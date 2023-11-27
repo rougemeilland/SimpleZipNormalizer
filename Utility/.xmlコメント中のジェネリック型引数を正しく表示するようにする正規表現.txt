@@ -1,0 +1,6 @@
+﻿置換元: <see cref="([A-Za-z0-9_]+)\{([^"]+[^"T])\}"/>
+置換先: <see cref="$1{$2}">$1&lt;<see cref="$2"/>&gt;</see>
+
+
+置換元: <see cref="([A-Za-z0-9_]+)\{([^"]+_T)\}"/>
+置換先: <see cref="$1{$2}">$1&lt;<typeparamref name="$2"/>&gt;</see>
