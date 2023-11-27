@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Experiment.Xceed.CSharp001": {
+      "commandName": "Project",
+      "commandLineArgs": "\"Z:\\Downloads\\Lunor\"\r\n\"Z:\\Downloads\\Lunor\\sample data\""
+    }
+  }
+}

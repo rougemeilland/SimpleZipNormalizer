@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "SimpleZipNormalizer.CUI": {
+      "commandName": "Project",
+      "commandLineArgs": "-i -n\r\n\"Z:\\Downloads\\Lunor\\work\"\r\n",
+      "environmentVariables": {
+        "TRASH_BOX_PATH": "Z:\\Downloads\\Lunor\\trash_box"
+      }
+    }
+  }
+}

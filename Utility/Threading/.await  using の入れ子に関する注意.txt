@@ -1,0 +1,56 @@
+﻿from https://docs.microsoft.com/ja-jp/dotnet/standard/garbage-collection/implementing-disposeasync#stacked-usings
+
+【OKなパターン1】
+明示的な入れ子になっている場合
+
+        var objOne = new ExampleAsyncDisposable();
+        await using (objOne.ConfigureAwait(false))
+        {
+            // Interact with the objOne instance.
+
+            var objTwo = new ExampleAsyncDisposable();
+            await using (objTwo.ConfigureAwait(false))
+            {
+                // Interact with the objOne and/or objTwo instance(s).
+            }
+        }
+
+
+【OKなパターン2】
+入れ子になっていない場合
+
+        var objOne = new ExampleAsyncDisposable();
+        await using (objOne.ConfigureAwait(false))
+        {
+            // Interact with the objOne instance.
+        }
+
+        var objTwo = new ExampleAsyncDisposable();
+        await using (objTwo.ConfigureAwait(false))
+        {
+            // Interact with the objTwo instance.
+        }
+
+【OKなパターン3】
+暗黙的な入れ子になっている場合
+        var objOne = new ExampleAsyncDisposable();
+        await using var ignored1 = objOne.ConfigureAwait(false);
+
+        var objTwo = new ExampleAsyncDisposable();
+        await using var ignored2 = objTwo.ConfigureAwait(false);
+
+        // Interact with objOne and/or objTwo instance(s).
+
+
+【NGなパターン】
+例外が発生する箇所によってはオブジェクトが適切に廃棄されない。
+
+        var objOne = new ExampleAsyncDisposable();
+        // Exception thrown on .ctor
+        var objTwo = new AnotherAsyncDisposable();
+
+        await using (objOne.ConfigureAwait(false))
+        await using (objTwo.ConfigureAwait(false))
+        {
+            // Neither object has its DisposeAsync called.
+        }

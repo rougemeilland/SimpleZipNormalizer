@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Experiment.Xceed.CSharp002": {
+      "commandName": "Project",
+      "commandLineArgs": "\"Z:\\Downloads\\Lunor\\sample_use_utf8.zip\"\r\n\"Z:\\Downloads\\Lunor\\sample_only_0x000a.zip\"\r\n\"Z:\\Downloads\\Lunor\\sample_except_0x6375_0x7075.zip\"\r\n\"Z:\\Downloads\\Lunor\\sample_except_0x554e.zip\"\r\n\"Z:\\Downloads\\Lunor\\sample_all.zip\""
+    }
+  }
+}
