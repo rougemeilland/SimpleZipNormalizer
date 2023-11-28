@@ -196,9 +196,7 @@ namespace Utility.IO
                     }
                     else if (!newFile.Exists)
                     {
-                        // MoveTo メソッドは FileInfo オブジェクトを改変してしまうため、
-                        // 複製してから呼び出している
-                        new FileInfo(sourceFile.FullName).MoveTo(newFile.FullName);
+                        File.Move(sourceFile.FullName, newFile.FullName);
                         return (newFile, false);
                     }
                     else if (newFile.Length == sourceFile.Length &&
@@ -212,6 +210,18 @@ namespace Utility.IO
                         ++retryCount;
                     }
                 }
+            }
+        }
+
+        public static void SafetyDelete(this FileInfo file)
+        {
+            try
+            {
+                if (File.Exists(file.FullName))
+                    File.Delete(file.FullName);
+            }
+            catch (Exception)
+            {
             }
         }
 

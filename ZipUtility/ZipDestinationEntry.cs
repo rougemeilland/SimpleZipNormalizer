@@ -23,13 +23,13 @@ namespace ZipUtility
             : IBasicOutputByteStream, IReportableOnStreamClosed<UInt64>
         {
             private readonly IBasicOutputByteStream _baseStream1;
-            private readonly IBasicOutputByteStream _baseStream2;
+            private readonly IBasicOutputByteStream? _baseStream2;
             private Boolean _isDisposed;
             private UInt64 _writtenTotalCount;
 
             public event EventHandler<OnStreamClosedEventArgs<UInt64>>? OnStreamClosed;
 
-            public PassThroughOutputStream(IBasicOutputByteStream baseStream1, IBasicOutputByteStream baseStream2)
+            public PassThroughOutputStream(IBasicOutputByteStream baseStream1, IBasicOutputByteStream? baseStream2 = null)
             {
                 _baseStream1 = baseStream1;
                 _baseStream2 = baseStream2;
@@ -43,7 +43,7 @@ namespace ZipUtility
                     throw new ObjectDisposedException(GetType().FullName);
 
                 _baseStream1.WriteBytes(buffer);
-                _baseStream2.WriteBytes(buffer);
+                _baseStream2?.WriteBytes(buffer);
                 checked
                 {
                     _writtenTotalCount += (UInt64)buffer.Length;
@@ -58,7 +58,8 @@ namespace ZipUtility
                     throw new ObjectDisposedException(GetType().FullName);
 
                 await _baseStream1.WriteBytesAsync(buffer, cancellationToken).ConfigureAwait(false);
-                await _baseStream2.WriteBytesAsync(buffer, cancellationToken).ConfigureAwait(false);
+                if (_baseStream2 is not null)
+                    await _baseStream2.WriteBytesAsync(buffer, cancellationToken).ConfigureAwait(false);
                 checked
                 {
                     _writtenTotalCount += (UInt64)buffer.Length;
@@ -73,7 +74,7 @@ namespace ZipUtility
                     throw new ObjectDisposedException(GetType().FullName);
 
                 _baseStream1.Flush();
-                _baseStream2.Flush();
+                _baseStream2?.Flush();
             }
 
             public async Task FlushAsync(CancellationToken cancellationToken = default)
@@ -82,7 +83,8 @@ namespace ZipUtility
                     throw new ObjectDisposedException(GetType().FullName);
 
                 await _baseStream1.FlushAsync(cancellationToken).ConfigureAwait(false);
-                await _baseStream2.FlushAsync(cancellationToken).ConfigureAwait(false);
+                if (_baseStream2 is not null)
+                    await _baseStream2.FlushAsync(cancellationToken).ConfigureAwait(false);
             }
 
             public void Dispose()
@@ -107,7 +109,7 @@ namespace ZipUtility
                         if (disposing)
                         {
                             _baseStream1.Dispose();
-                            _baseStream2.Dispose();
+                            _baseStream2?.Dispose();
                         }
 
                         _isDisposed = true;
@@ -132,7 +134,8 @@ namespace ZipUtility
                     try
                     {
                         await _baseStream1.DisposeAsync().ConfigureAwait(false);
-                        await _baseStream2.DisposeAsync().ConfigureAwait(false);
+                        if (_baseStream2 is not null)
+                            await _baseStream2.DisposeAsync().ConfigureAwait(false);
                         _isDisposed = true;
                     }
                     finally
@@ -486,7 +489,7 @@ namespace ZipUtility
             _contentHeaderInfo = null;
             _generalPurposeBitFlag = ZipEntryGeneralPurposeBitFlag.None;
             _isFile = true;
-            _compressionMethodId = ZipEntryCompressionMethodId.Deflate;
+            _compressionMethodId = ZipEntryCompressionMethodId.Stored;
             _compressionLevel = ZipEntryCompressionLevel.Normal;
             _lastWriteTimeUtc = null;
             _lastAccessTimeUtc = null;
@@ -988,46 +991,40 @@ namespace ZipUtility
                 var compressionMethod = CompressionMethodId.GetCompressionMethod(CompressionLevel);
 
                 temporaryFile = new FileInfo(Path.GetTempFileName());
-                packedTemporaryFile = new FileInfo(Path.GetTempFileName());
+
+                packedTemporaryFile =
+                    CompressionMethodId == ZipEntryCompressionMethodId.Stored
+                    ? null
+                    : new FileInfo(Path.GetTempFileName());
+
+                var outputStrem =
+                    temporaryFile.Create()
+                    .AsOutputByteStream()
+                    .WithCrc32Calculation(crcValueHolder);
+
+                var packedOutputStream =
+                    packedTemporaryFile is null
+                    ? null
+                    : compressionMethod.GetEncodingStream(
+                        packedTemporaryFile.Create()
+                        .AsOutputByteStream()
+                        .WithCache(),
+                        null,
+                        SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
+                            unpackedCountProgress,
+                            value => value.unpackedCount / 2))
+                        .WithCache();
 
                 var tempraryFileStream =
-                    new PassThroughOutputStream(
-                        temporaryFile.Create()
-                            .AsOutputByteStream()
-                            .WithCrc32Calculation(crcValueHolder),
-                        compressionMethod.GetEncodingStream(
-                            packedTemporaryFile.Create()
-                            .AsOutputByteStream()
-                            .WithCache(),
-                            null,
-                            SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
-                                unpackedCountProgress,
-                                value => value.unpackedCount / 2))
-                            .WithCache());
+                    new PassThroughOutputStream(outputStrem, packedOutputStream);
 
                 tempraryFileStream.OnStreamClosed += EndOfCopyingToTemporaryFile;
                 return tempraryFileStream;
             }
             catch (Exception)
             {
-                try
-                {
-                    if (temporaryFile is not null && temporaryFile.Exists)
-                        temporaryFile.Delete();
-                }
-                catch (Exception)
-                {
-                }
-
-                try
-                {
-                    if (packedTemporaryFile is not null && packedTemporaryFile.Exists)
-                        packedTemporaryFile.Delete();
-                }
-                catch (Exception)
-                {
-                }
-
+                temporaryFile?.SafetyDelete();
+                packedTemporaryFile?.SafetyDelete();
                 _zipStream.UnlockStream();
                 throw;
             }
@@ -1040,25 +1037,36 @@ namespace ZipUtility
                 var success = false;
                 try
                 {
-                    if (temporaryFile is not null
-                        && temporaryFile.Exists
-                        && packedTemporaryFile is not null
-                        && packedTemporaryFile.Exists)
+                    if (temporaryFile is not null && temporaryFile.Exists)
                     {
+                        if (CompressionMethodId == ZipEntryCompressionMethodId.Stored != (packedTemporaryFile is null))
+                            throw new InternalLogicalErrorException();
+
                         var size = (UInt64)temporaryFile.Length;
-                        var packedSize = (UInt64)packedTemporaryFile.Length;
+                        var packedSize = (UInt64)temporaryFile.Length;
                         var crc = crcValueHolder.Value.Crc;
+
                         if (size != crcValueHolder.Value.Size)
                             throw new Exception("Faital error !");
 
-                        if (size <= 0 || packedSize >= size)
+                        if (packedTemporaryFile is not null)
                         {
-                            // 圧縮前のサイズが 0、または圧縮後のサイズが圧縮前のサイズより小さくなっていない場合
+                            if (!packedTemporaryFile.Exists)
+                                throw new InternalLogicalErrorException();
 
-                            // 圧縮方式を強制的に Stored に変更する。
-                            CompressionMethodId = ZipEntryCompressionMethodId.Stored;
-                            CompressionLevel = ZipEntryCompressionLevel.Normal;
-                            packedSize = size;
+                            packedSize = (UInt64)packedTemporaryFile.Length;
+
+                            if (size <= 0 || packedSize >= size)
+                            {
+                                // 圧縮前のサイズが 0、または圧縮後のサイズが圧縮前のサイズより小さくなっていない場合
+
+                                // 圧縮方式を強制的に Stored に変更する。
+                                CompressionMethodId = ZipEntryCompressionMethodId.Stored;
+                                CompressionLevel = ZipEntryCompressionLevel.Normal;
+                                packedSize = size;
+                                packedTemporaryFile.SafetyDelete();
+                                packedTemporaryFile = null;
+                            }
                         }
 
                         //
@@ -1104,7 +1112,7 @@ namespace ZipUtility
 
                         using var destinationStream = _zipStream.Stream.AsPartial(_contentHeaderInfo.LocalHeaderPosition, null);
                         destinationStream.WriteBytes(_contentHeaderInfo.ToLocalHeaderBytes());
-                        using var sourceStream = (CompressionMethodId == ZipEntryCompressionMethodId.Stored ? temporaryFile : packedTemporaryFile).OpenRead();
+                        using var sourceStream = (packedTemporaryFile is null ? temporaryFile : packedTemporaryFile).OpenRead();
                         sourceStream.AsInputByteStream().CopyTo(
                             destinationStream,
                             SafetyProgress.CreateProgress<UInt64, UInt64>(
@@ -1133,23 +1141,8 @@ namespace ZipUtility
                 }
                 finally
                 {
-                    try
-                    {
-                        if (temporaryFile is not null && temporaryFile.Exists)
-                            temporaryFile.Delete();
-                    }
-                    catch (Exception)
-                    {
-                    }
-
-                    try
-                    {
-                        if (packedTemporaryFile is not null && packedTemporaryFile.Exists)
-                            packedTemporaryFile.Delete();
-                    }
-                    catch (Exception)
-                    {
-                    }
+                    temporaryFile.SafetyDelete();
+                    packedTemporaryFile?.SafetyDelete();
 
                     try
                     {

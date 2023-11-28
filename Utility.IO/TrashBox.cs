@@ -157,14 +157,7 @@ namespace Utility.IO
                         }
                         finally
                         {
-                            try
-                            {
-                                if (temporaryFile.Exists)
-                                    temporaryFile.Delete();
-                            }
-                            catch (Exception)
-                            {
-                            }
+                            temporaryFile.SafetyDelete();
                         }
                     }
                     catch (Exception)

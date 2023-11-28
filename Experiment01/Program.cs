@@ -11,93 +11,98 @@ namespace Experiment01
         private static void Main(string[] args)
         {
 #if true
-
-            using var reader = new FileInfo(args[0]).OpenAsZipFile(ZipEntryNameEncodingProvider.Create(Array.Empty<string>(), Array.Empty<string>()));
-            Console.WriteLine($"zip-comment:{reader.Comment}");
-            foreach (var entry in reader.GetEntries())
+            foreach (string arg in args)
             {
-                Console.WriteLine("-----");
+                Console.WriteLine("===================================================");
+                Console.WriteLine($"zip file: {arg}");
+                using var reader = new FileInfo(arg).OpenAsZipFile(ZipEntryNameEncodingProvider.Create(Array.Empty<string>(), Array.Empty<string>()));
+                Console.WriteLine($"zip-comment:{reader.Comment}");
+                foreach (var entry in reader.GetEntries())
                 {
-                    Console.WriteLine($"{entry.FullName}: utf8 bit={(entry.EntryTextEncoding == ZipEntryTextEncoding.UTF8 ? "ON" : "OFF")}");
-                    var extraField = entry.LocalHeaderExtraFields.GetExtraField<XceedUnicodeExtraField>();
-                    if (extraField is not null)
+                    Console.WriteLine("-----");
                     {
-                        Console.WriteLine($"{entry.FullName}-(local): 0x554e_name=\"{extraField.FullName}\"");
+                        Console.WriteLine($"{entry.FullName}: utf8 bit={(entry.EntryTextEncoding == ZipEntryTextEncoding.UTF8 ? "ON" : "OFF")}");
+                        var extraField = entry.LocalHeaderExtraFields.GetExtraField<XceedUnicodeExtraField>();
+                        if (extraField is not null)
+                        {
+                            Console.WriteLine($"{entry.FullName}-(local): 0x554e_name=\"{extraField.FullName}\"");
+                        }
                     }
-                }
 
-                {
-                    var extraField = entry.CentralDirectoryHeaderExtraFields.GetExtraField<XceedUnicodeExtraField>();
-                    if (extraField is not null)
                     {
-                        Console.WriteLine($"{entry.FullName}-(central): 0x554e_name=\"{extraField.FullName}\", 0x554e_comment=\"{extraField.Comment ?? ""}\"");
+                        var extraField = entry.CentralDirectoryHeaderExtraFields.GetExtraField<XceedUnicodeExtraField>();
+                        if (extraField is not null)
+                        {
+                            Console.WriteLine($"{entry.FullName}-(central): 0x554e_name=\"{extraField.FullName}\", 0x554e_comment=\"{extraField.Comment ?? ""}\"");
+                        }
                     }
-                }
 
-                {
-                    var extraField = entry.LocalHeaderExtraFields.GetExtraField<NtfsExtraField>();
-                    if (extraField is not null)
                     {
-                        Console.WriteLine($"{entry.FullName}-(local): 0x000a_m={extraField.LastWriteTimeUtc?.ToLocalTime()}, 0x000a_a={extraField.LastAccessTimeUtc?.ToLocalTime()}, 0x000a_c={extraField.CreationTimeUtc?.ToLocalTime()}");
+                        var extraField = entry.LocalHeaderExtraFields.GetExtraField<NtfsExtraField>();
+                        if (extraField is not null)
+                        {
+                            Console.WriteLine($"{entry.FullName}-(local): 0x000a_m={extraField.LastWriteTimeUtc?.ToLocalTime()}, 0x000a_a={extraField.LastAccessTimeUtc?.ToLocalTime()}, 0x000a_c={extraField.CreationTimeUtc?.ToLocalTime()}");
+                        }
                     }
-                }
 
-                {
-                    var extraField = entry.CentralDirectoryHeaderExtraFields.GetExtraField<NtfsExtraField>();
-                    if (extraField is not null)
                     {
-                        Console.WriteLine($"{entry.FullName}-(central): 0x000a_m={extraField.LastWriteTimeUtc?.ToLocalTime()}, 0x000a_a={extraField.LastAccessTimeUtc?.ToLocalTime()}, 0x000a_c={extraField.CreationTimeUtc?.ToLocalTime()}");
+                        var extraField = entry.CentralDirectoryHeaderExtraFields.GetExtraField<NtfsExtraField>();
+                        if (extraField is not null)
+                        {
+                            Console.WriteLine($"{entry.FullName}-(central): 0x000a_m={extraField.LastWriteTimeUtc?.ToLocalTime()}, 0x000a_a={extraField.LastAccessTimeUtc?.ToLocalTime()}, 0x000a_c={extraField.CreationTimeUtc?.ToLocalTime()}");
+                        }
                     }
-                }
 
-                {
-                    var extraField = entry.LocalHeaderExtraFields.GetExtraField<ExtendedTimestampExtraField>();
-                    if (extraField is not null)
                     {
-                        Console.WriteLine($"{entry.FullName}-(local): 0x5455_m={extraField.LastWriteTimeUtc?.ToLocalTime()}, 0x5455_a={extraField.LastAccessTimeUtc?.ToLocalTime()}, 0x5455_c={extraField.CreationTimeUtc?.ToLocalTime()}");
+                        var extraField = entry.LocalHeaderExtraFields.GetExtraField<ExtendedTimestampExtraField>();
+                        if (extraField is not null)
+                        {
+                            Console.WriteLine($"{entry.FullName}-(local): 0x5455_m={extraField.LastWriteTimeUtc?.ToLocalTime()}, 0x5455_a={extraField.LastAccessTimeUtc?.ToLocalTime()}, 0x5455_c={extraField.CreationTimeUtc?.ToLocalTime()}");
+                        }
                     }
-                }
 
-                {
-                    var extraField = entry.CentralDirectoryHeaderExtraFields.GetExtraField<ExtendedTimestampExtraField>();
-                    if (extraField is not null)
                     {
-                        Console.WriteLine($"{entry.FullName}-(central): 0x5455_m={extraField.LastWriteTimeUtc?.ToLocalTime()}");
+                        var extraField = entry.CentralDirectoryHeaderExtraFields.GetExtraField<ExtendedTimestampExtraField>();
+                        if (extraField is not null)
+                        {
+                            Console.WriteLine($"{entry.FullName}-(central): 0x5455_m={extraField.LastWriteTimeUtc?.ToLocalTime()}");
+                        }
                     }
-                }
 
-                {
-                    var extraField = entry.LocalHeaderExtraFields.GetExtraField<UnicodePathExtraField>();
-                    if (extraField is not null)
                     {
-                        Console.WriteLine($"{entry.FullName}-(lcoal): 0x7075_name=\"{extraField.GetFullName(entry.FullNameBytes.Span)}\"");
+                        var extraField = entry.LocalHeaderExtraFields.GetExtraField<UnicodePathExtraField>();
+                        if (extraField is not null)
+                        {
+                            Console.WriteLine($"{entry.FullName}-(lcoal): 0x7075_name=\"{extraField.GetFullName(entry.FullNameBytes.Span)}\"");
+                        }
                     }
-                }
 
-                {
-                    var extraField = entry.CentralDirectoryHeaderExtraFields.GetExtraField<UnicodePathExtraField>();
-                    if (extraField is not null)
                     {
-                        Console.WriteLine($"{entry.FullName}-(central): 0x7075_name=\"{extraField.GetFullName(entry.FullNameBytes.Span)}\"");
+                        var extraField = entry.CentralDirectoryHeaderExtraFields.GetExtraField<UnicodePathExtraField>();
+                        if (extraField is not null)
+                        {
+                            Console.WriteLine($"{entry.FullName}-(central): 0x7075_name=\"{extraField.GetFullName(entry.FullNameBytes.Span)}\"");
+                        }
                     }
-                }
 
-                {
-                    var extraField = entry.LocalHeaderExtraFields.GetExtraField<UnicodeCommentExtraField>();
-                    if (extraField is not null)
                     {
-                        Console.WriteLine($"{entry.FullName}-(lcoal): 0x6375_comment=\"{extraField.GetComment(entry.CommentBytes.Span)}\"");
+                        var extraField = entry.LocalHeaderExtraFields.GetExtraField<UnicodeCommentExtraField>();
+                        if (extraField is not null)
+                        {
+                            Console.WriteLine($"{entry.FullName}-(lcoal): 0x6375_comment=\"{extraField.GetComment(entry.CommentBytes.Span)}\"");
+                        }
                     }
-                }
 
-                {
-                    var extraField = entry.CentralDirectoryHeaderExtraFields.GetExtraField<UnicodeCommentExtraField>();
-                    if (extraField is not null)
                     {
-                        Console.WriteLine($"{entry.FullName}-(central): 0x6375_comment=\"{extraField.GetComment(entry.CommentBytes.Span)}\"");
+                        var extraField = entry.CentralDirectoryHeaderExtraFields.GetExtraField<UnicodeCommentExtraField>();
+                        if (extraField is not null)
+                        {
+                            Console.WriteLine($"{entry.FullName}-(central): 0x6375_comment=\"{extraField.GetComment(entry.CommentBytes.Span)}\"");
+                        }
                     }
                 }
             }
+
 #else
             var sourceString = new string('あ', 1000);
             var uncompressedData = Encoding.UTF8.GetBytes(sourceString);

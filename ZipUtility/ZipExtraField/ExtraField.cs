@@ -44,8 +44,8 @@ namespace ZipUtility.ZipExtraField
         /// 以下の何れにも該当しない場合は、<paramref name="headerType"/> で示されるヘッダに設定すべきバイト列を復帰値として返してください。
         /// 以下の何れかの該当する場合には null を返してください。
         /// <list type="bullet">
-        /// <item>拡張フィールドとして出力するための有効なデータが存在しない、または不足している。</item>
-        /// <item><paramref name="headerType"/> で示されるヘッダにこの拡張フィールドを出力してはならない。</item>
+        /// <item>拡張フィールドとして出力するための有効なデータが存在しない、または不足している場合。</item>
+        /// <item><paramref name="headerType"/> で示されるヘッダにこの拡張フィールドを出力してはならない仕様である場合。</item>
         /// </list>
         /// </item>
         /// </list>

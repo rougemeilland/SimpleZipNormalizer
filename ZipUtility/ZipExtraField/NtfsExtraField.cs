@@ -6,6 +6,53 @@ namespace ZipUtility.ZipExtraField
     /// <summary>
     /// PKWARE Win95/WinNT Extra Field の拡張フィールドのクラスです。
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    /// <item>
+    /// <term>[拡張フィールド 0x000a [PKWARE Win95/WinNT Extra Field] の付加条件について]</term>
+    /// <description>
+    /// <para>
+    /// <see href="https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT">PKWAREの APPNOTE</see> では特に規定されていないが、
+    /// <see href="https://libzip.org/specifications/extrafld.txt">Info-ZIP によって公開されている拡張フィールドの仕様書</see> には、以下のように記載されている。
+    /// </para>
+    /// <para>
+    /// --
+    /// In the current implementations, this field has a fixed total data size of 32 bytes and is only stored as local extra field.
+    /// (現在の実装では、このフィールドの合計データ サイズは 32 バイトに固定されており、ローカルの拡張フィールドとしてのみ保存されます。)
+    /// --
+    /// </para>
+    /// <para>
+    /// しかし、実際には、拡張フィールド 0x000a がどのヘッダに格納されるかは実装により異なる。
+    /// </para>
+    /// <list type="bullet">
+    /// <item>
+    /// <term>PKZIPの場合</term>
+    /// <description>
+    /// <list type="bullet">
+    /// <item>読み込みの際はセントラルディレクトリヘッダとローカルヘッダのどちらか拡張フィールドが存在する方から読み込む。</item>
+    /// <item>書き込みの際はセントラルディレクトリヘッダへ書き込む。</item>
+    /// </list>
+    /// </description>
+    /// </item>
+    /// <item>
+    /// <term>7-ZIP / WinRar の場合</term>
+    /// <description>
+    /// <list type="bullet">
+    /// <item>読み込みの際はセントラルディレクトリヘッダから読み込む。</item>
+    /// <item>書き込みの際はセントラルディレクトリヘッダへ書き込む。</item>
+    /// </list>
+    /// </description>
+    /// </item>
+    /// </list>
+    /// これらの実装状況と、仕様を鑑み、このクラスでは以下の様に実装している。
+    /// <list type="bullet">
+    /// <item>読み込みの際はセントラルディレクトリヘッダとローカルヘッダの両方から読み込む。</item>
+    /// <item>書き込みの際はセントラルディレクトリヘッダとローカルヘッダの両方へ書き込む。</item>
+    /// </list>
+    /// </description>
+    /// </item>
+    /// </list>
+    /// </remarks>
     public class NtfsExtraField
         : TimestampExtraField
     {
@@ -38,6 +85,7 @@ namespace ZipUtility.ZipExtraField
             switch (headerType)
             {
                 case ZipEntryHeaderType.LocalFileHeader:
+                case ZipEntryHeaderType.CentralDirectoryHeader:
                 {
                     var dataOfSubTag0001 = GetDataForSubTag0001();
                     if (dataOfSubTag0001 is null)
@@ -54,8 +102,6 @@ namespace ZipUtility.ZipExtraField
                     builder.AppendBytes(dataOfSubTag0001.Value.Span);
                     return builder.ToByteArray();
                 }
-                case ZipEntryHeaderType.CentralDirectoryHeader:
-                    return null;
                 default:
                     throw new InternalLogicalErrorException($"Unknown header type: {nameof(headerType)}={headerType}");
             }

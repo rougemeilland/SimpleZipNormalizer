@@ -47,6 +47,8 @@ namespace SimpleZipNormalizer.CUI
 
         private static int Main(string[] args)
         {
+            // TODO: stored の性能向上 のテスト
+            // TODO: UNICODEにない文字セットを含む名前とコメントを持つエントリをZIPファイルに入れてみる。どういう挙動をするか？
             // TODO: ZIP64対応のテスト 圧縮済みサイズが合計4Gを超えるファイルを含むZIPファイル
             // TODO: データディスクリプタ付きの書き込みに挑戦 (いやがらせ？)
             // TODO: マルチボリューム対応に挑戦
@@ -91,7 +93,7 @@ namespace SimpleZipNormalizer.CUI
                             {
                                 excludedEncodngNames.AddRange(args[index + 1].Split(','));
                             }
-                            else if (arg.StartsWith("-", StringComparison.Ordinal))
+                            else if (arg.StartsWith('-'))
                             {
                                 throw new Exception($"サポートされていないオプションがコマンド引数に指定されました。: \"{arg}\"");
                             }
@@ -124,7 +126,7 @@ namespace SimpleZipNormalizer.CUI
 
                     var trashBox = TrashBox.OpenTrashBox();
 
-                    var zipFiles = EnumerateZipFiles(args.Where(arg => !arg.StartsWith("-", StringComparison.Ordinal))).ToList();
+                    var zipFiles = EnumerateZipFiles(args.Where(arg => !arg.StartsWith('-'))).ToList();
 
                     if (mode == CommandMode.Normalize)
                     {
@@ -139,14 +141,14 @@ namespace SimpleZipNormalizer.CUI
                             var parentDirectoryPath = zipFile.DirectoryName ?? throw new Exception();
                             var originalZipFileSize = zipFile.Length;
                             var temporaryFileName = $".{zipFile.Name}.0.zip";
-                            var tempFilePath = Path.Combine(parentDirectoryPath, temporaryFileName);
-                            if (File.Exists(tempFilePath))
+                            var temporaryFile = new FileInfo(Path.Combine(parentDirectoryPath, temporaryFileName));
+                            if (temporaryFile.Exists)
                             {
                                 for (var index = 1; ; ++index)
                                 {
                                     temporaryFileName = $".{zipFile.Name}.{index}.zip";
-                                    tempFilePath = Path.Combine(parentDirectoryPath, temporaryFileName);
-                                    if (!File.Exists(tempFilePath))
+                                    temporaryFile = new FileInfo(Path.Combine(parentDirectoryPath, temporaryFileName));
+                                    if (!temporaryFile.Exists)
                                         break;
                                 }
                             }
@@ -155,7 +157,7 @@ namespace SimpleZipNormalizer.CUI
                             {
                                 if (NormalizeZipFile(
                                     zipFile,
-                                    new FileInfo(tempFilePath),
+                                    temporaryFile,
                                     encodingProvider,
                                     SafetyProgress.CreateIncreasingProgress<double>(
                                         value =>
@@ -166,7 +168,7 @@ namespace SimpleZipNormalizer.CUI
                                     if (!trashBox.DisposeFile(new FileInfo(zipFile.FullName)))
                                         throw new Exception($"ファイルのごみ箱への移動に失敗しました。: \"{zipFile.FullName}\"");
 
-                                    File.Move(tempFilePath, zipFile.FullName, false);
+                                    File.Move(temporaryFile.FullName, zipFile.FullName, false);
                                 }
                             }
                             catch (Exception ex)
@@ -175,15 +177,7 @@ namespace SimpleZipNormalizer.CUI
                             }
                             finally
                             {
-                                try
-                                {
-                                    if (File.Exists(tempFilePath))
-                                        File.Delete(tempFilePath);
-                                }
-                                catch (Exception)
-                                {
-                                }
-
+                                temporaryFile.SafetyDelete();
                                 completedRate += (double)originalZipFileSize / totalSize;
                                 ReportProgress(completedRate);
                             }
@@ -338,7 +332,7 @@ namespace SimpleZipNormalizer.CUI
             var sourceZipFileLength = sourceZipFile.Length;
             var rootNode = PathNode.CreateRootNode();
             var badEntries = sourceArchiveReader.GetEntries().Where(entry => entry.FullName.IsUnknownEncodingText()).ToList();
-            if (badEntries.Any())
+            if (badEntries.Count > 0)
                 throw new Exception($".NETで認識できない名前のエントリがZIPファイルに含まれています。: ZIP file name:\"{sourceZipFile.FullName}\", Entry name: \"{badEntries.First().FullName}\"");
 
             progress?.Report(0);
@@ -443,8 +437,6 @@ namespace SimpleZipNormalizer.CUI
                     {
                         var destinationEntry = zipArchiveWriter.CreateEntry(item.destinationFullName, item.sourceEntry?.Comment ?? "");
                         var sourceEntry = item.sourceEntry;
-                        destinationEntry.CompressionMethodId = ZipEntryCompressionMethodId.Deflate;
-                        destinationEntry.CompressionLevel = ZipEntryCompressionLevel.Maximum;
                         if (sourceEntry is not null)
                         {
                             var now = DateTime.UtcNow;
@@ -456,6 +448,17 @@ namespace SimpleZipNormalizer.CUI
 
                             if (sourceEntry.IsFile)
                             {
+                                if (sourceEntry.Size > 0)
+                                {
+                                    destinationEntry.CompressionMethodId = ZipEntryCompressionMethodId.Deflate;
+                                    destinationEntry.CompressionLevel = ZipEntryCompressionLevel.Maximum;
+                                }
+                                else
+                                {
+                                    destinationEntry.CompressionMethodId = ZipEntryCompressionMethodId.Stored;
+                                    destinationEntry.CompressionLevel = ZipEntryCompressionLevel.Normal;
+                                }
+
                                 using var destinationStream = destinationEntry.GetContentStream();
                                 using var sourceStream = sourceEntry.GetContentStream();
                                 sourceStream.CopyTo(
@@ -502,16 +505,7 @@ namespace SimpleZipNormalizer.CUI
             finally
             {
                 if (!success)
-                {
-                    try
-                    {
-                        if (destinationZipFile.Exists)
-                            destinationZipFile.Delete();
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
+                    destinationZipFile.SafetyDelete();
             }
         }
 
