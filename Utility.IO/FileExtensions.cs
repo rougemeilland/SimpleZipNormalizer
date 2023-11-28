@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -46,7 +47,23 @@ namespace Utility.IO
             return File.ReadAllBytes(file.FullName);
         }
 
+        public static Byte[] ReadAllBytes(this FilePath file)
+        {
+            if (file is null)
+                throw new ArgumentNullException(nameof(file));
+
+            return File.ReadAllBytes(file.FullName);
+        }
+
         public static String[] ReadAllLines(this FileInfo file)
+        {
+            if (file is null)
+                throw new ArgumentNullException(nameof(file));
+
+            return File.ReadAllLines(file.FullName);
+        }
+
+        public static String[] ReadAllLines(this FilePath file)
         {
             if (file is null)
                 throw new ArgumentNullException(nameof(file));
@@ -62,7 +79,26 @@ namespace Utility.IO
             return File.ReadLines(file.FullName);
         }
 
+        public static IEnumerable<String> ReadLines(this FilePath file)
+        {
+            if (file is null)
+                throw new ArgumentNullException(nameof(file));
+
+            return File.ReadLines(file.FullName);
+        }
+
         public static void WriteAllBytes(this FileInfo file, IEnumerable<Byte> data)
+        {
+            if (file is null)
+                throw new ArgumentNullException(nameof(file));
+            if (data is null)
+                throw new ArgumentNullException(nameof(data));
+
+            using var stream = file.OpenWrite();
+            stream.WriteByteSequence(data);
+        }
+
+        public static void WriteAllBytes(this FilePath file, IEnumerable<Byte> data)
         {
             if (file is null)
                 throw new ArgumentNullException(nameof(file));
@@ -83,7 +119,26 @@ namespace Utility.IO
             File.WriteAllBytes(file.FullName, data);
         }
 
+        public static void WriteAllBytes(this FilePath file, Byte[] data)
+        {
+            if (file is null)
+                throw new ArgumentNullException(nameof(file));
+            if (data is null)
+                throw new ArgumentNullException(nameof(data));
+
+            File.WriteAllBytes(file.FullName, data);
+        }
+
         public static void WriteAllBytes(this FileInfo file, ReadOnlyMemory<Byte> data)
+        {
+            if (file is null)
+                throw new ArgumentNullException(nameof(file));
+
+            using var stream = file.OpenWrite();
+            stream.WriteBytes(data.Span);
+        }
+
+        public static void WriteAllBytes(this FilePath file, ReadOnlyMemory<Byte> data)
         {
             if (file is null)
                 throw new ArgumentNullException(nameof(file));
@@ -101,7 +156,26 @@ namespace Utility.IO
             stream.WriteBytes(data);
         }
 
+        public static void WriteAllBytes(this FilePath file, ReadOnlySpan<Byte> data)
+        {
+            if (file is null)
+                throw new ArgumentNullException(nameof(file));
+
+            using var stream = file.OpenWrite();
+            stream.WriteBytes(data);
+        }
+
         public static void WriteAllText(this FileInfo file, String text)
+        {
+            if (file is null)
+                throw new ArgumentNullException(nameof(file));
+            if (String.IsNullOrEmpty(text))
+                throw new ArgumentException($"'{nameof(text)}' を NULL または空にすることはできません。", nameof(text));
+
+            File.WriteAllText(file.FullName, text);
+        }
+
+        public static void WriteAllText(this FilePath file, String text)
         {
             if (file is null)
                 throw new ArgumentNullException(nameof(file));
@@ -123,7 +197,29 @@ namespace Utility.IO
             File.WriteAllText(file.FullName, text, encoding);
         }
 
+        public static void WriteAllText(this FilePath file, String text, Encoding encoding)
+        {
+            if (file is null)
+                throw new ArgumentNullException(nameof(file));
+            if (String.IsNullOrEmpty(text))
+                throw new ArgumentException($"'{nameof(text)}' を NULL または空にすることはできません。", nameof(text));
+            if (encoding is null)
+                throw new ArgumentNullException(nameof(encoding));
+
+            File.WriteAllText(file.FullName, text, encoding);
+        }
+
         public static void WriteAllText(this FileInfo file, String[] lines)
+        {
+            if (file is null)
+                throw new ArgumentNullException(nameof(file));
+            if (lines is null)
+                throw new ArgumentNullException(nameof(lines));
+
+            File.WriteAllLines(file.FullName, lines);
+        }
+
+        public static void WriteAllText(this FilePath file, String[] lines)
         {
             if (file is null)
                 throw new ArgumentNullException(nameof(file));
@@ -143,7 +239,29 @@ namespace Utility.IO
             File.WriteAllLines(file.FullName, lines);
         }
 
+        public static void WriteAllText(this FilePath file, IEnumerable<String> lines)
+        {
+            if (file is null)
+                throw new ArgumentNullException(nameof(file));
+            if (lines is null)
+                throw new ArgumentNullException(nameof(lines));
+
+            File.WriteAllLines(file.FullName, lines);
+        }
+
         public static void WriteAllText(this FileInfo file, String[] lines, Encoding encoding)
+        {
+            if (file is null)
+                throw new ArgumentNullException(nameof(file));
+            if (lines is null)
+                throw new ArgumentNullException(nameof(lines));
+            if (encoding is null)
+                throw new ArgumentNullException(nameof(encoding));
+
+            File.WriteAllLines(file.FullName, lines, encoding);
+        }
+
+        public static void WriteAllText(this FilePath file, String[] lines, Encoding encoding)
         {
             if (file is null)
                 throw new ArgumentNullException(nameof(file));
@@ -167,7 +285,22 @@ namespace Utility.IO
             File.WriteAllLines(file.FullName, lines, encoding);
         }
 
-        public static (FileInfo File, Boolean AlreadyExists) RenameFile(this FileInfo sourceFile, String newFileName)
+        public static void WriteAllText(this FilePath file, IEnumerable<String> lines, Encoding encoding)
+        {
+            if (file is null)
+                throw new ArgumentNullException(nameof(file));
+            if (lines is null)
+                throw new ArgumentNullException(nameof(lines));
+            if (encoding is null)
+                throw new ArgumentNullException(nameof(encoding));
+
+            File.WriteAllLines(file.FullName, lines, encoding);
+        }
+
+        public static (FilePath File, Boolean AlreadyExists) RenameFile(this FileInfo sourceFile, String newFileName)
+            => ((FilePath)sourceFile).RenameFile(newFileName);
+
+        public static (FilePath File, Boolean AlreadyExists) RenameFile(this FilePath sourceFile, String newFileName)
         {
             if (sourceFile is null)
                 throw new ArgumentNullException(nameof(sourceFile));
@@ -186,10 +319,8 @@ namespace Utility.IO
                 while (true)
                 {
                     var newFile =
-                        new FileInfo(
-                            Path.Combine(
-                                sourceFileDirectory.FullName,
-                                $"{sourceFileNameWithoutExtension}{(retryCount <= 1 ? "" : $" ({retryCount})")}{sourceFileExtension}"));
+                        sourceFileDirectory.GetFile(
+                            $"{sourceFileNameWithoutExtension}{(retryCount <= 1 ? "" : $" ({retryCount})")}{sourceFileExtension}");
                     if (String.Equals(newFile.FullName, sourceFile.FullName, StringComparison.OrdinalIgnoreCase))
                     {
                         return (newFile, false);
@@ -225,14 +356,78 @@ namespace Utility.IO
             }
         }
 
+        public static void SafetyDelete(this FilePath file)
+        {
+            try
+            {
+                if (file.Exists)
+                    file.Delete();
+            }
+            catch (Exception)
+            {
+            }
+        }
+
         public static (UInt32 Crc, UInt64 Length) CalculateCrc24(this FileInfo sourceFile, IProgress<UInt64>? progress = null)
-            => sourceFile is null
-                ? throw new ArgumentNullException(nameof(sourceFile))
-                : sourceFile.OpenRead().CalculateCrc24(progress);
+        {
+            if (sourceFile is null)
+                throw new ArgumentNullException(nameof(sourceFile));
+
+            return sourceFile.OpenRead().CalculateCrc24(progress);
+        }
 
         public static (UInt32 Crc, UInt64 Length) CalculateCrc32(this FileInfo sourceFile, IProgress<UInt64>? progress = null)
-            => sourceFile is null
-                ? throw new ArgumentNullException(nameof(sourceFile))
-                : sourceFile.OpenRead().CalculateCrc32(progress);
+        {
+            if (sourceFile is null)
+                throw new ArgumentNullException(nameof(sourceFile));
+
+            return sourceFile.OpenRead().CalculateCrc32(progress);
+        }
+
+        public static IEnumerable<FilePath> EnumerateFilesFromArgument(this IEnumerable<String> args)
+        {
+            if (args is null)
+                throw new ArgumentNullException(nameof(args));
+
+            return
+                args
+                .SelectMany(arg =>
+                {
+                    var file = TryParseAsFilePath(arg);
+                    if (file is not null)
+                        return new[] { file };
+                    var directory = TryParseAsDirectoryPath(arg);
+                    return
+                        directory is not null
+                        ? directory.EnumerateFiles(true)
+                        : Array.Empty<FilePath>();
+                });
+        }
+
+        private static FilePath? TryParseAsFilePath(String path)
+        {
+            try
+            {
+                var file = new FilePath(path);
+                return file.Exists ? file : null;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        private static DirectoryPath? TryParseAsDirectoryPath(String path)
+        {
+            try
+            {
+                var directory = new DirectoryPath(path);
+                return directory.Exists ? directory : null;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
     }
 }

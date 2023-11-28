@@ -859,7 +859,7 @@ namespace ZipUtility
         /// {
         ///     private static void Main(string[] args)
         ///     {
-        ///         using var writer = new FileInfo(args[0]).CreateAsZipFile(ZipEntryNameEncodingProvider.Create(Array.Empty&lt;string&gt;(), Array.Empty&lt;string&gt;()));
+        ///         using var writer = new FilePath(args[0]).CreateAsZipFile(ZipEntryNameEncodingProvider.Create(Array.Empty&lt;string&gt;(), Array.Empty&lt;string&gt;()));
         ///
         ///         // "note.txt" というエントリ名を作る。
         ///         var entry = writer.CreateEntry("note.txt");
@@ -974,8 +974,8 @@ namespace ZipUtility
             if (CreationTimeUtc is not null && CreationTimeUtc.Value.Kind == DateTimeKind.Unspecified)
                 throw new InvalidOperationException($"The value of {nameof(CreationTimeUtc)}.{nameof(CreationTimeUtc.Value.Kind)} property must not be {nameof(DateTimeKind)}.{nameof(DateTimeKind.Unspecified)}.");
 
-            var temporaryFile = (FileInfo?)null;
-            var packedTemporaryFile = (FileInfo?)null;
+            var temporaryFile = (FilePath?)null;
+            var packedTemporaryFile = (FilePath?)null;
             var crcValueHolder = new ValueHolder<(UInt32 Crc, UInt64 Size)>();
 
             try
@@ -990,16 +990,15 @@ namespace ZipUtility
 
                 var compressionMethod = CompressionMethodId.GetCompressionMethod(CompressionLevel);
 
-                temporaryFile = new FileInfo(Path.GetTempFileName());
+                temporaryFile = new FilePath(Path.GetTempFileName());
 
                 packedTemporaryFile =
                     CompressionMethodId == ZipEntryCompressionMethodId.Stored
                     ? null
-                    : new FileInfo(Path.GetTempFileName());
+                    : new FilePath(Path.GetTempFileName());
 
                 var outputStrem =
                     temporaryFile.Create()
-                    .AsOutputByteStream()
                     .WithCrc32Calculation(crcValueHolder);
 
                 var packedOutputStream =
@@ -1007,7 +1006,6 @@ namespace ZipUtility
                     ? null
                     : compressionMethod.GetEncodingStream(
                         packedTemporaryFile.Create()
-                        .AsOutputByteStream()
                         .WithCache(),
                         null,
                         SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
@@ -1113,7 +1111,7 @@ namespace ZipUtility
                         using var destinationStream = _zipStream.Stream.AsPartial(_contentHeaderInfo.LocalHeaderPosition, null);
                         destinationStream.WriteBytes(_contentHeaderInfo.ToLocalHeaderBytes());
                         using var sourceStream = (packedTemporaryFile is null ? temporaryFile : packedTemporaryFile).OpenRead();
-                        sourceStream.AsInputByteStream().CopyTo(
+                        sourceStream.CopyTo(
                             destinationStream,
                             SafetyProgress.CreateProgress<UInt64, UInt64>(
                                 unpackedCountProgress,

@@ -83,22 +83,6 @@ namespace Utility
 
         #endregion
 
-        public static IEnumerable<FileInfo> EnumerateFilesFromArgument(this IEnumerable<String> args)
-            => args is null
-                ? throw new ArgumentNullException(nameof(args))
-                : args
-                .SelectMany(arg =>
-                {
-                    var file = TryParseAsFilePath(arg);
-                    if (file is not null)
-                        return new[] { file };
-                    var directory = TryParseAsDirectoryPath(arg);
-                    return
-                        directory is not null
-                        ? directory.EnumerateFiles("*", SearchOption.AllDirectories)
-                        : Array.Empty<FileInfo>();
-                });
-
         public static String? GetLeadingCommonPart(this String? s1, String? s2, Boolean ignoreCase = false)
         {
             if (s1 is null)
@@ -273,32 +257,6 @@ namespace Utility
                                 '?' => '？',
                                 _ => c,
                             })));
-
-        private static FileInfo? TryParseAsFilePath(String path)
-        {
-            try
-            {
-                var file = new FileInfo(path);
-                return file.Exists ? file : null;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        private static DirectoryInfo? TryParseAsDirectoryPath(String path)
-        {
-            try
-            {
-                var directory = new DirectoryInfo(path);
-                return directory.Exists ? directory : null;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static Boolean CharacterEqual(Char c1, Char c2, Boolean ignoreCase)

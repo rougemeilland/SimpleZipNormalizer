@@ -10,15 +10,15 @@ namespace ZipUtility
            : IZipInputStream, IVirtualZipFile
     {
         private readonly IRandomInputByteStream<UInt64> _baseStream;
-        private readonly FileInfo _zipArchiveFile;
+        private readonly FilePath _zipArchiveFile;
         private Boolean _isDisposed;
 
-        public SingleVolumeZipInputStream(FileInfo zipArchiveFile)
+        public SingleVolumeZipInputStream(FilePath zipArchiveFile)
         {
             _isDisposed = false;
             _zipArchiveFile = zipArchiveFile;
             var success = false;
-            var stream = zipArchiveFile.OpenRead().AsInputByteStream();
+            var stream = zipArchiveFile.OpenRead();
             try
             {
                 if (stream is not IRandomInputByteStream<UInt64> randomAccessStream)

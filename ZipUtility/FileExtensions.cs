@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using Utility;
+using Utility.IO;
 
 namespace ZipUtility
 {
     /// <summary>
-    /// <see cref="FileInfo"/> オブジェクトが示すファイルを ZIP アーカイブとして扱うための拡張メソッドのクラスです。
+    /// <see cref="FilePath"/> オブジェクトが示すファイルを ZIP アーカイブとして扱うための拡張メソッドのクラスです。
     /// </summary>
     public static class FileExtensions
     {
@@ -43,7 +44,7 @@ namespace ZipUtility
         /// <exception cref="ArgumentNullException">
         /// <paramref name="zipFile"/> または <paramref name="zipEntryNameEncodingProvider"/> が null です。
         /// </exception>
-        public static ZipArchiveValidationResult ValidateAsZipFile(this FileInfo zipFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider, IProgress<Double>? progress = null)
+        public static ZipArchiveValidationResult ValidateAsZipFile(this FilePath zipFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider, IProgress<Double>? progress = null)
         {
             if (zipFile is null)
                 throw new ArgumentNullException(nameof(zipFile));
@@ -68,14 +69,17 @@ namespace ZipUtility
         /// <exception cref="ArgumentNullException">
         /// <paramref name="sourceZipFile"/> または <paramref name="zipEntryNameEncodingProvider"/> が null です。
         /// </exception>
-        public static ZipArchiveFileReader OpenAsZipFile(this FileInfo sourceZipFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider)
+        public static ZipArchiveFileReader OpenAsZipFile(this FilePath sourceZipFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider)
         {
             if (sourceZipFile is null)
                 throw new ArgumentNullException(nameof(sourceZipFile));
             if (zipEntryNameEncodingProvider is null)
                 throw new ArgumentNullException(nameof(zipEntryNameEncodingProvider));
+            var baseDirectory = sourceZipFile.Directory;
+            if (baseDirectory is null)
+                throw new ArgumentException($"The parent directory of the file specified by parameter {nameof(sourceZipFile)} does not exist.", nameof(baseDirectory));
 
-            var sourceStream = GetSourceStreamByFileNamePattern(sourceZipFile);
+            var sourceStream = GetSourceStreamByFileNamePattern(baseDirectory, sourceZipFile);
             while (true)
             {
                 var success = false;
@@ -89,7 +93,7 @@ namespace ZipUtility
                 {
                     sourceStream.Dispose();
                     var lastDiskNumber = ex.LastDiskNumber;
-                    sourceStream = GetSourceStreamByLastDiskNumber(sourceZipFile, lastDiskNumber);
+                    sourceStream = GetSourceStreamByLastDiskNumber(baseDirectory, sourceZipFile, lastDiskNumber);
                 }
                 finally
                 {
@@ -114,7 +118,7 @@ namespace ZipUtility
         /// <exception cref="ArgumentNullException">
         /// <paramref name="destinationZipFile"/> または <paramref name="zipEntryNameEncodingProvider"/> が null です。
         /// </exception>
-        public static ZipArchiveFileWriter CreateAsZipFile(this FileInfo destinationZipFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider)
+        public static ZipArchiveFileWriter CreateAsZipFile(this FilePath destinationZipFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider)
         {
             if (destinationZipFile is null)
                 throw new ArgumentNullException(nameof(destinationZipFile));
@@ -128,7 +132,7 @@ namespace ZipUtility
                     destinationZipFile);
         }
 
-        private static ZipArchiveValidationResult InternalValidateZipFile(FileInfo file, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider, IProgress<Double>? progress)
+        private static ZipArchiveValidationResult InternalValidateZipFile(FilePath file, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider, IProgress<Double>? progress)
         {
             // progress 値は以下のように定義される
             //   処理できたエントリの非圧縮サイズ の合計 / ZIP ファイルのサイズ
@@ -222,22 +226,22 @@ namespace ZipUtility
             }
         }
 
-        private static IZipInputStream GetSourceStreamByFileNamePattern(FileInfo sourceFile)
+        private static IZipInputStream GetSourceStreamByFileNamePattern(DirectoryPath baseDirectory, FilePath sourceFile)
         {
             var match = _sevenZipMultiVolumeZipFileNamePattern.Match(sourceFile.Name);
             if (match.Success)
             {
                 var body = match.Groups["body"].Value;
-                var files = new List<FileInfo>();
+                var files = new List<FilePath>();
                 for (var index = 1UL; index <= UInt32.MaxValue; ++index)
                 {
-                    var file = new FileInfo(Path.Combine(sourceFile.DirectoryName ?? ".", $"{body}.{index:D3}"));
+                    var file = baseDirectory.GetFile($"{body}.{index:D3}");
                     if (!file.Exists)
                         break;
                     files.Add(file);
                 }
 
-                return GetMultiVolumeInputStream(files.ToArray().AsReadOnly());
+                return GetMultiVolumeInputStream(files.ToArray());
             }
             else
             {
@@ -245,27 +249,26 @@ namespace ZipUtility
             }
         }
 
-        private static IZipInputStream GetSourceStreamByLastDiskNumber(FileInfo sourceFile, UInt32 lastDiskNumber)
+        private static IZipInputStream GetSourceStreamByLastDiskNumber(DirectoryPath baseDirectory, FilePath sourceFile, UInt32 lastDiskNumber)
         {
             var match = _generalMultiVolumeZipFileNamePattern.Match(sourceFile.Name);
             if (!match.Success)
                 throw new NotSupportedSpecificationException("Unknown format as multi-volume ZIP file.");
             var body = match.Groups["body"].Value;
-            var files = new List<FileInfo>();
+            var files = new List<FilePath>();
             for (var index = 1U; index < lastDiskNumber; ++index)
             {
-
-                var file = new FileInfo(Path.Combine(sourceFile.DirectoryName ?? ".", $"{body}.z{index:D2}"));
+                var file = baseDirectory.GetFile($"{body}.z{index:D2}");
                 if (!file.Exists)
                     throw new BadZipFileFormatException("There is a missing disk in a multi-volume ZIP file.");
                 files.Add(file);
             }
 
             files.Add(sourceFile);
-            return GetMultiVolumeInputStream(files.ToArray().AsReadOnly());
+            return GetMultiVolumeInputStream(files.ToArray());
         }
 
-        private static IZipInputStream GetMultiVolumeInputStream(ReadOnlyMemory<FileInfo> disks)
+        private static IZipInputStream GetMultiVolumeInputStream(ReadOnlyMemory<FilePath> disks)
             => throw new NotSupportedSpecificationException($"Not supported \"Multi-Volume Zip File\".; disk count={disks.Length}");
     }
 }

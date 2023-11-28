@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Utility;
@@ -21,7 +20,7 @@ namespace ZipUtility
             Byte ThisSoftwareVersion { get; }
             ZipEntryHostSystem HostSystem { get; }
             IZipEntryNameEncodingProvider EntryNameEncodingProvider { get; }
-            FileInfo ZipArchiveFile { get; }
+            FilePath ZipArchiveFile { get; }
         }
 
         internal interface IZipFileWriterOutputStream
@@ -51,8 +50,8 @@ namespace ZipUtility
 
         private readonly IZipOutputStream _zipOutputStream;
         private readonly IZipEntryNameEncodingProvider _entryNameEncodingProvider;
-        private readonly FileInfo _zipArchiveFile;
-        private readonly ICollection<ZipDestinationEntry> _entries;
+        private readonly FilePath _zipArchiveFile;
+        private readonly List<ZipDestinationEntry> _entries;
         private Boolean _isDisposed;
         private Boolean _isLocked;
         private UInt32 _currentIndex;
@@ -69,7 +68,7 @@ namespace ZipUtility
             _signatureOfEOCDR = Signature.MakeUInt32LESignature(0x50, 0x4b, 0x05, 0x06);
         }
 
-        internal ZipArchiveFileWriter(IZipOutputStream zipStream, IZipEntryNameEncodingProvider entryNameEncodingProvider, FileInfo zipArchiveFile)
+        internal ZipArchiveFileWriter(IZipOutputStream zipStream, IZipEntryNameEncodingProvider entryNameEncodingProvider, FilePath zipArchiveFile)
         {
             _zipOutputStream = zipStream ?? throw new ArgumentNullException(nameof(zipStream));
             if (_zipOutputStream.IsMultiVolumeZipStream)
@@ -357,7 +356,7 @@ namespace ZipUtility
                 ? ZipEntryHostSystem.Macintosh
                 : ZipEntryHostSystem.FAT; // 未知の OS の場合には MS-DOS とみなす
         IZipEntryNameEncodingProvider IZipFileWriterEnvironment.EntryNameEncodingProvider => _entryNameEncodingProvider;
-        FileInfo IZipFileWriterEnvironment.ZipArchiveFile => new(_zipArchiveFile.FullName);
+        FilePath IZipFileWriterEnvironment.ZipArchiveFile => new(_zipArchiveFile.FullName);
         void IZipFileWriterOutputStream.LockStream() => LockZipStream();
         void IZipFileWriterOutputStream.UnlockStream() => UnlockZipStream();
         IZipOutputStream IZipFileWriterOutputStream.Stream => _zipOutputStream;

@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Utility;
+using Utility.IO;
 using ZipUtility.ZipFileHeader;
 
 namespace ZipUtility
@@ -21,7 +21,7 @@ namespace ZipUtility
             IZipEntryNameEncodingProvider ZipEntryNameEncodingProvider { get; }
             Boolean CheckVersion(UInt16 versionNeededToExtract);
             Byte ThisSoftwareVersion { get; }
-            FileInfo ZipArchiveFile { get; }
+            FilePath ZipArchiveFile { get; }
         }
 
         internal interface IZipReaderStream
@@ -32,9 +32,9 @@ namespace ZipUtility
         private class ReaderParameter
             : IZipReaderEnvironment
         {
-            private readonly FileInfo _zipArchiveFile;
+            private readonly FilePath _zipArchiveFile;
 
-            public ReaderParameter(IZipEntryNameEncodingProvider entryNameEncodingProvider, FileInfo zipArchiveFile)
+            public ReaderParameter(IZipEntryNameEncodingProvider entryNameEncodingProvider, FilePath zipArchiveFile)
             {
                 ZipEntryNameEncodingProvider = entryNameEncodingProvider;
                 _zipArchiveFile = zipArchiveFile;
@@ -47,7 +47,7 @@ namespace ZipUtility
 
             public Byte ThisSoftwareVersion => _zipReadVersion;
 
-            public FileInfo ZipArchiveFile => new(_zipArchiveFile.FullName);
+            public FilePath ZipArchiveFile => new(_zipArchiveFile.FullName);
         }
 
         private const Byte _zipReadVersion = 63; // 開発時点での APPNOTE のバージョン
@@ -58,7 +58,7 @@ namespace ZipUtility
 
         private Boolean _isDisposed;
 
-        private ZipArchiveFileReader(IZipEntryNameEncodingProvider entryNameEncodingProvider, IZipInputStream zipInputStream, FileInfo zipArchiveFile, ZipStreamPosition centralDirectoryPosition, UInt64 totalNumberOfCentralDirectoryRecords, ReadOnlyMemory<Byte> commentBytes)
+        private ZipArchiveFileReader(IZipEntryNameEncodingProvider entryNameEncodingProvider, IZipInputStream zipInputStream, FilePath zipArchiveFile, ZipStreamPosition centralDirectoryPosition, UInt64 totalNumberOfCentralDirectoryRecords, ReadOnlyMemory<Byte> commentBytes)
         {
             _isDisposed = false;
             _paramter = new ReaderParameter(entryNameEncodingProvider, zipArchiveFile);
@@ -99,7 +99,7 @@ namespace ZipUtility
         public static IEnumerable<ZipEntryCompressionMethodId> SupportedCompressionIds
             => ZipEntryCompressionMethod.SupportedCompresssionMethodIds;
 
-        internal static ZipArchiveFileReader Parse(IZipEntryNameEncodingProvider entryNameEncodingProvider, FileInfo zipArchiveFile, IZipInputStream zipInputStream)
+        internal static ZipArchiveFileReader Parse(IZipEntryNameEncodingProvider entryNameEncodingProvider, FilePath zipArchiveFile, IZipInputStream zipInputStream)
         {
             if (entryNameEncodingProvider is null)
                 throw new ArgumentNullException(nameof(entryNameEncodingProvider));

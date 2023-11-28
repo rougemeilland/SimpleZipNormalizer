@@ -26,7 +26,7 @@ namespace Utility.IO
                     ? new WindowsTrashBox()
                     : null as ITrashBox;
 
-            Boolean ITrashBox.DisposeFile(FileInfo file)
+            Boolean ITrashBox.DisposeFile(FilePath file)
             {
                 try
                 {
@@ -39,7 +39,7 @@ namespace Utility.IO
                 }
             }
 
-            async Task<Boolean> ITrashBox.DisposeFileAsync(FileInfo file)
+            async Task<Boolean> ITrashBox.DisposeFileAsync(FilePath file)
             {
                 try
                 {
@@ -57,7 +57,7 @@ namespace Utility.IO
             : ITrashBox
         {
             private static readonly Guid _thisClassId;
-            private readonly DirectoryInfo _trashBoxDirectory;
+            private readonly DirectoryPath _trashBoxDirectory;
             private readonly String _lockObjectName;
 
             static GenericTrashBox()
@@ -65,9 +65,9 @@ namespace Utility.IO
                 _thisClassId = new Guid("B70EB9E2-150A-4FC9-A274-07658AEA0C16");
             }
 
-            private GenericTrashBox(DirectoryInfo trashBoxDirectory)
+            private GenericTrashBox(DirectoryPath trashBoxDirectory)
             {
-                _trashBoxDirectory = new DirectoryInfo(trashBoxDirectory.FullName);
+                _trashBoxDirectory = new DirectoryPath(trashBoxDirectory.FullName);
                 var hashValue = MD5.HashData(Encoding.UTF8.GetBytes(_trashBoxDirectory.FullName.ToUpperInvariant()));
                 _lockObjectName = $"{_thisClassId}-{String.Concat(hashValue.Select(byteValue => byteValue.ToString("x2")))}";
             }
@@ -81,7 +81,7 @@ namespace Utility.IO
                 return new GenericTrashBox(trashBoxDirector);
             }
 
-            Boolean ITrashBox.DisposeFile(FileInfo file)
+            Boolean ITrashBox.DisposeFile(FilePath file)
             {
                 try
                 {
@@ -89,12 +89,12 @@ namespace Utility.IO
                     using var semaphore = new Semaphore(1, 1, _lockObjectName, out var createdNew);
                     for (count = 0; ; ++count)
                     {
-                        var destinationFileName = Path.Combine(_trashBoxDirectory.FullName, $"{file.Name}.{count}");
+                        var destinationFile = _trashBoxDirectory.GetFile($"{file.Name}.{count}");
 
                         using var lockObject = semaphore.Lock();
-                        if (!File.Exists(destinationFileName))
+                        if (!destinationFile.Exists)
                         {
-                            File.Move(file.FullName, destinationFileName);
+                            file.MoveTo(destinationFile);
                             return true;
                         }
                     }
@@ -105,7 +105,7 @@ namespace Utility.IO
                 }
             }
 
-            async Task<Boolean> ITrashBox.DisposeFileAsync(FileInfo sourceFile)
+            async Task<Boolean> ITrashBox.DisposeFileAsync(FilePath sourceFile)
             {
                 try
                 {
@@ -113,12 +113,12 @@ namespace Utility.IO
                     using var semaphore = new Semaphore(0, 1, _lockObjectName);
                     for (count = 0; ; ++count)
                     {
-                        var destinationFilePath = Path.Combine(_trashBoxDirectory.FullName, $"{sourceFile.FullName}.{count}");
+                        var destinationFile = _trashBoxDirectory.GetFile($"{sourceFile.FullName}.{count}");
 
                         using var lockObject = await semaphore.LockAsync().ConfigureAwait(false);
-                        if (!File.Exists(destinationFilePath))
+                        if (!destinationFile.Exists)
                         {
-                            await Task.Run(() => File.Move(destinationFilePath, sourceFile.FullName, false)).ConfigureAwait(false);
+                            await Task.Run(() => sourceFile.MoveTo(destinationFile, false)).ConfigureAwait(false);
                             return true;
                         }
                     }
@@ -129,7 +129,7 @@ namespace Utility.IO
                 }
             }
 
-            private static DirectoryInfo? TryGetTrashBoxDirectory(String environmentVariableName)
+            private static DirectoryPath? TryGetTrashBoxDirectory(String environmentVariableName)
             {
                 var trashBoxPath = Environment.GetEnvironmentVariable(environmentVariableName);
                 if (trashBoxPath is not null)
@@ -139,7 +139,7 @@ namespace Utility.IO
                     try
                     {
 
-                        var trashBoxDirectory = new DirectoryInfo(trashBoxPath);
+                        var trashBoxDirectory = new DirectoryPath(trashBoxPath);
                         if (!trashBoxDirectory.Exists)
                         {
                             trashBoxDirectory.Create();

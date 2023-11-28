@@ -1,6 +1,5 @@
 ﻿using System;
-using System.IO;
-using System.Security.AccessControl;
+using Utility.IO;
 using ZipUtility;
 using ZipUtility.ZipExtraField;
 
@@ -15,7 +14,7 @@ namespace Experiment01
             {
                 Console.WriteLine("===================================================");
                 Console.WriteLine($"zip file: {arg}");
-                using var reader = new FileInfo(arg).OpenAsZipFile(ZipEntryNameEncodingProvider.Create(Array.Empty<string>(), Array.Empty<string>()));
+                using var reader = new FilePath(arg).OpenAsZipFile(ZipEntryNameEncodingProvider.Create(Array.Empty<string>(), Array.Empty<string>()));
                 Console.WriteLine($"zip-comment:{reader.Comment}");
                 foreach (var entry in reader.GetEntries())
                 {

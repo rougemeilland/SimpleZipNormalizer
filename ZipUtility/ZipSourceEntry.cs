@@ -332,7 +332,7 @@ namespace ZipUtility
         /// {
         ///     private static void Main(string[] args)
         ///     {
-        ///         using var reader = new FileInfo(args[0]).OpenAsZipFile(ZipEntryNameEncodingProvider.Create(Array.Empty&lt;string&gt;(), Array.Empty&lt;string&gt;()));
+        ///         using var reader = new FilePath(args[0]).OpenAsZipFile(ZipEntryNameEncodingProvider.Create(Array.Empty&lt;string&gt;(), Array.Empty&lt;string&gt;()));
         ///         foreach (var entry in reader.GetEntries())
         ///         {
         ///             // NTFS のセキュリティディスクリプタを保持する拡張フィールドを実装しているクラスは <see cref="WindowsSecurityDescriptorExtraField"/> なので、型パラメタに <see cref="WindowsSecurityDescriptorExtraField"/> を指定する。

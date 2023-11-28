@@ -13,11 +13,11 @@ namespace ZipUtility
 
         private Boolean _isDisposed;
 
-        public SingleVolumeZipOutputStream(FileInfo file)
+        public SingleVolumeZipOutputStream(FilePath file)
         {
             _isDisposed = false;
             var success = false;
-            var stream = file.Create().AsOutputByteStream();
+            var stream = file.Create();
             try
             {
                 if (stream is not IRandomOutputByteStream<UInt64> randomAccessStream)
@@ -106,8 +106,6 @@ namespace ZipUtility
             return _baseStream.FlushAsync(cancellationToken);
         }
 
-        public Boolean IsMultiVolumeZipStream => false;
-
         public ZipStreamPosition GetPosition(UInt32 diskNumber, UInt64 offset)
         {
             if (_isDisposed)
@@ -138,7 +136,14 @@ namespace ZipUtility
             }
         }
 
-        public UInt64 MaximumDiskSize => throw new NotImplementedException();
+        Boolean IZipOutputStream.IsMultiVolumeZipStream => false;
+
+        UInt64 IZipOutputStream.MaximumDiskSize => UInt64.MaxValue;
+
+        void IZipOutputStream.ReserveAtomicSpace(UInt64 atomicSpaceSize)
+        {
+            // シングルボリューム ZIP ファイルなので何もしない
+        }
 
         ZipStreamPosition? IVirtualZipFile.Add(ZipStreamPosition position, UInt64 offset)
         {

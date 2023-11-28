@@ -138,16 +138,16 @@ namespace SimpleZipNormalizer.CUI
                         {
                             ReportProgress(completedRate, zipFile);
 
-                            var parentDirectoryPath = zipFile.DirectoryName ?? throw new Exception();
+                            var parentDirectory = zipFile.Directory ?? throw new Exception();
                             var originalZipFileSize = zipFile.Length;
                             var temporaryFileName = $".{zipFile.Name}.0.zip";
-                            var temporaryFile = new FileInfo(Path.Combine(parentDirectoryPath, temporaryFileName));
+                            var temporaryFile = parentDirectory.GetFile(temporaryFileName);
                             if (temporaryFile.Exists)
                             {
                                 for (var index = 1; ; ++index)
                                 {
                                     temporaryFileName = $".{zipFile.Name}.{index}.zip";
-                                    temporaryFile = new FileInfo(Path.Combine(parentDirectoryPath, temporaryFileName));
+                                    temporaryFile = parentDirectory.GetFile(temporaryFileName);
                                     if (!temporaryFile.Exists)
                                         break;
                                 }
@@ -165,10 +165,10 @@ namespace SimpleZipNormalizer.CUI
                                                 completedRate + value * originalZipFileSize / totalSize,
                                                 zipFile))))
                                 {
-                                    if (!trashBox.DisposeFile(new FileInfo(zipFile.FullName)))
+                                    if (!trashBox.DisposeFile(zipFile))
                                         throw new Exception($"ファイルのごみ箱への移動に失敗しました。: \"{zipFile.FullName}\"");
 
-                                    File.Move(temporaryFile.FullName, zipFile.FullName, false);
+                                    temporaryFile.MoveTo(zipFile, false);
                                 }
                             }
                             catch (Exception ex)
@@ -225,7 +225,7 @@ namespace SimpleZipNormalizer.CUI
             }
         }
 
-        private static IEnumerable<FileInfo> EnumerateZipFiles(IEnumerable<string> args)
+        private static IEnumerable<FilePath> EnumerateZipFiles(IEnumerable<string> args)
         {
             foreach (var arg in args)
             {
@@ -252,26 +252,26 @@ namespace SimpleZipNormalizer.CUI
             }
         }
 
-        private static IEnumerable<FileInfo> EnumerateZipFiles(DirectoryInfo directory)
+        private static IEnumerable<FilePath> EnumerateZipFiles(DirectoryPath directory)
         {
-            foreach (var childFile in directory.EnumerateFiles("*", SearchOption.AllDirectories))
+            foreach (var childFile in directory.EnumerateFiles(true))
             {
                 if (string.Equals(childFile.Extension, ".zip", StringComparison.OrdinalIgnoreCase))
                     yield return childFile;
             }
 
-            foreach (var chilDirectory in directory.EnumerateDirectories("*", SearchOption.AllDirectories))
+            foreach (var chilDirectory in directory.EnumerateDirectories(true))
             {
                 foreach (var childFile in EnumerateZipFiles(chilDirectory))
                     yield return childFile;
             }
         }
 
-        private static DirectoryInfo? TryGetDirectoryInfo(string path)
+        private static DirectoryPath? TryGetDirectoryInfo(string path)
         {
             try
             {
-                var dir = new DirectoryInfo(path.EndsWith(Path.PathSeparator) ? path[..^1] : path);
+                var dir = new DirectoryPath(path.EndsWith(Path.PathSeparator) ? path[..^1] : path);
                 return dir.Exists ? dir : null;
             }
             catch (IOException)
@@ -280,11 +280,11 @@ namespace SimpleZipNormalizer.CUI
             }
         }
 
-        private static FileInfo? TryGetFileInfo(string path)
+        private static FilePath? TryGetFileInfo(string path)
         {
             try
             {
-                var file = new FileInfo(path);
+                var file = new FilePath(path);
                 return file.Exists && string.Equals(file.Extension, ".zip", StringComparison.OrdinalIgnoreCase) ? file : null;
             }
             catch (IOException)
@@ -293,7 +293,7 @@ namespace SimpleZipNormalizer.CUI
             }
         }
 
-        private static void ListZipFile(FileInfo sourceZipFile, IZipEntryNameEncodingProvider entryNameEncodingProvider, IProgress<double>? progress = null)
+        private static void ListZipFile(FilePath sourceZipFile, IZipEntryNameEncodingProvider entryNameEncodingProvider, IProgress<double>? progress = null)
         {
             try
             {
@@ -326,7 +326,7 @@ namespace SimpleZipNormalizer.CUI
             }
         }
 
-        private static bool NormalizeZipFile(FileInfo sourceZipFile, FileInfo destinationZipFile, IZipEntryNameEncodingProvider entryNameEncodingProvider, IProgress<double> progress)
+        private static bool NormalizeZipFile(FilePath sourceZipFile, FilePath destinationZipFile, IZipEntryNameEncodingProvider entryNameEncodingProvider, IProgress<double> progress)
         {
             using var sourceArchiveReader = sourceZipFile.OpenAsZipFile(entryNameEncodingProvider);
             var sourceZipFileLength = sourceZipFile.Length;
@@ -420,7 +420,7 @@ namespace SimpleZipNormalizer.CUI
                                 || otherItem.newOrder < item.newOrder && otherItem.sourceEntry.Order > item.sourceEntry.Order)));
 
         private static void CreateNormalizedZipArchive(
-            FileInfo destinationZipFile,
+            FilePath destinationZipFile,
             IZipEntryNameEncodingProvider entryNameEncodingProvider,
             long sourceZipFileLength,
             ZipArchiveEntryCollection entries,
@@ -510,7 +510,7 @@ namespace SimpleZipNormalizer.CUI
         }
 
         private static void VerifyNormalizedEntries(
-            FileInfo sourceZipFile,
+            FilePath sourceZipFile,
             IEnumerable<ZipSourceEntry> sourceEntries,
             IEnumerable<ZipSourceEntry> normalizedEntries,
             IProgress<double>? progress)
@@ -643,7 +643,7 @@ namespace SimpleZipNormalizer.CUI
             }
         }
 
-        private static void ReportProgress(double progressRate, FileInfo? zipFile = null)
+        private static void ReportProgress(double progressRate, FilePath? zipFile = null)
         {
             if (_consoleWriter is not null)
             {
