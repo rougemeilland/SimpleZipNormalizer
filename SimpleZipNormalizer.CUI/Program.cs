@@ -47,8 +47,6 @@ namespace SimpleZipNormalizer.CUI
 
         private static int Main(string[] args)
         {
-            // TODO: stored の性能向上 のテスト
-            // TODO: UNICODEにない文字セットを含む名前とコメントを持つエントリをZIPファイルに入れてみる。どういう挙動をするか？
             // TODO: ZIP64対応のテスト 圧縮済みサイズが合計4Gを超えるファイルを含むZIPファイル
             // TODO: データディスクリプタ付きの書き込みに挑戦 (いやがらせ？)
             // TODO: マルチボリューム対応に挑戦
@@ -104,7 +102,7 @@ namespace SimpleZipNormalizer.CUI
                         }
                     }
 
-                    var encodingProvider = ZipEntryNameEncodingProvider.Create(allowedEncodngNames.ToArray(), excludedEncodngNames.ToArray(), "##");
+                    var encodingProvider = ZipEntryNameEncodingProvider.CreateInstance(allowedEncodngNames.ToArray(), excludedEncodngNames.ToArray(), "##");
 
                     if (mode == CommandMode.ShowCodePages)
                     {

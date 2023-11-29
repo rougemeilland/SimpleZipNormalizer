@@ -107,7 +107,7 @@ namespace ZipUtility
                         .OrderBy(item => _codePagePriority[item.encoding.CodePage])
                         .ToList();
 
-                    if (matchedEncodings.Any())
+                    if (matchedEncodings.Count > 0)
                     {
                         return
                             matchedEncodings
@@ -173,6 +173,18 @@ namespace ZipUtility
         /// <summary>
         /// <see cref="IZipEntryNameEncodingProvider"/> を実装するオブジェクトを作成します。
         /// </summary>
+        /// <param name="alternativeText">
+        /// エンコードあるいはデコードの際に変換できない文字を見つけた場合に使用される代替文字列です。省略時の値はエンコーディング依存です。
+        /// </param>
+        /// <returns>
+        /// 作成された <see cref="IZipEntryNameEncodingProvider"/> をサポートするオブジェクトです。
+        /// </returns>
+        public static IZipEntryNameEncodingProvider CreateInstance(String alternativeText = "")
+            => CreateInstance(Array.Empty<String>(), Array.Empty<String>(), alternativeText);
+
+        /// <summary>
+        /// <see cref="IZipEntryNameEncodingProvider"/> を実装するオブジェクトを作成します。
+        /// </summary>
         /// <param name="allowedEncodingNames">
         /// ZIPエントリのエンコーディングの候補としたいコードページの名前のコレクションです。
         /// 空のコレクションを与えた場合、実装されているすべてのエンコーディングが候補になります。
@@ -203,7 +215,7 @@ namespace ZipUtility
         /// var provider = ZipEntryNameEncodingProvider.Create(new string[0], new string[] { "IBM437" });
         /// </code>
         /// </example>
-        public static IZipEntryNameEncodingProvider Create(IEnumerable<String> allowedEncodingNames, IEnumerable<String> excludedEncodingNames, String alternativeText = "")
+        public static IZipEntryNameEncodingProvider CreateInstance(IEnumerable<String> allowedEncodingNames, IEnumerable<String> excludedEncodingNames, String alternativeText = "")
         {
             if (allowedEncodingNames is null)
                 throw new ArgumentNullException(nameof(allowedEncodingNames));

@@ -460,7 +460,7 @@ namespace ZipUtility
             UInt32 index,
             String fullName,
             ReadOnlyMemory<Byte> fullNameBytes,
-            String entryComment,
+            String comment,
             ReadOnlyMemory<Byte> commentBytes,
             Encoding? exactEntryEncoding,
             IEnumerable<Encoding> possibleEntryEncodings)
@@ -471,8 +471,8 @@ namespace ZipUtility
                 throw new InvalidOperationException($"The {nameof(fullNameBytes)} value must not be empty.");
             if (fullNameBytes.Length > UInt16.MaxValue)
                 throw new InvalidOperationException($"The value of the {nameof(fullNameBytes)} is too long.: {fullNameBytes.Length} bytes");
-            if (entryComment is null)
-                throw new ArgumentNullException(nameof(entryComment));
+            if (comment is null)
+                throw new ArgumentNullException(nameof(comment));
             if (commentBytes.Length > UInt16.MaxValue)
                 throw new InvalidOperationException($"The value of the {nameof(commentBytes)} is too long.: {commentBytes.Length} bytes");
             if (possibleEntryEncodings is null)
@@ -503,7 +503,7 @@ namespace ZipUtility
             Index = index;
             FullName = fullName;
             FullNameBytes = fullNameBytes;
-            Comment = entryComment;
+            Comment = comment;
             CommentBytes = commentBytes;
             LocalHeaderPosition = zipStream.Stream.Position;
 
@@ -517,76 +517,43 @@ namespace ZipUtility
             _extraFields.Delete(UnicodeCommentExtraField.ExtraFieldId);
             _extraFields.Delete(CodePageExtraField.ExtraFieldId);
 
-            var entryEncodings = possibleEntryEncodings;
             if (exactEntryEncoding is not null)
-                entryEncodings = entryEncodings.Prepend(exactEntryEncoding);
-            entryEncodings = entryEncodings.ToList();
-            if (entryEncodings.None())
-                entryEncodings = _zipFileWriter.EntryNameEncodingProvider.GetBestEncodings(fullNameBytes, fullName, commentBytes, entryComment);
-            var entryEncoding = entryEncodings.FirstOrDefault();
-
-            if (entryEncoding is null)
             {
-                // 与えられたバイト列のデコード方式が不明である場合
+                // 確実なエンコーディングが与えられている場合
 
-                if (fullNameBytes.Length > 0 && fullName.Length > 0 && !fullName.IsUnknownEncodingText())
-                {
-                    // 有効なエントリ名文字列が与えられている場合
-
-                    // 与えられたエントリ名文字列(UNICODE)を拡張フィールドに設定する
-                    var extrafield = new UnicodePathExtraField();
-                    extrafield.SetFullName(fullName, fullNameBytes.Span);
-                    _extraFields.AddExtraField(extrafield);
-                }
-
-                if (commentBytes.Length > 0 && entryComment.Length > 0 && !entryComment.IsUnknownEncodingText())
-                {
-                    // 有効なコメント文字列が与えられている場合
-
-                    // 与えられたコメント(UNICODE)を拡張フィールドに設定する
-                    var extrafield = new UnicodeCommentExtraField();
-                    extrafield.SetComment(Comment, CommentBytes.Span);
-                    _extraFields.AddExtraField(extrafield);
-                }
-            }
-            else
-            {
-                // 与えられたバイト列のデコード方式が判明している場合
-
-                if (exactEntryEncoding is not null &&
-                    IsMatchedBytesAndString(entryEncoding, FullName, fullNameBytes.Span, Comment, commentBytes.Span))
+                if (ValidateEncoding(exactEntryEncoding, fullName, fullNameBytes.Span, comment, commentBytes.Span))
                 {
                     // エントリのエンコーディングが明確に判明しており、かつ
                     // 与えられた文字列をエンコードしたバイト列と与えられたバイト列が一致している場合
 
-                    // (エンコーディングが何かはともかく) バイト列に UNICODE 文字セットのみが含まれている
-                    // エントリ名とコメントを UTF-8 でエンコードしなおす
+                    // エンコーディングが何かはともかく、バイト列が示す文字はすべて UNICODE 文字セットにも含まれている文字である (.NET の文字列の内部表現は UNICODE (UTF-16) であるため)
+                    // => 拡張フィールドの単純化のため、エントリ名とコメントを UTF-8 でエンコードしなおす
 
-                    FullNameBytes = _utf8Encoding.GetReadOnlyBytes(FullName);
-                    CommentBytes = _utf8Encoding.GetReadOnlyBytes(Comment);
+                    FullNameBytes = _utf8Encoding.GetReadOnlyBytes(fullName);
+                    CommentBytes = _utf8Encoding.GetReadOnlyBytes(comment);
 
                     // エントリのエンコーディングが UTF-8 であることを示す汎用フラグを立てる
                     _generalPurposeBitFlag |= ZipEntryGeneralPurposeBitFlag.UseUnicodeEncodingForNameAndComment;
                 }
                 else
                 {
-                    // エントリのエンコーディングが明確には判明していない、または
-                    // 与えられた文字列をエンコードしたバイト列と与えられたバイト列が一致しない場合
+                    // エントリのエンコーディングが明確に判明しており、かつ
+                    // 与えられた文字列をエンコードしたバイト列と与えられたバイト列が一致していない場合
 
-                    // エントリのエンコーディングに確信が持てないか、あるいはおそらくバイト列に UNICODE 文字セットに含まれていない文字が含まれている
+                    // バイト列が示す文字列の文字の中に、UNICODE にマッピングできない文字が含まれている (.NET の文字列の内部表現は UNICODE (UTF-16) であるため)
 
                     if ((fullNameBytes.Length > 0 || commentBytes.Length > 0)
-                        && (fullName.Length > 0 || entryComment.Length > 0)
+                        && (fullName.Length > 0 || comment.Length > 0)
                         && !fullName.IsUnknownEncodingText()
-                        && !entryComment.IsUnknownEncodingText())
+                        && !comment.IsUnknownEncodingText())
                     {
                         // 有効なエントリ名またはコメントが与えられている場合
 
-                        // 与えられたバイト列をテキストにデコードするためのコードページを拡張フィールドに設定する
+                        // 与えられたバイト列をテキストにデコードするための拡張フィールドを付加する
                         _extraFields.AddExtraField(
                             new CodePageExtraField
                             {
-                                CodePage = entryEncoding.CodePage,
+                                CodePage = exactEntryEncoding.CodePage,
                             });
                     }
 
@@ -594,19 +561,68 @@ namespace ZipUtility
                     {
                         // 有効なエントリ名文字列が与えられている場合
 
-                        // 与えられたエントリ名文字列(UNICODE)を拡張フィールドに設定する
+                        // 与えられたエントリ名文字列(UNICODE)の拡張フィールドを付加する
                         var extraField = new UnicodePathExtraField();
-                        extraField.SetFullName(FullName, fullNameBytes.Span);
+                        extraField.SetFullName(fullName, fullNameBytes.Span);
                         _extraFields.AddExtraField(extraField);
                     }
 
-                    if (commentBytes.Length > 0 && entryComment.Length > 0 && !entryComment.IsUnknownEncodingText())
+                    if (commentBytes.Length > 0 && comment.Length > 0 && !comment.IsUnknownEncodingText())
                     {
                         // 有効なコメント文字列が与えられている場合
 
-                        // 与えられたコメント(UNICODE)を拡張フィールドに設定する
+                        // 与えられたコメント(UNICODE)の拡張フィールドを付加する
                         var extraField = new UnicodeCommentExtraField();
-                        extraField.SetComment(Comment, commentBytes.Span);
+                        extraField.SetComment(comment, commentBytes.Span);
+                        _extraFields.AddExtraField(extraField);
+                    }
+                }
+            }
+            else
+            {
+                // 確実なエンコーディングが与えられていない場合
+
+                // 正しい可能性のあるエンコーディングを探す
+                var possibleEntryEncoding =
+                    possibleEntryEncodings
+                    .Where(encoding => ValidateEncoding(encoding, fullName, fullNameBytes.Span, comment, commentBytes.Span))
+                    .FirstOrDefault();
+
+                if (possibleEntryEncoding is not null)
+                {
+                    // 確実に正しいエンコーディングが与えられておらず、かつ
+                    // 正しい可能性のあるエンコーディングが存在する場合
+
+                    // (エンコーディングが何かはともかく) バイト列に UNICODE 文字セットのみが含まれている
+                    // エントリ名とコメントを UTF-8 でエンコードしなおす
+
+                    FullNameBytes = _utf8Encoding.GetReadOnlyBytes(fullName);
+                    CommentBytes = _utf8Encoding.GetReadOnlyBytes(comment);
+
+                    // エントリのエンコーディングが UTF-8 であることを示す汎用フラグを立てる
+                    _generalPurposeBitFlag |= ZipEntryGeneralPurposeBitFlag.UseUnicodeEncodingForNameAndComment;
+                }
+                else
+                {
+                    // 正しい可能性のあるエンコーディングが存在しない場合
+
+                    if (fullNameBytes.Length > 0 && fullName.Length > 0 && !fullName.IsUnknownEncodingText())
+                    {
+                        // 有効なエントリ名文字列が与えられている場合
+
+                        // 与えられたエントリ名文字列(UNICODE)の拡張フィールドを付加する
+                        var extraField = new UnicodePathExtraField();
+                        extraField.SetFullName(fullName, fullNameBytes.Span);
+                        _extraFields.AddExtraField(extraField);
+                    }
+
+                    if (commentBytes.Length > 0 && comment.Length > 0 && !comment.IsUnknownEncodingText())
+                    {
+                        // 有効なコメント文字列が与えられている場合
+
+                        // 与えられたコメント(UNICODE)の拡張フィールドを付加する
+                        var extraField = new UnicodeCommentExtraField();
+                        extraField.SetComment(comment, commentBytes.Span);
                         _extraFields.AddExtraField(extraField);
                     }
                 }
@@ -1226,8 +1242,46 @@ namespace ZipUtility
             }
         }
 
-        private static Boolean IsMatchedBytesAndString(Encoding encoding, String fullName, ReadOnlySpan<Byte> fullNameBytes, String comment, ReadOnlySpan<Byte> commentBytes)
+        /// <summary>
+        /// エンコーディングの検証をします。
+        /// </summary>
+        /// <param name="encoding">
+        /// 検証対象のエンコーディングです。
+        /// </param>
+        /// <param name="fullName">
+        /// 検証のために使用するエントリ名の文字列です。
+        /// </param>
+        /// <param name="fullNameBytes">
+        /// 検証のために使用するエントリ名のバイト列です。
+        /// </param>
+        /// <param name="comment">
+        /// 検証のために使用するコメントの文字列です。
+        /// </param>
+        /// <param name="commentBytes">
+        /// 検証のために使用するコメントのバイト列です。
+        /// </param>
+        /// <returns>
+        /// 検証が成功した場合は true、そうではない場合は false を返します。
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        /// このメソッドは、以下の条件で true を返します。
+        /// </para>
+        /// <list type="number">
+        /// <item> <paramref name="encoding"/> により <paramref name="fullName"/> をエンコードした結果が <paramref name="fullNameBytes"/> に等しく、かつ </item>
+        /// <item> <paramref name="encoding"/> により <paramref name="fullNameBytes"/> をデコードした結果が <paramref name="fullName"/> に等しく、かつ </item>
+        /// <item> <paramref name="encoding"/> により <paramref name="comment"/> をエンコードした結果が <paramref name="commentBytes"/> に等しく、かつ </item>
+        /// <item> <paramref name="encoding"/> により <paramref name="commentBytes"/> をデコードした結果が <paramref name="comment"/> に等しい場合</item>
+        /// </list>
+        /// <para>
+        /// エンコーディングが正しくても、<paramref name="fullNameBytes"/> または <paramref name="commentBytes"/> に UNICODE にマッピングできない文字が含まれている場合には
+        /// 上記の条件は成立しないことに注意してください。
+        /// </para>
+        /// </remarks>
+        private static Boolean ValidateEncoding(Encoding encoding, String fullName, ReadOnlySpan<Byte> fullNameBytes, String comment, ReadOnlySpan<Byte> commentBytes)
         {
+            // このメソッドは、エンコーディングが正しくない場合以外にも、
+            // fullNameBytes または commentBytes に UNICODE にマッピングできない文字が含まれている場合にも false を返すことに注意。
             try
             {
                 var encodingForTest = encoding.WithFallback(null, null).WithoutPreamble();
