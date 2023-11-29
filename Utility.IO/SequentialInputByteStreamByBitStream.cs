@@ -126,7 +126,7 @@ namespace Utility.IO
             while (!_isEndOfBaseStream && _bitQueue.Count < BitQueue.RecommendedMaxCount)
             {
                 var bitArray = _baseStream.ReadBits(BitQueue.RecommendedMaxCount - _bitQueue.Count);
-                if (!bitArray.HasValue)
+                if (bitArray is null)
                 {
                     _isEndOfBaseStream = true;
                     break;
@@ -141,7 +141,7 @@ namespace Utility.IO
             while (!_isEndOfBaseStream && _bitQueue.Count < BitQueue.RecommendedMaxCount)
             {
                 var bitArray = await _baseStream.ReadBitsAsync(BitQueue.RecommendedMaxCount - _bitQueue.Count, cancellationToken).ConfigureAwait(false);
-                if (!bitArray.HasValue)
+                if (bitArray is null)
                 {
                     _isEndOfBaseStream = true;
                     break;

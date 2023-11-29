@@ -112,7 +112,7 @@ namespace Utility.IO
                 _isDisposed = false;
                 BaseStream = baseStream;
                 _startOfStream = offset ?? BaseStream.Position;
-                if (size.HasValue)
+                if (size is not null)
                 {
                     var (successPosition, position) = AddBasePosition(_startOfStream, size.Value);
                     if (!successPosition)

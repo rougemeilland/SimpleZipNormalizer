@@ -96,7 +96,7 @@ namespace ZipUtility.ZipExtraField
             where EXTRA_FIELD_T : IExtraField
         {
             var body = extraField.GetData(_headerType);
-            if (!body.HasValue)
+            if (body is null)
                 return;
             if (body.Value.Length > UInt16.MaxValue)
                 throw new OverflowException($"Too large extra field data in {extraField.GetType().FullName}");

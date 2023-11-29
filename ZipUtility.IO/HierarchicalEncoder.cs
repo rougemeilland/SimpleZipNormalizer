@@ -42,7 +42,7 @@ namespace ZipUtility.IO
                 return 0;
             var written = WriteToDestinationStream(_baseStream, buffer);
             UpdatePosition(written);
-            if (_size.HasValue && _position >= _size.Value)
+            if (_size is not null && _position >= _size.Value)
             {
                 FlushDestinationStream(_baseStream, true);
                 _isEndOfWriting = true;

@@ -110,7 +110,7 @@ namespace Utility.IO
                 _isDisposed = false;
                 _baseStream = baseStream;
                 _startOfStream = offset ?? _baseStream.Position;
-                if (size.HasValue)
+                if (size is not null)
                 {
                     var (successPosition, position) = AddBasePosition(_startOfStream, size.Value);
                     if (!successPosition)
@@ -145,7 +145,7 @@ namespace Utility.IO
                 var (successPosition, endOfStream) = AddBasePosition(ZeroBasePositionValue, _baseStream.Length);
                 if (!successPosition)
                     throw new InternalLogicalErrorException();
-                if (_limitOfStream.HasValue)
+                if (_limitOfStream is not null)
                     endOfStream = endOfStream.Minimum(_limitOfStream.Value);
                 var (successDistance, distance) = GetDistanceBetweenBasePositions(endOfStream, _startOfStream);
                 return
@@ -295,15 +295,15 @@ namespace Utility.IO
         {
             if (bufferLength <= 0)
                 return 0;
-            else if (!_limitOfStream.HasValue)
+            else if (_limitOfStream is null)
                 return bufferLength;
             var (success, distance) = GetDistanceBetweenBasePositions(_limitOfStream.Value, _baseStream.Position);
-            return
-                !success
-                ? throw new IOException("Size not match")
-                : distance <= 0
-                ? throw new IOException("Can not write any more.")
-                : (Int32)distance.Minimum((UInt32)bufferLength);
+            if (!success)
+                throw new IOException("Size not match");
+            if (distance <= 0)
+                throw new IOException("Can not write any more.");
+
+            return (Int32)distance.Minimum((UInt32)bufferLength);
         }
     }
 }

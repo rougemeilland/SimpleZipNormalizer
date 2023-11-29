@@ -3605,12 +3605,12 @@ namespace Utility.IO
                 var randomAccessStream = baseStream as IRandomInputByteStream<POSITION_T>;
                 if (randomAccessStream is not null)
                 {
-                    if (offset.HasValue)
+                    if (offset is not null)
                         randomAccessStream.Seek(offset.Value);
                 }
                 else
                 {
-                    if (offset.HasValue)
+                    if (offset is not null)
                         throw new ArgumentException($"{nameof(offset)} must be null if {nameof(baseStream)} is sequential.", nameof(offset));
                 }
 
@@ -3629,7 +3629,7 @@ namespace Utility.IO
                     try
                     {
                         var readCount = buffer.Length;
-                        if (count.HasValue)
+                        if (count is not null)
                             readCount = (Int32)((UInt64)readCount).Minimum(count.Value - processedCount);
                         if (readCount <= 0)
                             break;

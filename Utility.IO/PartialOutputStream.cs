@@ -202,7 +202,7 @@ namespace Utility.IO
         {
             if (bufferLength <= 0)
                 return 0;
-            if (!_size.HasValue)
+            if (_size is null)
                 return bufferLength;
             if (_position > _size.Value)
                 throw new IOException("Size not match");
