@@ -47,7 +47,6 @@ namespace SimpleZipNormalizer.CUI
 
         private static int Main(string[] args)
         {
-            // TODO: 拡張フィールドの日時の精度に関する実装者向けのコメント
             // TODO: WithCountU(), Branch() を正式仕様にする count は 他の With のオプションでもいいかも
             // TODO: マルチボリューム対応に挑戦
             // TODO: ZIP64対応のテスト ディスク数が65535以上になるように分割してみる。分割サイズが64KBだとして、圧縮済みサイズが合計4GBを超えれば ZIP64 EOCDR が適用されるはず。

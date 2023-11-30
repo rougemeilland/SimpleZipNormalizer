@@ -10,8 +10,11 @@ namespace ZipUtility.ZipExtraField
     {
         /// <summary>
         /// 最終更新日時 (UTC) を取得または設定します。
-        /// 値が設定されていない場合は null です。
         /// </summary>
+        /// <value>
+        /// 作成日時である <see cref="DateTime"/> オブジェクトです。
+        /// 値が設定されていない場合は null です。
+        /// </value>
         /// <remarks>
         /// <list type="bullet">
         /// <item><see cref="DateTime.Kind"/> の値が <see cref="DateTimeKind.Local"/> である <see cref="DateTime"/> 構造体を設定しようとした場合は、自動的に UTC に変換されます。</item>
@@ -25,8 +28,11 @@ namespace ZipUtility.ZipExtraField
 
         /// <summary>
         /// 最終アクセス日時 (UTC) を取得または設定します。
-        /// 値が設定されていない場合は null です。
         /// </summary>
+        /// <value>
+        /// 作成日時である <see cref="DateTime"/> オブジェクトです。
+        /// 値が設定されていない場合は null です。
+        /// </value>
         /// <remarks>
         /// <list type="bullet">
         /// <item><see cref="DateTime.Kind"/> の値が <see cref="DateTimeKind.Local"/> である <see cref="DateTime"/> 構造体を設定しようとした場合は、自動的に UTC に変換されます。</item>
@@ -40,8 +46,11 @@ namespace ZipUtility.ZipExtraField
 
         /// <summary>
         /// 作成日時 (UTC) を取得または設定します。
-        /// 値が設定されていない場合は null です。
         /// </summary>
+        /// <value>
+        /// 作成日時である <see cref="DateTime"/> オブジェクトです。
+        /// 値が設定されていない場合は null です。
+        /// </value>
         /// <remarks>
         /// <list type="bullet">
         /// <item><see cref="DateTime.Kind"/> の値が <see cref="DateTimeKind.Local"/> である <see cref="DateTime"/> 構造体を設定しようとした場合は、自動的に UTC に変換されます。</item>
@@ -54,8 +63,9 @@ namespace ZipUtility.ZipExtraField
         DateTime? CreationTimeUtc { get; set; }
 
         /// <summary>
-        /// 表現可能な最小時の時間を取得します。
+        /// 拡張フィールドが保持する日時の最小単位を取得します。
         /// </summary>
-        TimeSpan  DateTimePrecision { get; }
+        /// <value>日時の最小単位である <see cref="TimeSpan"/> 値です。</value>
+        TimeSpan DateTimePrecision { get; }
     }
 }
