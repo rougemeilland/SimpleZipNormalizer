@@ -47,8 +47,9 @@ namespace SimpleZipNormalizer.CUI
 
         private static int Main(string[] args)
         {
-            // TODO: ZIP64対応のテスト 圧縮済みサイズが合計4Gを超えるファイルを含むZIPファイル
-            // TODO: データディスクリプタ付きの書き込みに挑戦 (いやがらせ？)
+            // TODO: ファイルの正規化の前に書き込み可能チェック
+            // TODO: 拡張フィールドの日時の精度に関する実装者向けのコメント
+            // TODO: WithCountU(), Branch() を正式仕様にする count は 他の With のオプションでもいいかも
             // TODO: マルチボリューム対応に挑戦
             // TODO: ZIP64対応のテスト ディスク数が65535以上になるように分割してみる。分割サイズが64KBだとして、圧縮済みサイズが合計4GBを超えれば ZIP64 EOCDR が適用されるはず。
             var optionInteractive = false;
@@ -443,7 +444,6 @@ namespace SimpleZipNormalizer.CUI
                             destinationEntry.LastWriteTimeUtc = sourceEntry.LastWriteTimeUtc ?? sourceEntry.CreationTimeUtc ?? now;
                             destinationEntry.LastAccessTimeUtc = sourceEntry.LastAccessTimeUtc ?? sourceEntry.LastWriteTimeUtc ?? sourceEntry.CreationTimeUtc ?? now;
                             destinationEntry.CreationTimeUtc = sourceEntry.CreationTimeUtc ?? sourceEntry.LastWriteTimeUtc ?? now;
-
                             if (sourceEntry.IsFile)
                             {
                                 if (sourceEntry.Size > 0)

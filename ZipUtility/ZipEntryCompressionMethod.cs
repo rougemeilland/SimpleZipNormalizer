@@ -255,6 +255,7 @@ namespace ZipUtility
                     enoderPlugin is null ? null : optionGetter(enoderPlugin));
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1859:可能な場合は具象型を使用してパフォーマンスを向上させる", Justification = "<保留中>")]
         private static IDictionary<(CompressionMethodId CompressionMethodId, CoderType CoderType), ICompressionCoder> EnumeratePlugin()
         {
             var interfaceType = typeof(ICompressionCoder);
