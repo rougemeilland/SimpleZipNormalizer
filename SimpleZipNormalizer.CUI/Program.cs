@@ -47,7 +47,6 @@ namespace SimpleZipNormalizer.CUI
 
         private static int Main(string[] args)
         {
-            // TODO: ファイルの正規化の前に書き込み可能チェック
             // TODO: 拡張フィールドの日時の精度に関する実装者向けのコメント
             // TODO: WithCountU(), Branch() を正式仕様にする count は 他の With のオプションでもいいかも
             // TODO: マルチボリューム対応に挑戦
@@ -327,6 +326,7 @@ namespace SimpleZipNormalizer.CUI
 
         private static bool NormalizeZipFile(FilePath sourceZipFile, FilePath destinationZipFile, IZipEntryNameEncodingProvider entryNameEncodingProvider, IProgress<double> progress)
         {
+            ValidateIfWritableFile(sourceZipFile);
             using var sourceArchiveReader = sourceZipFile.OpenAsZipFile(entryNameEncodingProvider);
             var sourceZipFileLength = sourceZipFile.Length;
             var rootNode = PathNode.CreateRootNode();
@@ -404,6 +404,19 @@ namespace SimpleZipNormalizer.CUI
 
             progress?.Report(1);
             return modified;
+        }
+
+        private static void ValidateIfWritableFile(FilePath sourceZipFile)
+        {
+            try
+            {
+                using var outStream = sourceZipFile.OpenWrite();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"ZIPアーカイブへの書き込みができません。: \"{sourceZipFile.FullName}\"", ex);
+            }
+
         }
 
         private static bool ExistModifiedEntries(IEnumerable<(string destinationFullName, bool isDirectory, string sourceFullName, int newOrder, ZipSourceEntry? sourceEntry)> normalizedEntries)
@@ -676,18 +689,10 @@ namespace SimpleZipNormalizer.CUI
         {
             try
             {
-#if DEBUG
-                var (_, cursorTop1) = Console.GetCursorPosition();
-#endif
                 _consoleWriter?.Write($"\x1b[0J");
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.BackgroundColor = ConsoleColor.Black;
                 Console.Error.WriteLine($"{new string(' ', indent)}{_thisProgramName}:ERROR:{message}");
-#if DEBUG
-                var (_, cursorTop2) = Console.GetCursorPosition();
-                if (cursorTop2 <= cursorTop1)
-                    throw new Exception();
-#endif
             }
             finally
             {
