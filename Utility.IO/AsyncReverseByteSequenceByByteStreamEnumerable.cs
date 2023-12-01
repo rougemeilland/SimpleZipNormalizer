@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,31 +19,29 @@ namespace Utility.IO
             private readonly POSITION_T _offset;
             private readonly UInt64 _count;
             private readonly Boolean _leaveOpen;
-            private readonly IProgress<UInt64>? _progress;
             private readonly CancellationToken _cancellationToken;
             private readonly Byte[] _buffer;
+            private readonly ProgressCounterUInt64 _processedCounter;
 
             private Boolean _isDisposed;
             private Int32 _bufferCount;
             private Int32 _bufferIndex;
             private POSITION_T _fileIndex;
-            private UInt64 _processedCount;
 
             public Enumerator(AsyncReverseByteSequenceByByteStreamEnumerable<POSITION_T> parent, IRandomInputByteStream<POSITION_T> randomAccessStream, POSITION_T offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken)
             {
-                _isDisposed = false;
                 _parent = parent;
                 _inputStream = randomAccessStream;
                 _offset = offset;
                 _count = count;
                 _leaveOpen = leaveOpen;
-                _progress = progress;
                 _cancellationToken = cancellationToken;
                 _buffer = new Byte[_bufferSize];
+                _processedCounter = new ProgressCounterUInt64(progress);
+                _isDisposed = false;
                 _bufferCount = 0;
                 _bufferIndex = 0;
                 _fileIndex = _parent.AddPositionAndDistance(_offset, _count);
-                _processedCount = 0;
             }
 
             public Byte Current
@@ -68,48 +65,31 @@ namespace Utility.IO
 
                 _cancellationToken.ThrowIfCancellationRequested();
 
-                if (_processedCount <= 0)
-                {
-                    try
-                    {
-                        _progress?.Report(_processedCount);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
+                if (_processedCounter.Value <= 0)
+                    _processedCounter.Report();
 
-                try
+                if (_bufferIndex <= 0)
                 {
-                    if (_bufferIndex <= 0)
+                    var newFileIndex =
+                        _fileIndex.CompareTo(_parent.AddPositionAndDistance(_offset, _bufferSize)) < 0
+                        ? _offset
+                        : _parent.SubtractBufferSizeFromPosition(_fileIndex, _bufferSize);
+                    _bufferCount = _parent.GetDistanceBetweenPositions(_fileIndex, newFileIndex);
+                    if (_bufferCount <= 0)
                     {
-                        var newFileIndex =
-                            _fileIndex.CompareTo(_parent.AddPositionAndDistance(_offset, _bufferSize)) < 0
-                            ? _offset
-                            : _parent.SubtractBufferSizeFromPosition(_fileIndex, _bufferSize);
-                        _bufferCount = _parent.GetDistanceBetweenPositions(_fileIndex, newFileIndex);
-                        if (_bufferCount <= 0)
-                            return false;
-                        _fileIndex = newFileIndex;
-                        _inputStream.Seek(_fileIndex);
-                        _ = await _inputStream.ReadBytesAsync(_buffer, 0, _bufferCount, _cancellationToken).ConfigureAwait(false);
-                        _bufferIndex = _bufferCount;
-                        _processedCount += (UInt32)_bufferCount;
+                        _processedCounter.Report();
+                        return false;
                     }
 
-                    --_bufferIndex;
-                    return true;
+                    _fileIndex = newFileIndex;
+                    _inputStream.Seek(_fileIndex);
+                    _ = await _inputStream.ReadBytesAsync(_buffer, 0, _bufferCount, _cancellationToken).ConfigureAwait(false);
+                    _bufferIndex = _bufferCount;
+                    _processedCounter.AddValue((UInt32)_bufferCount);
                 }
-                finally
-                {
-                    try
-                    {
-                        _progress?.Report(_processedCount);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
+
+                --_bufferIndex;
+                return true;
             }
 
             public void Reset()
@@ -167,6 +147,8 @@ namespace Utility.IO
 
         public IAsyncEnumerator<Byte> GetAsyncEnumerator(CancellationToken cancellationToken = default)
             => new Enumerator(this, _baseStream, _offset, _count, _progress, _leaveOpen, cancellationToken);
+
+        // 以下のメソッドは .NET 7.0 以降では IAdditionOperators / ISubtractionOperators で代替可能で、しかもわかりやすくコード量も減る。
         protected abstract POSITION_T AddPositionAndDistance(POSITION_T position, UInt64 distance);
         protected abstract POSITION_T SubtractBufferSizeFromPosition(POSITION_T position, UInt32 distance);
         protected abstract Int32 GetDistanceBetweenPositions(POSITION_T position1, POSITION_T position2);

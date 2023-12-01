@@ -103,6 +103,7 @@ namespace Utility.IO
                 case SeekOrigin.Begin:
                     if (offset < 0)
                         throw new ArgumentOutOfRangeException(nameof(offset));
+
                     absoluteOffset = checked((UInt64)offset);
                     break;
                 case SeekOrigin.Current:

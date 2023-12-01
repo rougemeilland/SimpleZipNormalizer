@@ -109,7 +109,6 @@ namespace Utility.IO
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                _isDisposed = false;
                 BaseStream = baseStream;
                 _startOfStream = offset ?? BaseStream.Position;
                 if (size is not null)
@@ -123,6 +122,8 @@ namespace Utility.IO
                 {
                     _endOfStream = EndBasePositionValue;
                 }
+
+                _isDisposed = false;
 
                 _leaveOpen = leaveOpen;
 
@@ -166,14 +167,7 @@ namespace Utility.IO
                 if (BaseStream.Position.CompareTo(_startOfStream) < 0)
                     throw new IOException();
 
-                var (successDistance, distance) = GetDistanceBetweenBasePositions(BaseStream.Position, _startOfStream);
-                if (!successDistance)
-                    throw new InternalLogicalErrorException();
-                var (successPosition, position) = AddPosition(ZeroPositionValue, distance);
-                return
-                    !successPosition
-                    ? throw new InternalLogicalErrorException()
-                    : position;
+                return GetCurrentPosition();
             }
         }
 
@@ -202,10 +196,9 @@ namespace Utility.IO
             if (actualCount <= 0)
                 return 0;
             var length = BaseStream.Read(buffer[..actualCount]);
-            return
-                actualCount > 0 && length <= 0
-                ? throw new IOException("Stream length is not match")
-                : length;
+            if (length <= 0 && actualCount > 0)
+                throw new IOException("Stream length is not match");
+            return length;
         }
 
         public async Task<Int32> ReadAsync(Memory<Byte> buffer, CancellationToken cancellationToken = default)
@@ -219,10 +212,10 @@ namespace Utility.IO
             if (actualCount <= 0)
                 return 0;
             var length = await BaseStream.ReadAsync(buffer[..actualCount], cancellationToken).ConfigureAwait(false);
-            return
-                actualCount > 0 && length <= 0
-                ? throw new IOException("Stream length is not match")
-                : length;
+            if (length <= 0 && actualCount > 0)
+                throw new IOException("Stream length is not match");
+
+            return length;
         }
 
         public void Dispose()
@@ -241,6 +234,8 @@ namespace Utility.IO
         protected IRandomInputByteStream<BASE_POSITION_T> BaseStream { get; private set; }
         protected abstract POSITION_T ZeroPositionValue { get; }
         protected abstract BASE_POSITION_T EndBasePositionValue { get; }
+
+        // 以下のメソッドは .NET 7.0 以降では IAdditionOperators / ISubtractionOperators で代替可能で、しかもわかりやすくコード量も減る。
         protected abstract (Boolean Success, UInt64 Distance) GetDistanceBetweenPositions(POSITION_T x, POSITION_T y);
         protected abstract (Boolean Success, UInt64 Distance) GetDistanceBetweenBasePositions(BASE_POSITION_T x, BASE_POSITION_T y);
         protected abstract (Boolean Success, POSITION_T Position) AddPosition(POSITION_T x, UInt64 y);
@@ -266,8 +261,22 @@ namespace Utility.IO
             {
                 if (!_leaveOpen)
                     await BaseStream.DisposeAsync().ConfigureAwait(false);
+
                 _isDisposed = true;
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private POSITION_T GetCurrentPosition()
+        {
+            var (successDistance, distance) = GetDistanceBetweenBasePositions(BaseStream.Position, _startOfStream);
+            if (!successDistance)
+                throw new InternalLogicalErrorException();
+            var (successPosition, position) = AddPosition(ZeroPositionValue, distance);
+            if (!successPosition)
+                throw new InternalLogicalErrorException();
+
+            return position;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -276,12 +285,9 @@ namespace Utility.IO
             if (bufferLength <= 0)
                 return 0;
             var (success, distance) = GetDistanceBetweenBasePositions(_endOfStream, BaseStream.Position);
-            return
-                !success
-                ? throw new IOException("Size not match")
-                : distance <= 0
-                ? 0
-                : (Int32)distance.Minimum((UInt32)bufferLength);
+            if (!success)
+                throw new IOException("Size not match");
+            return (Int32)distance.Minimum((UInt32)bufferLength);
         }
     }
 }

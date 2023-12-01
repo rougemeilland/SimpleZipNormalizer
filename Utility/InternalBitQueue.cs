@@ -431,7 +431,7 @@ namespace Utility
         {
             _bitArray = bitArray;
             _bitLength = bitLength;
-            _additionalBitArray = additionalBitArray is not null && additionalBitArray.Any() ? additionalBitArray : null;
+            _additionalBitArray = additionalBitArray is not null && additionalBitArray.Length > 0 ? additionalBitArray : null;
             Length = 0;
             Normalize();
         }

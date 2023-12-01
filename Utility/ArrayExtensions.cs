@@ -678,10 +678,6 @@ namespace Utility
             where ELEMENT_T : IComparable<ELEMENT_T>
         {
             InternalQuickSort(sourceArray);
-#if DEBUG
-            for (var index = 0; index < sourceArray.Length - 1; ++index)
-                Assert(sourceArray[index].CompareTo(sourceArray[index + 1]) <= 0);
-#endif
             return sourceArray;
         }
 

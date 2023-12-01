@@ -3,19 +3,19 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Utility;
 using Utility.IO;
 
 namespace ZipUtility.IO
 {
     public abstract class HierarchicalEncoder
-        : IBasicOutputByteStream
+        : IOutputByteStream<UInt64>
     {
         private readonly IBasicOutputByteStream _baseStream;
         private readonly UInt64? _size;
-        private readonly IProgress<UInt64>? _unpackedCountProgress;
+        private readonly ProgressCounterUInt64 _unpackedSizeCounter;
 
         private Boolean _isDisposed;
-        private UInt64 _position;
         private Boolean _isEndOfWriting;
 
         public HierarchicalEncoder(IBasicOutputByteStream baseStream, UInt64? size, IProgress<UInt64>? unpackedCountProgress)
@@ -26,9 +26,19 @@ namespace ZipUtility.IO
             _isDisposed = false;
             _baseStream = baseStream;
             _size = size;
-            _unpackedCountProgress = unpackedCountProgress;
-            _position = 0;
+            _unpackedSizeCounter = new ProgressCounterUInt64(unpackedCountProgress);
             _isEndOfWriting = false;
+        }
+
+        public UInt64 Position
+        {
+            get
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+
+                return _unpackedSizeCounter.Value;
+            }
         }
 
         public Int32 Write(ReadOnlySpan<Byte> buffer)
@@ -36,13 +46,13 @@ namespace ZipUtility.IO
             if (_isDisposed)
                 throw new ObjectDisposedException(GetType().FullName);
 
-            if (_position <= 0)
-                ReportProgress(0);
+            if (_unpackedSizeCounter.Value <= 0)
+                _unpackedSizeCounter.Report();
             if (buffer.Length <= 0)
                 return 0;
             var written = WriteToDestinationStream(_baseStream, buffer);
             UpdatePosition(written);
-            if (_size is not null && _position >= _size.Value)
+            if (_size is not null && _unpackedSizeCounter.Value >= _size.Value)
             {
                 FlushDestinationStream(_baseStream, true);
                 _isEndOfWriting = true;
@@ -56,13 +66,13 @@ namespace ZipUtility.IO
             if (_isDisposed)
                 throw new ObjectDisposedException(GetType().FullName);
 
-            if (_position <= 0)
-                ReportProgress(0);
+            if (_unpackedSizeCounter.Value <= 0)
+                _unpackedSizeCounter.Report();
             if (buffer.Length <= 0)
                 return 0;
             var written = await WriteToDestinationStreamAsync(_baseStream, buffer, cancellationToken).ConfigureAwait(false);
             UpdatePosition(written);
-            if (_size is not null && _position >= _size.Value)
+            if (_size is not null && _unpackedSizeCounter.Value >= _size.Value)
             {
                 await FlushDestinationStreamAsync(_baseStream, true, cancellationToken).ConfigureAwait(false);
                 _isEndOfWriting = true;
@@ -190,25 +200,7 @@ namespace ZipUtility.IO
         private void UpdatePosition(Int32 written)
         {
             if (written > 0)
-            {
-                checked
-                {
-                    _position += (UInt32)written;
-                }
-            }
-
-            ReportProgress(_position);
-        }
-
-        private void ReportProgress(UInt64 unpackedCount)
-        {
-            try
-            {
-                _unpackedCountProgress?.Report(unpackedCount);
-            }
-            catch (Exception)
-            {
-            }
+                _unpackedSizeCounter.AddValue((UInt32)written);
         }
     }
 }

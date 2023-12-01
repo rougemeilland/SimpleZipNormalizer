@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 
 namespace Utility.IO
 {
-    class SequentialInputByteStreamBySequence
-        : IInputByteStream<UInt64>
+    internal class SequentialInputByteStreamBySequence
+          : IInputByteStream<UInt64>
     {
         private readonly IEnumerator<Byte> _sourceSequenceEnumerator;
 
@@ -17,24 +17,39 @@ namespace Utility.IO
 
         public SequentialInputByteStreamBySequence(IEnumerable<Byte> sourceSequence)
         {
-            _isDisposed = false;
             _sourceSequenceEnumerator = sourceSequence.GetEnumerator();
+            _isDisposed = false;
             _position = 0;
             _isEndOfBaseStream = false;
             _isEndOfStream = false;
         }
 
-        public UInt64 Position => !_isDisposed ? _position : throw new ObjectDisposedException(GetType().FullName);
+        public UInt64 Position
+        {
+            get
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+
+                return _position;
+            }
+        }
 
         public Int32 Read(Span<Byte> buffer)
-            => _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : InternalRead(buffer, default);
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(GetType().FullName);
+
+            return InternalRead(buffer, default);
+        }
 
         public Task<Int32> ReadAsync(Memory<Byte> buffer, CancellationToken cancellationToken = default)
-            => _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : Task.FromResult(InternalRead(buffer.Span, cancellationToken));
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(GetType().FullName);
+
+            return Task.FromResult(InternalRead(buffer.Span, cancellationToken));
+        }
 
         public void Dispose()
         {
@@ -96,7 +111,11 @@ namespace Utility.IO
                 return 0;
             }
 
-            _position += (UInt32)bufferIndex;
+            checked
+            {
+                _position += (UInt32)bufferIndex;
+            }
+
             return bufferIndex;
         }
     }

@@ -88,7 +88,6 @@ namespace Utility.IO
 
                 _position = checked((UInt64)value);
                 _randomAccessStream.Seek(_position);
-
             }
         }
 
@@ -136,7 +135,8 @@ namespace Utility.IO
             if (absoluteOffset > Int64.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(offset));
             _randomAccessStream.Seek(absoluteOffset);
-            return checked((Int64)absoluteOffset);
+            _position = absoluteOffset;
+            return checked((Int64)_position);
         }
 
         public override Int32 Read(Byte[] buffer, Int32 offset, Int32 count) => throw new NotSupportedException();
@@ -151,9 +151,12 @@ namespace Utility.IO
                 throw new ArgumentOutOfRangeException(nameof(count));
 
             _baseStream.WriteBytes(buffer, offset, count);
-            checked
+            if (count > 0)
             {
-                _position += (UInt32)count;
+                checked
+                {
+                    _position += (UInt32)count;
+                }
             }
         }
 

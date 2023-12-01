@@ -28,6 +28,7 @@ namespace Experiment02
                     entry.LastWriteTimeUtc = now;
                     entry.LastAccessTimeUtc = now;
                     entry.CreationTimeUtc = now;
+                    //entry.UseDataDescriptor = true; // データディスクリプタ付き
                 }
 
                 {
@@ -38,6 +39,7 @@ namespace Experiment02
                     entry.LastAccessTimeUtc = now;
                     entry.CreationTimeUtc = now;
                     entry.CompressionMethodId = ZipEntryCompressionMethodId.Stored;
+                    //entry.UseDataDescriptor = true; // データディスクリプタ付き
                     using var outStream = entry.GetContentStream();
                     using var writer = new StreamWriter(outStream.AsStream(), Encoding.ASCII);
                     var totalLength = (ulong)uint.MaxValue + 1;
@@ -54,6 +56,7 @@ namespace Experiment02
                     entry.LastAccessTimeUtc = now;
                     entry.CreationTimeUtc = now;
                     entry.CompressionMethodId = ZipEntryCompressionMethodId.Stored;
+                    //entry.UseDataDescriptor = true; // データディスクリプタ付き
                     using var outStream = entry.GetContentStream();
                     using var writer = new StreamWriter(outStream.AsStream(), Encoding.ASCII);
                     var totalLength = (ulong)uint.MaxValue + 1;

@@ -106,9 +106,6 @@ namespace ZipUtility.ZipFileHeader
                 (dosDate == 0 && dosTime == 0)
                     ? (DateTime?)null
                     : (dosDate, dosTime).FromDosDateTimeToDateTime(DateTimeKind.Local);
-#if DEBUG && false
-            System.Diagnostics.Debug.WriteLine($"{localHeaderPosition}: {nameof(dosDateTime)}={dosDateTime?.ToString() ?? "null"}");
-#endif
             var dataDescriptor =
                 generalPurposeBitFlag.HasFlag(ZipEntryGeneralPurposeBitFlag.HasDataDescriptor)
                     ? ZipEntryDataDescriptor.Parse(

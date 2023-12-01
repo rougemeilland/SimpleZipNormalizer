@@ -91,7 +91,7 @@ namespace Utility.IO
             }
         }
 
-        public IBasicOutputByteStream Create()
+        public IOutputByteStream<UInt64> Create()
         {
             _file.Refresh();
             try
@@ -151,7 +151,7 @@ namespace Utility.IO
             }
         }
 
-        public IBasicInputByteStream OpenRead()
+        public IInputByteStream<UInt64> OpenRead()
         {
             _file.Refresh();
             try
@@ -193,7 +193,7 @@ namespace Utility.IO
             }
         }
 
-        public IBasicOutputByteStream OpenWrite()
+        public IOutputByteStream<UInt64> OpenWrite()
         {
             _file.Refresh();
             try

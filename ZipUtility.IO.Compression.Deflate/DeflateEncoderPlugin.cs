@@ -19,19 +19,7 @@ namespace ZipUtility.IO.Compression.Deflate
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-#if true
                 return new DeflateStream(baseStream.AsStream(), level).AsOutputByteStream();
-#else
-                return
-                    new DeflateEncoderStream(
-                        baseStream.WithCache(),
-                        new DeflateEncoderProperties
-                        {
-                            Level = level,
-                        },
-                        null,
-                        false);
-#endif
             }
 
             protected override void FlushDestinationStream(IBasicOutputByteStream destinationStream, Boolean isEndOfData)
@@ -41,7 +29,11 @@ namespace ZipUtility.IO.Compression.Deflate
             }
         }
 
-        public IBasicOutputByteStream GetEncodingStream(IBasicOutputByteStream baseStream, ICoderOption option, UInt64? unpackedStreamSize, IProgress<UInt64>? unpackedCountProgress = null)
+        IOutputByteStream<UInt64> IHierarchicalEncoder.GetEncodingStream(
+            IBasicOutputByteStream baseStream,
+            ICoderOption option,
+            UInt64? unpackedStreamSize,
+            IProgress<UInt64>? unpackedCountProgress)
         {
             if (baseStream is null)
                 throw new ArgumentNullException(nameof(baseStream));

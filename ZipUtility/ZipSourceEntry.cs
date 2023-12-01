@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Utility;
 using Utility.IO;
 using Utility.Linq;
@@ -18,104 +16,6 @@ namespace ZipUtility
     /// </summary>
     public class ZipSourceEntry
     {
-        private class PassThroughInputStream
-            : IBasicInputByteStream, IReportableOnStreamClosed<UInt64>
-        {
-            private readonly IBasicInputByteStream _baseStream;
-            private Boolean _isDisposed;
-            private UInt64 _readTotalCount;
-
-            public event EventHandler<OnStreamClosedEventArgs<UInt64>>? OnStreamClosed;
-
-            public PassThroughInputStream(IBasicInputByteStream baseStream)
-            {
-                _baseStream = baseStream;
-                _isDisposed = false;
-                _readTotalCount = 0;
-            }
-
-            public Int32 Read(Span<Byte> buffer)
-                => HandleResultOfReading(_baseStream.Read(buffer));
-
-            public async Task<Int32> ReadAsync(Memory<Byte> buffer, CancellationToken cancellationToken = default)
-                => HandleResultOfReading(
-                    await _baseStream.ReadAsync(
-                        buffer,
-                        cancellationToken)
-                    .ConfigureAwait(false));
-
-            public void Dispose()
-            {
-                Dispose(disposing: true);
-                GC.SuppressFinalize(this);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                await DisposeAsyncCore().ConfigureAwait(false);
-                Dispose(disposing: false);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(Boolean disposing)
-            {
-                if (!_isDisposed)
-                {
-                    try
-                    {
-                        if (disposing)
-                            _baseStream.Dispose();
-
-                        _isDisposed = true;
-                    }
-                    finally
-                    {
-                        RaiseEvent();
-                    }
-                }
-            }
-
-            protected virtual async ValueTask DisposeAsyncCore()
-            {
-                if (!_isDisposed)
-                {
-                    try
-                    {
-                        await _baseStream.DisposeAsync().ConfigureAwait(false);
-                        _isDisposed = true;
-                    }
-                    finally
-                    {
-                        RaiseEvent();
-                    }
-                }
-            }
-
-            private Int32 HandleResultOfReading(Int32 length)
-            {
-                if (length > 0)
-                {
-                    checked
-                    {
-                        _readTotalCount += (UInt32)length;
-                    }
-                }
-
-                return length;
-            }
-
-            private void RaiseEvent()
-            {
-                try
-                {
-                    OnStreamClosed?.Invoke(this, new OnStreamClosedEventArgs<UInt64>(_readTotalCount));
-                }
-                catch (Exception)
-                {
-                }
-            }
-        }
-
         private readonly ZipArchiveFileReader.IZipReaderEnvironment _zipReader;
         private readonly ZipArchiveFileReader.IZipReaderStream _zipStream;
         private readonly ZipEntryGeneralPurposeBitFlag _generalPurposeBitFlag;
@@ -505,34 +405,21 @@ namespace ZipUtility
         /// </returns>
         public IBasicInputByteStream GetContentStream(IProgress<(UInt64 unpackedCount, UInt64 packedCount)>? progress = null)
         {
-            var valueHolder = new ValueHolder<(UInt32 crc, UInt64 length)>();
-            var stream =
-                new PassThroughInputStream(
-                    CompressionMethodId
-                        .GetCompressionMethod(_generalPurposeBitFlag)
-                        .GetDecodingStream(
-                            _zipStream.Stream
-                                .AsPartial(DataPosition, PackedSize)
-                                .WithCache(),
-                            Size,
-                            PackedSize,
-                            progress)
-                        .WithCache()
-                        .WithCrc32Calculation(valueHolder));
-            stream.OnStreamClosed += EndOfReadingStream;
+            return
+                CompressionMethodId
+                .GetCompressionMethod(_generalPurposeBitFlag)
+                .GetDecodingStream(
+                    _zipStream.Stream.AsPartial(DataPosition, PackedSize),
+                    Size,
+                    PackedSize,
+                    progress)
+                .WithCrc32Calculation(resultValue => EndOfReadingStream(resultValue.Crc, resultValue.Length));
 
-            return stream;
-
-            void EndOfReadingStream(Object? sender, OnStreamClosedEventArgs<UInt64> e)
+            void EndOfReadingStream(UInt32 actualCrc, UInt64 actualSize)
             {
-                if (sender is IReportableOnStreamClosed<UInt64> eventSender)
-                    eventSender.OnStreamClosed -= EndOfReadingStream;
-#if DEBUG && false
-                System.Diagnostics.Debug.WriteLine($"読み込み完了: ファイル={_zipStream.Stream}, エントリ={FullName}, データ開始位置={DataPosition}, ヘッダ上の長さ=0x{Size:x16}, 実際の長さ=0x{valueHolder.Value.length:x16}, ヘッダ上のCRC=0x{Crc:x8}, 実際のCRC=0x{valueHolder.Value.crc:x8}");
-#endif
-                if (valueHolder.Value.crc != Crc)
+                if (actualCrc != Crc)
                     throw new BadZipFileFormatException($"CRC of entry data does not match. Perhaps the entry's data is corrupted.: \"{_zipReader.ZipArchiveFile.FullName}/{FullName}\"");
-                if (valueHolder.Value.length != Size)
+                if (actualSize != Size)
                     throw new BadZipFileFormatException($"Entry data lengths do not match. Perhaps the entry's data is corrupted.: \"{_zipReader.ZipArchiveFile.FullName}/{FullName}\"");
             }
         }
@@ -563,7 +450,7 @@ namespace ZipUtility
                     DataPosition,
                     Size,
                     PackedSize,
-                    progress).Crc;
+                    progress);
 
             if (actualCrc != Crc)
             {

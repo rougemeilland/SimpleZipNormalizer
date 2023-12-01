@@ -9,40 +9,20 @@ namespace ZipUtility
         private class PartialInputStreamForZipInputStream
             : PartialInputStream<UInt64, ZipStreamPosition>
         {
-#if DEBUG && false
-            private readonly IInputByteStream<ZipStreamPosition> _baseStream;
-#endif
             public PartialInputStreamForZipInputStream(IInputByteStream<ZipStreamPosition> baseStream, Boolean leaveOpen = false)
                 : base(baseStream, leaveOpen)
             {
-#if DEBUG && false
-                _baseStream = baseStream;
-#endif
             }
 
             public PartialInputStreamForZipInputStream(IInputByteStream<ZipStreamPosition> baseStream, UInt64 size, Boolean leaveOpen = false)
                 : base(baseStream, size, leaveOpen)
             {
-#if DEBUG && false
-                _baseStream = baseStream;
-#endif
             }
 
             public PartialInputStreamForZipInputStream(IInputByteStream<ZipStreamPosition> baseStream, UInt64? size, Boolean leaveOpen = false)
                 : base(baseStream, size, leaveOpen)
             {
-#if DEBUG && false
-                _baseStream = baseStream;
-#endif
             }
-
-#if DEBUG && false
-            public override Int32 Read(Span<Byte> buffer)
-            {
-                System.Diagnostics.Debug.WriteLine($"Partial stream: read stream={_baseStream}, position={_baseStream.Position}");
-                return base.Read(buffer);
-            }
-#endif
 
             protected override UInt64 ZeroPositionValue => 0;
 
@@ -141,13 +121,7 @@ namespace ZipUtility
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-#if DEBUG && false
-                System.Diagnostics.Debug.WriteLine($"Partial stream: open({baseStream}, {offset}, 0x{size:x16})");
-#endif
                 baseStream.Seek(offset);
-#if DEBUG && false
-                System.Diagnostics.Debug.WriteLine($"Partial stream: stream={baseStream}, position={baseStream.Position}");
-#endif
                 return new PartialInputStreamForZipInputStream(baseStream, size, true);
             }
             catch (Exception)

@@ -35,7 +35,16 @@ namespace Utility.IO
             }
         }
 
-        public UInt64 Position => !_isDisposed ? _position : throw new ObjectDisposedException(GetType().FullName);
+        public UInt64 Position
+        {
+            get
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+
+                return _position;
+            }
+        }
 
         public Int32 Read(Span<Byte> buffer)
         {
@@ -43,8 +52,7 @@ namespace Utility.IO
                 throw new ObjectDisposedException(GetType().FullName);
 
             var length = _baseStream.Read(buffer);
-            if (length > 0)
-                _position += (UInt32)length;
+            UpdatePosition(length);
             return length;
         }
 
@@ -54,8 +62,7 @@ namespace Utility.IO
                 throw new ObjectDisposedException(GetType().FullName);
 
             var length = await _baseStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-            if (length > 0)
-                _position += (UInt32)length;
+            UpdatePosition(length);
             return length;
         }
 
@@ -93,6 +100,17 @@ namespace Utility.IO
                 if (!_leaveOpen)
                     await _baseStream.DisposeAsync().ConfigureAwait(false);
                 _isDisposed = true;
+            }
+        }
+
+        private void UpdatePosition(Int32 length)
+        {
+            if (length > 0)
+            {
+                checked
+                {
+                    _position += (UInt32)length;
+                }
             }
         }
     }

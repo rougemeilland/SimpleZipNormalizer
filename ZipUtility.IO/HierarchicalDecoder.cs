@@ -3,19 +3,19 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Utility;
 using Utility.IO;
 
 namespace ZipUtility.IO
 {
     public abstract class HierarchicalDecoder
-        : IBasicInputByteStream
+        : IInputByteStream<UInt64>
     {
         private readonly IBasicInputByteStream _baseStream;
         private readonly UInt64 _size;
-        private readonly IProgress<UInt64>? _unpackedCountProgress;
+        private readonly ProgressCounterUInt64 _unpackedSizeCounter;
 
         private Boolean _isDisposed;
-        private UInt64 _position;
         private Boolean _isEndOfStream;
 
         public HierarchicalDecoder(IBasicInputByteStream baseStream, UInt64 size, IProgress<UInt64>? unpackedCountProgress)
@@ -26,8 +26,18 @@ namespace ZipUtility.IO
             _isDisposed = false;
             _baseStream = baseStream;
             _size = size;
-            _unpackedCountProgress = unpackedCountProgress;
-            _position = 0;
+            _unpackedSizeCounter = new ProgressCounterUInt64(unpackedCountProgress);
+        }
+
+        public UInt64 Position
+        {
+            get
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+
+                return _unpackedSizeCounter.Value;
+            }
         }
 
         public Int32 Read(Span<Byte> buffer)
@@ -35,8 +45,8 @@ namespace ZipUtility.IO
             if (_isDisposed)
                 throw new ObjectDisposedException(GetType().FullName);
 
-            if (_position <= 0)
-                ReportProgress(0);
+            if (_unpackedSizeCounter.Value <= 0)
+                _unpackedSizeCounter.Report();
             if (_isEndOfStream || buffer.Length <= 0)
                 return 0;
             var length = ReadFromSourceStream(_baseStream, buffer);
@@ -48,8 +58,8 @@ namespace ZipUtility.IO
             if (_isDisposed)
                 throw new ObjectDisposedException(GetType().FullName);
 
-            if (_position <= 0)
-                ReportProgress(0);
+            if (_unpackedSizeCounter.Value <= 0)
+                _unpackedSizeCounter.Report();
             if (_isEndOfStream || buffer.Length <= 0)
                 return 0;
             var length = await ReadFromSourceStreamAsync(_baseStream, buffer, cancellationToken).ConfigureAwait(false);
@@ -86,6 +96,7 @@ namespace ZipUtility.IO
             {
                 if (disposing)
                     _baseStream.Dispose();
+                _unpackedSizeCounter.Report();
                 _isDisposed = true;
             }
         }
@@ -95,6 +106,7 @@ namespace ZipUtility.IO
             if (!_isDisposed)
             {
                 await _baseStream.DisposeAsync().ConfigureAwait(false);
+                _unpackedSizeCounter.Report();
                 _isDisposed = true;
             }
         }
@@ -104,31 +116,15 @@ namespace ZipUtility.IO
         {
             if (length > 0)
             {
-                checked
-                {
-                    _position += (UInt64)length;
-                }
+                _unpackedSizeCounter.AddValue((UInt32)length);
             }
             else
             {
                 _isEndOfStream = true;
-                if (_position != _size)
+                if (_unpackedSizeCounter.Value != _size)
                     throw new IOException("Size not match");
                 else
                     OnEndOfStream();
-            }
-
-            ReportProgress(_position);
-        }
-
-        private void ReportProgress(UInt64 unpackedCount)
-        {
-            try
-            {
-                _unpackedCountProgress?.Report(unpackedCount);
-            }
-            catch (Exception)
-            {
             }
         }
     }

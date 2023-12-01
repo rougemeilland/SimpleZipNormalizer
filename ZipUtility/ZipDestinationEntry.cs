@@ -4,8 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using Utility;
 using Utility.IO;
 using Utility.Linq;
@@ -19,145 +17,6 @@ namespace ZipUtility
     /// </summary>
     public class ZipDestinationEntry
     {
-        private class PassThroughOutputStream
-            : IBasicOutputByteStream, IReportableOnStreamClosed<UInt64>
-        {
-            private readonly IBasicOutputByteStream _baseStream1;
-            private readonly IBasicOutputByteStream? _baseStream2;
-            private readonly ValueHolder<UInt64>? _positionValueHolder;
-            private Boolean _isDisposed;
-            private UInt64 _writtenTotalCount;
-
-            public event EventHandler<OnStreamClosedEventArgs<UInt64>>? OnStreamClosed;
-
-            public PassThroughOutputStream(IBasicOutputByteStream baseStream1, IBasicOutputByteStream? baseStream2 = null, ValueHolder<UInt64>? positionValueHolder = null)
-            {
-                _baseStream1 = baseStream1;
-                _baseStream2 = baseStream2;
-                _isDisposed = false;
-                _writtenTotalCount = 0;
-                _positionValueHolder = positionValueHolder;
-            }
-
-            public Int32 Write(ReadOnlySpan<Byte> buffer)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                _baseStream1.WriteBytes(buffer);
-                _baseStream2?.WriteBytes(buffer);
-                checked
-                {
-                    _writtenTotalCount += (UInt64)buffer.Length;
-                    if (_positionValueHolder is not null)
-                        _positionValueHolder.Value += (UInt64)buffer.Length;
-                }
-
-                return buffer.Length;
-            }
-
-            public async Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                await _baseStream1.WriteBytesAsync(buffer, cancellationToken).ConfigureAwait(false);
-                if (_baseStream2 is not null)
-                    await _baseStream2.WriteBytesAsync(buffer, cancellationToken).ConfigureAwait(false);
-                checked
-                {
-                    _writtenTotalCount += (UInt64)buffer.Length;
-                    if (_positionValueHolder is not null)
-                        _positionValueHolder.Value += (UInt64)buffer.Length;
-                }
-
-                return buffer.Length;
-            }
-
-            public void Flush()
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                _baseStream1.Flush();
-                _baseStream2?.Flush();
-            }
-
-            public async Task FlushAsync(CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                await _baseStream1.FlushAsync(cancellationToken).ConfigureAwait(false);
-                if (_baseStream2 is not null)
-                    await _baseStream2.FlushAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            public void Dispose()
-            {
-                Dispose(disposing: true);
-                GC.SuppressFinalize(this);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                await DisposeAsyncCore().ConfigureAwait(false);
-                Dispose(disposing: false);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(Boolean disposing)
-            {
-                if (!_isDisposed)
-                {
-                    try
-                    {
-                        if (disposing)
-                        {
-                            _baseStream1.Dispose();
-                            _baseStream2?.Dispose();
-                        }
-
-                        _isDisposed = true;
-                    }
-                    finally
-                    {
-                        try
-                        {
-                            OnStreamClosed?.Invoke(this, new OnStreamClosedEventArgs<UInt64>(_writtenTotalCount));
-                        }
-                        catch (Exception)
-                        {
-                        }
-                    }
-                }
-            }
-
-            protected virtual async ValueTask DisposeAsyncCore()
-            {
-                if (!_isDisposed)
-                {
-                    try
-                    {
-                        await _baseStream1.DisposeAsync().ConfigureAwait(false);
-                        if (_baseStream2 is not null)
-                            await _baseStream2.DisposeAsync().ConfigureAwait(false);
-                        _isDisposed = true;
-                    }
-                    finally
-                    {
-                        try
-                        {
-                            OnStreamClosed?.Invoke(this, new OnStreamClosedEventArgs<UInt64>(_writtenTotalCount));
-                        }
-                        catch (Exception)
-                        {
-                        }
-                    }
-                }
-            }
-        }
-
         private class LocalHeaderInfo
         {
             private LocalHeaderInfo(
@@ -1225,12 +1084,10 @@ namespace ZipUtility
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1859:可能な場合は具象型を使用してパフォーマンスを向上させる", Justification = "<保留中>")]
         private IBasicOutputByteStream GetContentStreamWithoutDataDescriptor(IProgress<UInt64>? unpackedCountProgress)
         {
             var temporaryFile = (FilePath?)null;
             var packedTemporaryFile = (FilePath?)null;
-            var crcValueHolder = new ValueHolder<(UInt32 Crc, UInt64 Size)>();
 
             try
             {
@@ -1254,25 +1111,23 @@ namespace ZipUtility
                     : new FilePath(Path.GetTempFileName());
 
                 var outputStrem =
-                    temporaryFile.Create()
-                    .WithCrc32Calculation(crcValueHolder);
+                    temporaryFile.Create();
 
                 var packedOutputStream =
                     packedTemporaryFile is null
                     ? null
                     : compressionMethod.GetEncodingStream(
-                        packedTemporaryFile.Create()
-                        .WithCache(),
+                        packedTemporaryFile.Create(),
                         null,
                         SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
                             unpackedCountProgress,
-                            value => value.unpackedCount / 2))
-                        .WithCache();
+                            value => value.unpackedCount / 2));
 
                 var tempraryFileStream =
-                    new PassThroughOutputStream(outputStrem, packedOutputStream);
+                    (packedOutputStream is null ? outputStrem : outputStrem.Branch(packedOutputStream))
+                    .WithCrc32Calculation(
+                        resultValue => EndOfCopyingToTemporaryFile(resultValue.Crc, resultValue.Length));
 
-                tempraryFileStream.OnStreamClosed += EndOfCopyingToTemporaryFile;
                 return tempraryFileStream;
             }
             catch (Exception)
@@ -1283,11 +1138,8 @@ namespace ZipUtility
                 throw;
             }
 
-            void EndOfCopyingToTemporaryFile(Object? sender, OnStreamClosedEventArgs<UInt64> e)
+            void EndOfCopyingToTemporaryFile(UInt32 actualCrc, UInt64 actualSize)
             {
-                if (sender is IReportableOnStreamClosed<UInt64> eventSender)
-                    eventSender.OnStreamClosed -= EndOfCopyingToTemporaryFile;
-
                 var success = false;
                 try
                 {
@@ -1298,10 +1150,10 @@ namespace ZipUtility
 
                         var size = (UInt64)temporaryFile.Length;
                         var packedSize = (UInt64)temporaryFile.Length;
-                        var crc = crcValueHolder.Value.Crc;
+                        var crc = actualCrc;
 
-                        if (size != crcValueHolder.Value.Size)
-                            throw new Exception("Faital error !");
+                        if (size != actualSize)
+                            throw new InternalLogicalErrorException();
 
                         if (packedTemporaryFile is not null)
                         {
@@ -1423,12 +1275,9 @@ namespace ZipUtility
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1859:可能な場合は具象型を使用してパフォーマンスを向上させる", Justification = "<保留中>")]
         private IBasicOutputByteStream GetContentStreamWithDataDescriptor(IProgress<UInt64>? unpackedCountProgress)
         {
-            var crcValueHolder = new ValueHolder<(UInt32 Crc, UInt64 Size)>();
             var packedSizeHolder = new ValueHolder<UInt64>();
-
             try
             {
                 try
@@ -1478,16 +1327,14 @@ namespace ZipUtility
                 var destinationStream = _zipStream.Stream.AsPartial(LocalHeaderPosition, null);
                 destinationStream.WriteBytes(_localHeaderInfo.ToBytes());
                 var contentStream =
-                    new PassThroughOutputStream(
-                        compressionMethod.GetEncodingStream(
-                            new PassThroughOutputStream(destinationStream, null, packedSizeHolder).WithCache(),
-                            null,
-                            SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
-                                unpackedCountProgress,
-                                value => value.unpackedCount / 2))
-                    .WithCache()
-                    .WithCrc32Calculation(crcValueHolder));
-                contentStream.OnStreamClosed += EndOfWrintingContents;
+                    compressionMethod.GetEncodingStream(
+                        destinationStream
+                            .WithEndAction(packedSize => packedSizeHolder.Value = packedSize),
+                        null,
+                        SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
+                            unpackedCountProgress,
+                            value => value.unpackedCount / 2))
+                    .WithCrc32Calculation(resultValue => EndOfWrintingContents(resultValue.Crc, resultValue.Length));
                 return contentStream;
 
             }
@@ -1497,17 +1344,12 @@ namespace ZipUtility
                 throw;
             }
 
-            void EndOfWrintingContents(Object? sender, OnStreamClosedEventArgs<UInt64> e)
+            void EndOfWrintingContents(UInt32 actualCrc, UInt64 actualSize)
             {
-                if (sender is IReportableOnStreamClosed<UInt64> eventSender)
-                    eventSender.OnStreamClosed -= EndOfWrintingContents;
-
                 var success = false;
                 try
                 {
-                    var actualSize = crcValueHolder.Value.Size;
                     var actualPackedSize = packedSizeHolder.Value;
-                    var actualCrc = crcValueHolder.Value.Crc;
 
                     var dataDescriptor =
                         DataDescriptorInfo.Create(actualCrc, actualSize, actualPackedSize);

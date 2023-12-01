@@ -3614,46 +3614,25 @@ namespace Utility.IO
                         throw new ArgumentException($"{nameof(offset)} must be null if {nameof(baseStream)} is sequential.", nameof(offset));
                 }
 
-                try
-                {
-                    progress?.Report(0);
-                }
-                catch (Exception)
-                {
-                }
-
+                var processedCounter = new ProgressCounterUInt64(progress);
+                processedCounter.Report();
                 var buffer = new Byte[BUFFER_SIZE];
-                var processedCount = 0UL;
                 while (true)
                 {
-                    try
-                    {
-                        var readCount = buffer.Length;
-                        if (count is not null)
-                            readCount = (Int32)((UInt64)readCount).Minimum(count.Value - processedCount);
-                        if (readCount <= 0)
-                            break;
-                        var length = await baseStream.ReadAsync(buffer, 0, readCount, cancellationToken).ConfigureAwait(false);
-                        if (length <= 0)
-                            break;
-                        for (var index = 0; index < length; ++index)
-                            yield return buffer[index];
-                        checked
-                        {
-                            processedCount += (UInt32)length;
-                        }
-                    }
-                    finally
-                    {
-                        try
-                        {
-                            progress?.Report(processedCount);
-                        }
-                        catch (Exception)
-                        {
-                        }
-                    }
+                    var readCount = buffer.Length;
+                    if (count is not null)
+                        readCount = (Int32)((UInt64)readCount).Minimum(count.Value - processedCounter.Value);
+                    if (readCount <= 0)
+                        break;
+                    var length = await baseStream.ReadAsync(buffer, 0, readCount, cancellationToken).ConfigureAwait(false);
+                    if (length <= 0)
+                        break;
+                    for (var index = 0; index < length; ++index)
+                        yield return buffer[index];
+                    processedCounter.AddValue(checked((UInt32)length));
                 }
+
+                processedCounter.Report();
             }
             finally
             {
@@ -3686,25 +3665,18 @@ namespace Utility.IO
             if (bufferSize % sizeof(UInt64) != 0)
                 throw new InternalLogicalErrorException();
 
-            try
-            {
-                progress?.Report(0);
-            }
-            catch (Exception)
-            {
-            }
-
+            var processedCounter = new ProgressCounterUInt64(progress);
+            processedCounter.Report();
             var buffer1 = new Byte[bufferSize];
             var buffer2 = new Byte[bufferSize];
-            var processedCount = 0UL;
-            while (true)
+            try
             {
-                try
+                while (true)
                 {
                     // まず両方のストリームから bufferSize バイトだけ読み込みを試みる
                     var bufferCount1 = await stream1.ReadBytesAsync(buffer1, cancellationToken).ConfigureAwait(false);
                     var bufferCount2 = await stream2.ReadBytesAsync(buffer2, cancellationToken).ConfigureAwait(false);
-                    processedCount += (UInt32)bufferCount1;
+                    processedCounter.AddValue(checked((UInt32)bufferCount1));
 
                     if (bufferCount1 != bufferCount2)
                     {
@@ -3727,16 +3699,10 @@ namespace Utility.IO
                         return true;
                     }
                 }
-                finally
-                {
-                    try
-                    {
-                        progress?.Report(processedCount);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
+            }
+            finally
+            {
+                processedCounter.Report();
             }
         }
 
@@ -3775,38 +3741,18 @@ namespace Utility.IO
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static async Task InternalCopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken)
         {
+            var processedCounter = new ProgressCounterUInt64(progress);
             try
             {
-                try
-                {
-                    progress?.Report(0);
-                }
-                catch (Exception)
-                {
-                }
-
+                processedCounter.Report();
                 var buffer = new Byte[bufferSize];
-                var processedCount = 0UL;
                 while (true)
                 {
-                    try
-                    {
-                        var length = await source.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false);
-                        if (length <= 0)
-                            break;
-                        await destination.WriteBytesAsync(buffer, cancellationToken).ConfigureAwait(false);
-                        processedCount += (UInt32)length;
-                    }
-                    finally
-                    {
-                        try
-                        {
-                            progress?.Report(processedCount);
-                        }
-                        catch (Exception)
-                        {
-                        }
-                    }
+                    var length = await source.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false);
+                    if (length <= 0)
+                        break;
+                    await destination.WriteBytesAsync(buffer, cancellationToken).ConfigureAwait(false);
+                    processedCounter.AddValue(checked((UInt32)length));
                 }
 
                 destination.Flush();
@@ -3820,6 +3766,8 @@ namespace Utility.IO
                     if (destination is not null)
                         await destination.DisposeAsync().ConfigureAwait(false);
                 }
+
+                processedCounter.Report();
             }
         }
 
@@ -3945,39 +3893,26 @@ namespace Utility.IO
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static async Task<(UInt32 Crc, UInt64 Length)> InternalCalculateCrcAsync(IBasicInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, ICrcCalculationState<UInt32, UInt64> session, CancellationToken cancellationToken)
         {
+            var processedCounter = new ProgressCounterUInt64(progress);
+            processedCounter.Report();
+            var buffer = new Byte[bufferSize];
             try
             {
-                progress?.Report(0);
-            }
-            catch (Exception)
-            {
-            }
-
-            var buffer = new Byte[bufferSize];
-            var processedCount = 0UL;
-            while (true)
-            {
-                try
+                while (true)
                 {
                     var length = await inputStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
                     if (length <= 0)
                         break;
                     session.Put(buffer, 0, length);
-                    processedCount += (UInt32)length;
+                    processedCounter.AddValue((UInt32)length);
                 }
-                finally
-                {
-                    try
-                    {
-                        progress?.Report(processedCount);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
-            }
 
-            return session.GetResult();
+                return session.GetResult();
+            }
+            finally
+            {
+                processedCounter.Report();
+            }
         }
     }
 }

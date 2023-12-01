@@ -52,16 +52,24 @@ namespace Utility
 
             public override void Report(PROGRESS_VALUE_T value)
             {
-                if (!_option.HasFlag(SafetyProgressOption.AllowDecrease) && _previousValue is not null && _previousValue.CompareTo(value) > 0)
+                var needToReport = false;
+                lock (this)
                 {
+                    if (!_option.HasFlag(SafetyProgressOption.AllowDecrease) && _previousValue is not null && _previousValue.CompareTo(value) > 0)
+                    {
 #if DEBUG
-                    System.Diagnostics.Debug.WriteLine($"** Progress value is small compared to previous value.: previousValue={_previousValue}, currentValue={value}");
+                        System.Diagnostics.Debug.WriteLine($"** Progress value is small compared to previous value.: previousValue={_previousValue}, currentValue={value}");
 #endif
-                    throw new ArgumentException($"Progress value is small compared to previous value.: previousValue={_previousValue}, currentValue={value}", nameof(value));
+                    }
+                    else
+                    {
+                        needToReport = true;
+                        _previousValue = value;
+                    }
                 }
 
-                base.Report(value);
-                _previousValue = value;
+                if (needToReport)
+                    base.Report(value);
             }
         }
 

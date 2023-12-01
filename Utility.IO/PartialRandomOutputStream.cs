@@ -164,6 +164,7 @@ namespace Utility.IO
                 var (success, distance) = GetDistanceBetweenBasePositions(_startOfStream, ZeroBasePositionValue);
                 if (!success)
                     throw new InternalLogicalErrorException();
+
                 _baseStream.Length = checked(value + distance);
             }
         }
@@ -178,14 +179,7 @@ namespace Utility.IO
                 if (_baseStream.Position.CompareTo(_startOfStream) < 0)
                     throw new IOException();
 
-                var (successDistance, distance) = GetDistanceBetweenBasePositions(_baseStream.Position, _startOfStream);
-                if (!successDistance)
-                    throw new InternalLogicalErrorException();
-                var (successPosition, position) = AddPosition(ZeroPositionValue, distance);
-                return
-                    !successPosition
-                    ? throw new InternalLogicalErrorException()
-                    : position;
+                return GetCurrentPosition();
             }
         }
 
@@ -197,25 +191,33 @@ namespace Utility.IO
             var (successDistance, distance) = GetDistanceBetweenPositions(offset, ZeroPositionValue);
             if (!successDistance)
                 throw new InternalLogicalErrorException();
+
             var (successPosition, position) = AddBasePosition(_startOfStream, distance);
             if (!successPosition)
                 throw new InternalLogicalErrorException();
+
             _baseStream.Seek(position);
         }
 
         public Int32 Write(ReadOnlySpan<Byte> buffer)
-            => _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : _baseStream.Position.CompareTo(_startOfStream) < 0
-                ? throw new IOException()
-                : _baseStream.Write(buffer[..GetWriteCount(buffer.Length)]);
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(GetType().FullName);
+            if (_baseStream.Position.CompareTo(_startOfStream) < 0)
+                throw new IOException();
+
+            return _baseStream.Write(buffer[..GetWriteCount(buffer.Length)]);
+        }
 
         public Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
-            => _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : _baseStream.Position.CompareTo(_startOfStream) < 0
-                ? throw new IOException()
-                : _baseStream.WriteAsync(buffer[..GetWriteCount(buffer.Length)], cancellationToken);
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(GetType().FullName);
+            if (_baseStream.Position.CompareTo(_startOfStream) < 0)
+                throw new IOException();
+
+            return _baseStream.WriteAsync(buffer[..GetWriteCount(buffer.Length)], cancellationToken);
+        }
 
         public void Flush()
         {
@@ -226,9 +228,12 @@ namespace Utility.IO
         }
 
         public Task FlushAsync(CancellationToken cancellationToken = default)
-            => _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : _baseStream.FlushAsync(cancellationToken);
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(GetType().FullName);
+
+            return _baseStream.FlushAsync(cancellationToken);
+        }
 
         public void Dispose()
         {
@@ -245,6 +250,8 @@ namespace Utility.IO
 
         protected abstract POSITION_T ZeroPositionValue { get; }
         protected abstract BASE_POSITION_T ZeroBasePositionValue { get; }
+
+        // 以下のメソッドは .NET 7.0 以降では IAdditionOperators / ISubtractionOperators で代替可能で、しかもわかりやすくコード量も減る。
         protected abstract (Boolean Success, UInt64 Distance) GetDistanceBetweenPositions(POSITION_T x, POSITION_T y);
         protected abstract (Boolean Success, UInt64 Distance) GetDistanceBetweenBasePositions(BASE_POSITION_T x, BASE_POSITION_T y);
         protected abstract (Boolean Success, POSITION_T Position) AddPosition(POSITION_T x, UInt64 y);
@@ -286,6 +293,7 @@ namespace Utility.IO
 
                 if (!_leaveOpen)
                     await _baseStream.DisposeAsync().ConfigureAwait(false);
+
                 _isDisposed = true;
             }
         }
@@ -304,6 +312,20 @@ namespace Utility.IO
                 throw new IOException("Can not write any more.");
 
             return (Int32)distance.Minimum((UInt32)bufferLength);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private POSITION_T GetCurrentPosition()
+        {
+            var (successDistance, distance) = GetDistanceBetweenBasePositions(_baseStream.Position, _startOfStream);
+            if (!successDistance)
+                throw new InternalLogicalErrorException();
+
+            var (successPosition, position) = AddPosition(ZeroPositionValue, distance);
+            if (!successPosition)
+                throw new InternalLogicalErrorException();
+
+            return position;
         }
     }
 }

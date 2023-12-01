@@ -10,25 +10,21 @@ namespace Utility.IO
         where BASE_STREAM_T : Stream
     {
         private readonly BASE_STREAM_T _baseStream;
-        private readonly Action<BASE_STREAM_T> _finishAction;
         private readonly Boolean _leaveOpne;
 
         private Boolean _isDisposed;
         private UInt64 _position;
 
-        public SequentialOutputByteStreamByStream(BASE_STREAM_T baseStream, Action<BASE_STREAM_T> finishAction, Boolean leaveOpen)
+        public SequentialOutputByteStreamByStream(BASE_STREAM_T baseStream, Boolean leaveOpen)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (finishAction is null)
-                    throw new ArgumentNullException(nameof(finishAction));
                 if (!baseStream.CanWrite)
                     throw new NotSupportedException();
 
                 _baseStream = baseStream;
-                _finishAction = finishAction;
                 _leaveOpne = leaveOpen;
                 _position = 0;
             }
@@ -40,7 +36,16 @@ namespace Utility.IO
             }
         }
 
-        public UInt64 Position => !_isDisposed ? _position : throw new ObjectDisposedException(GetType().FullName);
+        public UInt64 Position
+        {
+            get
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+
+                return _position;
+            }
+        }
 
         public Int32 Write(ReadOnlySpan<Byte> buffer)
         {
@@ -48,8 +53,9 @@ namespace Utility.IO
                 throw new ObjectDisposedException(GetType().FullName);
 
             _baseStream.Write(buffer);
-            _position += (UInt64)buffer.Length;
-            return buffer.Length;
+            var length = buffer.Length;
+            UpdatePosition(length);
+            return length;
         }
 
         public async Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
@@ -58,8 +64,9 @@ namespace Utility.IO
                 throw new ObjectDisposedException(GetType().FullName);
 
             await _baseStream.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
-            _position += (UInt64)buffer.Length;
-            return buffer.Length;
+            var length = buffer.Length;
+            UpdatePosition(length);
+            return length;
         }
 
         public void Flush()
@@ -97,14 +104,6 @@ namespace Utility.IO
             {
                 if (disposing)
                 {
-                    try
-                    {
-                        _finishAction(_baseStream);
-                    }
-                    catch (Exception)
-                    {
-                    }
-
                     if (!_leaveOpne)
                         _baseStream.Dispose();
                 }
@@ -117,17 +116,20 @@ namespace Utility.IO
         {
             if (!_isDisposed)
             {
-                try
-                {
-                    _finishAction(_baseStream);
-                }
-                catch (Exception)
-                {
-                }
-
                 if (!_leaveOpne)
                     await _baseStream.DisposeAsync().ConfigureAwait(false);
                 _isDisposed = true;
+            }
+        }
+
+        private void UpdatePosition(Int32 length)
+        {
+            if (length > 0)
+            {
+                checked
+                {
+                    _position += (UInt64)length;
+                }
             }
         }
     }

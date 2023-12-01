@@ -42,6 +42,7 @@ namespace Utility.IO
             CurrentPosition = GetDistanceBetweenPositions(offset, ZeroPositionValue);
         }
 
+        // 以下のメソッドは .NET 7.0 以降では IAdditionOperators / ISubtractionOperators で代替可能で、しかもわかりやすくコード量も減る。
         protected abstract UInt64 GetDistanceBetweenPositions(POSITION_T x, POSITION_T y);
     }
 }

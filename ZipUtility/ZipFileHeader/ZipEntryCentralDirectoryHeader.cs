@@ -105,7 +105,6 @@ namespace ZipUtility.ZipFileHeader
             ZipArchiveFileReader.IZipReaderStream zipStream,
             Int32 index)
         {
-            var currentPosition = zipStream.Stream.Position;
             var minimumLengthOfHeader = 46;
             var minimumHeaderBytes = zipStream.Stream.ReadBytes(minimumLengthOfHeader);
             var signature = minimumHeaderBytes[..4].ToUInt32LE();
@@ -143,9 +142,6 @@ namespace ZipUtility.ZipFileHeader
                 (dosDate == 0 && dosTime == 0)
                     ? (DateTime?)null
                     : (dosDate, dosTime).FromDosDateTimeToDateTime(DateTimeKind.Local);
-#if DEBUG && false
-            System.Diagnostics.Debug.WriteLine($"{currentPosition}: {nameof(dosDateTime)}={dosDateTime?.ToString() ?? "null"}");
-#endif
             var extraFields = new ExtraFieldStorage(ZipEntryHeaderType.CentralDirectoryHeader, extraFieldDataSource);
             var zip64ExtraFieldValue = extraFields.GetExtraField<Zip64ExtendedInformationExtraFieldForCentraHeader>();
             if (zip64ExtraFieldValue is null)

@@ -12,6 +12,7 @@ namespace Experiment01
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:未使用のパラメーターを削除します", Justification = "<保留中>")]
         private static void Main(string[] args)
         {
             var shiftJisEncoding = Encoding.GetEncoding("shift_jis");

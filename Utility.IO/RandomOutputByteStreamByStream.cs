@@ -10,26 +10,22 @@ namespace Utility.IO
         where BASE_STREAM_T : Stream
     {
         private readonly BASE_STREAM_T _baseStream;
-        private readonly Action<BASE_STREAM_T> _finishAction;
         private readonly Boolean _leaveOpen;
 
         private Boolean _isDisposed;
 
-        public RandomOutputByteStreamByStream(BASE_STREAM_T baseStream, Action<BASE_STREAM_T> finishAction, Boolean leaveOpen)
+        public RandomOutputByteStreamByStream(BASE_STREAM_T baseStream, Boolean leaveOpen)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (finishAction is null)
-                    throw new ArgumentNullException(nameof(finishAction));
                 if (!baseStream.CanWrite)
                     throw new NotSupportedException();
                 if (!baseStream.CanSeek)
                     throw new NotSupportedException();
 
                 _baseStream = baseStream;
-                _finishAction = finishAction;
                 _leaveOpen = leaveOpen;
             }
             catch (Exception)
@@ -41,18 +37,29 @@ namespace Utility.IO
         }
 
         public UInt64 Position
-            => _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : _baseStream.Position < 0 ? throw new IOException() : (UInt64)_baseStream.Position;
+        {
+            get
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+                if (_baseStream.Position < 0)
+                    throw new IOException();
+
+                return checked((UInt64)_baseStream.Position);
+            }
+        }
 
         public UInt64 Length
         {
-            get =>
-                _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : _baseStream.Length < 0
-                ? throw new IOException()
-                : (UInt64)_baseStream.Length;
+            get
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+                if (_baseStream.Length < 0)
+                    throw new IOException();
+
+                return checked((UInt64)_baseStream.Length);
+            }
 
             set
             {
@@ -72,7 +79,7 @@ namespace Utility.IO
             if (offset > Int64.MaxValue)
                 throw new IOException();
 
-            _ = _baseStream.Seek((Int64)offset, SeekOrigin.Begin);
+            _ = _baseStream.Seek(checked((Int64)offset), SeekOrigin.Begin);
         }
 
         public Int32 Write(ReadOnlySpan<Byte> buffer)
@@ -84,8 +91,14 @@ namespace Utility.IO
             return buffer.Length;
         }
 
-        public Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
+        public async Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(GetType().FullName);
+
+            await _baseStream.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
+            return buffer.Length;
+        }
 
         public void Flush()
         {
@@ -122,14 +135,6 @@ namespace Utility.IO
             {
                 if (disposing)
                 {
-                    try
-                    {
-                        _finishAction(_baseStream);
-                    }
-                    catch (Exception)
-                    {
-                    }
-
                     if (!_leaveOpen)
                         _baseStream.Dispose();
                 }
@@ -142,14 +147,6 @@ namespace Utility.IO
         {
             if (!_isDisposed)
             {
-                try
-                {
-                    _finishAction(_baseStream);
-                }
-                catch (Exception)
-                {
-                }
-
                 if (!_leaveOpen)
                     await _baseStream.DisposeAsync().ConfigureAwait(false);
                 _isDisposed = true;

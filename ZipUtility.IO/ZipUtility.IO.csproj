@@ -9,12 +9,12 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <NoWarn>1701;1702;SYSLIB1045;SYSLIB1054</NoWarn>
+    <NoWarn>1701;1702;SYSLIB1045;SYSLIB1054;CA1510;CA1513</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <NoWarn>1701;1702;SYSLIB1045;SYSLIB1054</NoWarn>
+    <NoWarn>1701;1702;SYSLIB1045;SYSLIB1054;CA1510;CA1513</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

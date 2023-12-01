@@ -148,6 +148,7 @@ namespace Utility.IO
             GC.SuppressFinalize(this);
         }
 
+        // 以下のメソッドは .NET 7.0 以降では IAdditionOperators / ISubtractionOperators で代替可能で、しかもわかりやすくコード量も減る。
         protected abstract POSITION_T ZeroPositionValue { get; }
         protected abstract POSITION_T AddPosition(POSITION_T x, UInt64 y);
 
@@ -192,9 +193,12 @@ namespace Utility.IO
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void UpdatePosition(Int32 length)
         {
-            checked
+            if (length > 0)
             {
-                _position += (UInt32)length;
+                checked
+                {
+                    _position += (UInt32)length;
+                }
             }
         }
     }

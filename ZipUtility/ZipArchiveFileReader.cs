@@ -71,9 +71,6 @@ namespace ZipUtility
                 commentEncoding is not null
                 ? commentEncoding.GetString(commentBytes)
                 : commentBytes.GetStringByUnknownDecoding();
-#if DEBUG && false
-            System.Diagnostics.Debug.WriteLine($"Created {GetType().FullName}: \"{zipArchiveFile.FullName}\"");
-#endif
         }
 
         /// <summary>
@@ -220,9 +217,6 @@ namespace ZipUtility
         {
             get
             {
-#if DEBUG && false
-                System.Diagnostics.Debug.WriteLine($"Reference {GetType().FullName}.Stream: \"{_paramter.ZipArchiveFile.FullName}\"");
-#endif
                 if (_isDisposed)
                     throw new ObjectDisposedException(GetType().FullName);
 
@@ -243,9 +237,6 @@ namespace ZipUtility
                 if (disposing)
                     _zipInputStream.Dispose();
                 _isDisposed = true;
-#if DEBUG && false
-                System.Diagnostics.Debug.WriteLine($"Disposed {GetType().FullName}: \"{_paramter.ZipArchiveFile.FullName}\"");
-#endif
             }
         }
 

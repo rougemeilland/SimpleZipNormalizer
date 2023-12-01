@@ -9,9 +9,9 @@ namespace Utility.IO
     public abstract class PartialOutputStream<POSITION_T, BASE_POSITION_T>
         : IOutputByteStream<POSITION_T>
     {
+        private readonly IOutputByteStream<BASE_POSITION_T> _baseStream;
         private readonly UInt64? _size;
         private readonly Boolean _leaveOpen;
-        private readonly IOutputByteStream<BASE_POSITION_T> _baseStream;
 
         private Boolean _isDisposed;
         private UInt64 _position;
@@ -80,10 +80,10 @@ namespace Utility.IO
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                _isDisposed = false;
                 _baseStream = baseStream;
                 _size = size;
                 _leaveOpen = leaveOpen;
+                _isDisposed = false;
                 _position = 0;
             }
             catch (Exception)
@@ -154,6 +154,7 @@ namespace Utility.IO
             GC.SuppressFinalize(this);
         }
 
+        // 以下のメソッドは .NET 7.0 以降では IAdditionOperators / ISubtractionOperators で代替可能で、しかもわかりやすくコード量も減る。
         protected abstract POSITION_T ZeroPositionValue { get; }
         protected abstract POSITION_T AddPosition(POSITION_T x, UInt64 y);
 
@@ -214,9 +215,12 @@ namespace Utility.IO
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void UpdatePosition(Int32 written)
         {
-            checked
+            if (written > 0)
             {
-                _position += (UInt32)written;
+                checked
+                {
+                    _position += (UInt32)written;
+                }
             }
         }
     }

@@ -84,41 +84,17 @@ namespace Utility
             if (byteSequence is null)
                 throw new ArgumentNullException(nameof(byteSequence));
 
-            try
-            {
-                progress?.Report(0);
-            }
-            catch (Exception)
-            {
-            }
-
-            var count = 0UL;
+            var progressCounter = new ProgressCounterUInt64(progress, _PROGRESS_STEP_COUNT);
+            progressCounter.Report();
             var crc = InitialValue;
             foreach (var data in byteSequence)
             {
                 crc = Update(crc, data);
-                ++count;
-                if (count % _PROGRESS_STEP_COUNT == 0)
-                {
-                    try
-                    {
-                        progress?.Report(count);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
+                progressCounter.Increment();
             }
 
-            try
-            {
-                progress?.Report(count);
-            }
-            catch (Exception)
-            {
-            }
-
-            return (Finalize(crc), count);
+            progressCounter.Report();
+            return (Finalize(crc), progressCounter.Value);
         }
 
         public async Task<(CRC_VALUE_T Crc, UInt64 Length)> CalculateAsync(IAsyncEnumerable<Byte> byteSequence, IProgress<UInt64>? progress = null, CancellationToken cancellationToken = default)
@@ -126,15 +102,8 @@ namespace Utility
             if (byteSequence is null)
                 throw new ArgumentNullException(nameof(byteSequence));
 
-            try
-            {
-                progress?.Report(0);
-            }
-            catch (Exception)
-            {
-            }
-
-            var count = 0UL;
+            var progressCounter = new ProgressCounterUInt64(progress, _PROGRESS_STEP_COUNT);
+            progressCounter.Report();
             var crc = InitialValue;
             var enumerator = byteSequence.GetAsyncEnumerator(cancellationToken);
             await using (enumerator.ConfigureAwait(false))
@@ -143,29 +112,12 @@ namespace Utility
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     crc = Update(crc, enumerator.Current);
-                    ++count;
-                    if (count % _PROGRESS_STEP_COUNT == 0)
-                    {
-                        try
-                        {
-                            progress?.Report(count);
-                        }
-                        catch (Exception)
-                        {
-                        }
-                    }
+                    progressCounter.Increment();
                 }
             }
 
-            try
-            {
-                progress?.Report(count);
-            }
-            catch (Exception)
-            {
-            }
-
-            return (Finalize(crc), count);
+            progressCounter.Report();
+            return (Finalize(crc), progressCounter.Value);
         }
 
         public IEnumerable<Byte> GetSequenceWithCrc(IEnumerable<Byte> source, ValueHolder<(CRC_VALUE_T Crc, UInt64 Length)> result, IProgress<UInt64>? progress = null)
@@ -175,42 +127,18 @@ namespace Utility
             if (result is null)
                 throw new ArgumentNullException(nameof(result));
 
-            try
-            {
-                progress?.Report(0);
-            }
-            catch (Exception)
-            {
-            }
-
+            var progressCounter = new ProgressCounterUInt64(progress, _PROGRESS_STEP_COUNT);
+            progressCounter.Report();
             var session = CreateSession();
-            var _processedCount = 0UL;
             foreach (var data in source)
             {
                 session.Put(data);
-                ++_processedCount;
-                if (_processedCount % _PROGRESS_STEP_COUNT == 0)
-                {
-                    try
-                    {
-                        progress?.Report(_processedCount);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
-
+                progressCounter.Increment();
                 yield return data;
             }
 
             result.Value = session.GetResult();
-            try
-            {
-                progress?.Report(_processedCount);
-            }
-            catch (Exception)
-            {
-            }
+            progressCounter.Report();
         }
 
         public async IAsyncEnumerable<Byte> GetAsyncSequenceWithCrc(IAsyncEnumerable<Byte> source, ValueHolder<(CRC_VALUE_T Crc, UInt64 Length)> result, IProgress<UInt64>? progress = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -220,16 +148,9 @@ namespace Utility
             if (result is null)
                 throw new ArgumentNullException(nameof(result));
 
-            try
-            {
-                progress?.Report(0);
-            }
-            catch (Exception)
-            {
-            }
-
+            var progressCounter = new ProgressCounterUInt64(progress, _PROGRESS_STEP_COUNT);
+            progressCounter.Report();
             var session = CreateSession();
-            var _processedCount = 0UL;
             var enumerator = source.GetAsyncEnumerator(cancellationToken);
             await using (enumerator.ConfigureAwait(false))
             {
@@ -238,29 +159,12 @@ namespace Utility
                     cancellationToken.ThrowIfCancellationRequested();
                     var data = enumerator.Current;
                     session.Put(data);
-                    ++_processedCount;
-                    if (_processedCount % _PROGRESS_STEP_COUNT == 0)
-                    {
-                        try
-                        {
-                            progress?.Report(_processedCount);
-                        }
-                        catch (Exception)
-                        {
-                        }
-                    }
-
+                    progressCounter.Increment();
                     yield return data;
                 }
 
                 result.Value = session.GetResult();
-                try
-                {
-                    progress?.Report(_processedCount);
-                }
-                catch (Exception)
-                {
-                }
+                progressCounter.Report();
             }
         }
 

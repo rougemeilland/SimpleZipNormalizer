@@ -10,15 +10,28 @@ namespace ZipUtility
     class AsyncByteIOQueue
     {
         private class Reader
-            : IBasicInputByteStream
+            : IInputByteStream<UInt64>
         {
             private readonly AsyncByteIOQueue _parent;
             private Boolean _isDisposed;
+            private UInt64 _position;
 
             public Reader(AsyncByteIOQueue parent)
             {
-                _isDisposed = false;
                 _parent = parent;
+                _isDisposed = false;
+                _position = 0;
+            }
+
+            public UInt64 Position
+            {
+                get
+                {
+                    if (_isDisposed)
+                        throw new ObjectDisposedException(GetType().FullName);
+
+                    return _position;
+                }
             }
 
             public Int32 Read(Span<Byte> buffer)
@@ -26,15 +39,33 @@ namespace ZipUtility
                 if (_isDisposed)
                     throw new ObjectDisposedException(GetType().FullName);
 
-                return _parent._queue.Read(buffer);
+                var length = _parent._queue.Read(buffer);
+                if (length > 0)
+                {
+                    checked
+                    {
+                        _position += (UInt32)length;
+                    }
+                }
+
+                return length;
             }
 
-            public Task<Int32> ReadAsync(Memory<Byte> buffer, CancellationToken cancellationToken = default)
+            public async Task<Int32> ReadAsync(Memory<Byte> buffer, CancellationToken cancellationToken = default)
             {
                 if (_isDisposed)
                     throw new ObjectDisposedException(GetType().FullName);
 
-                return _parent._queue.ReadAsync(buffer, cancellationToken);
+                var length = await _parent._queue.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                if (length > 0)
+                {
+                    checked
+                    {
+                        _position += (UInt32)length;
+                    }
+                }
+
+                return length;
             }
 
             public void Dispose()
@@ -73,16 +104,28 @@ namespace ZipUtility
         }
 
         private class Writer
-            : IBasicOutputByteStream
+            : IOutputByteStream<UInt64>
         {
             private readonly AsyncByteIOQueue _parent;
-
             private Boolean _isDisposed;
+            private UInt64 _position;
 
             public Writer(AsyncByteIOQueue parent)
             {
-                _isDisposed = false;
                 _parent = parent;
+                _isDisposed = false;
+                _position = 0;
+            }
+
+            public UInt64 Position
+            {
+                get
+                {
+                    if (_isDisposed)
+                        throw new ObjectDisposedException(GetType().FullName);
+
+                    return _position;
+                }
             }
 
             public Int32 Write(ReadOnlySpan<Byte> buffer)
@@ -92,7 +135,16 @@ namespace ZipUtility
 
                 try
                 {
-                    return _parent._queue.Write(buffer);
+                    var length = _parent._queue.Write(buffer);
+                    if (length > 0)
+                    {
+                        checked
+                        {
+                            _position += (UInt32)length;
+                        }
+                    }
+
+                    return length;
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -100,14 +152,23 @@ namespace ZipUtility
                 }
             }
 
-            public Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
+            public async Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
             {
                 if (_isDisposed)
                     throw new ObjectDisposedException(GetType().FullName);
 
                 try
                 {
-                    return _parent._queue.WriteAsync(buffer, cancellationToken);
+                    var length = await _parent._queue.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
+                    if (length > 0)
+                    {
+                        checked
+                        {
+                            _position += (UInt32)length;
+                        }
+                    }
+
+                    return length;
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -201,7 +262,7 @@ namespace ZipUtility
             _writerState = StreamState.Initial;
         }
 
-        public IBasicInputByteStream GetReader()
+        public IInputByteStream<UInt64> GetReader()
         {
             try
             {
@@ -222,7 +283,7 @@ namespace ZipUtility
             }
         }
 
-        public IBasicOutputByteStream GetWriter()
+        public IOutputByteStream<UInt64> GetWriter()
         {
             try
             {

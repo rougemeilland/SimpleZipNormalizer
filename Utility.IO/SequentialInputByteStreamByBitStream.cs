@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Utility.IO
 {
-    class SequentialInputByteStreamByBitStream
+    internal class SequentialInputByteStreamByBitStream
         : IInputByteStream<UInt64>
     {
         private readonly IInputBitStream _baseStream;
@@ -24,10 +24,10 @@ namespace Utility.IO
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                _isDisposed = false;
                 _baseStream = baseStream;
                 _bitPackingDirection = bitPackingDirection;
                 _leaveOpen = leaveOpen;
+                _isDisposed = false;
                 _position = 0;
                 _bitQueue = new BitQueue();
                 _isEndOfBaseStream = false;
@@ -41,7 +41,16 @@ namespace Utility.IO
             }
         }
 
-        public UInt64 Position => !_isDisposed ? _position : throw new ObjectDisposedException(GetType().FullName);
+        public UInt64 Position
+        {
+            get
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+
+                return _position;
+            }
+        }
 
         public Int32 Read(Span<Byte> buffer)
         {
@@ -117,7 +126,14 @@ namespace Utility.IO
                 buffer[bufferIndex++] = _bitQueue.DequeueByte(_bitPackingDirection);
             if (bufferIndex <= 0 && _bitQueue.Count > 0)
                 buffer[bufferIndex++] = _bitQueue.DequeueByte(_bitPackingDirection);
-            _position += (UInt64)bufferIndex;
+            if (bufferIndex > 0)
+            {
+                checked
+                {
+                    _position += (UInt64)bufferIndex;
+                }
+            }
+
             return bufferIndex;
         }
 

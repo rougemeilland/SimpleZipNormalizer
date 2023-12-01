@@ -21,10 +21,10 @@ namespace Utility.IO
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                _isDisposed = false;
                 _baseStream = baseStream;
                 _bitPackingDirection = bitPackingDirection;
                 _leaveOpen = leaveOpen;
+                _isDisposed = false;
                 _position = 0;
             }
             catch (Exception)
@@ -35,7 +35,16 @@ namespace Utility.IO
             }
         }
 
-        public UInt64 Position => !_isDisposed ? _position : throw new ObjectDisposedException(GetType().FullName);
+        public UInt64 Position
+        {
+            get
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+
+                return _position;
+            }
+        }
 
         public Int32 Write(ReadOnlySpan<Byte> buffer)
         {
@@ -44,8 +53,9 @@ namespace Utility.IO
 
             for (Int32 index = 0; index < buffer.Length; ++index)
                 _baseStream.Write(TinyBitArray.FromByte(buffer[index], _bitPackingDirection));
-            _position += (UInt32)buffer.Length;
-            return buffer.Length;
+            var length = buffer.Length;
+            UpdatePosition(length);
+            return length;
         }
 
         public async Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
@@ -55,8 +65,9 @@ namespace Utility.IO
 
             for (var index = 0; index < buffer.Length; ++index)
                 await _baseStream.WriteAsync(TinyBitArray.FromByte(buffer.Span[index], _bitPackingDirection), cancellationToken).ConfigureAwait(false);
-            _position += (UInt32)buffer.Length;
-            return buffer.Length;
+            var length = buffer.Length;
+            UpdatePosition(length);
+            return length;
         }
 
         public void Flush()
@@ -68,9 +79,12 @@ namespace Utility.IO
         }
 
         public Task FlushAsync(CancellationToken cancellationToken = default)
-            => _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : _baseStream.FlushAsync(cancellationToken);
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(GetType().FullName);
+
+            return _baseStream.FlushAsync(cancellationToken);
+        }
 
         public void Dispose()
         {
@@ -106,6 +120,17 @@ namespace Utility.IO
                 if (!_leaveOpen)
                     await _baseStream.DisposeAsync().ConfigureAwait(false);
                 _isDisposed = true;
+            }
+        }
+
+        private void UpdatePosition(Int32 length)
+        {
+            if (length > 0)
+            {
+                checked
+                {
+                    _position += (UInt32)length;
+                }
             }
         }
     }

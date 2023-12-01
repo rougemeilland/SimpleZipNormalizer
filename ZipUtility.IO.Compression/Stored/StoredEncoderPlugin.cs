@@ -15,7 +15,11 @@ namespace ZipUtility.IO.Compression.Stored
             }
         }
 
-        IBasicOutputByteStream IHierarchicalEncoder.GetEncodingStream(IBasicOutputByteStream baseStream, ICoderOption option, UInt64? unpackedStreamSize, IProgress<UInt64>? unpackedCountProgress)
+        IOutputByteStream<UInt64> IHierarchicalEncoder.GetEncodingStream(
+            IBasicOutputByteStream baseStream,
+            ICoderOption option,
+            UInt64? unpackedStreamSize,
+            IProgress<UInt64>? unpackedCountProgress)
             => new Encoder(baseStream, unpackedStreamSize, unpackedCountProgress);
     }
 }

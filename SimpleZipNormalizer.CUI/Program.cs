@@ -47,7 +47,6 @@ namespace SimpleZipNormalizer.CUI
 
         private static int Main(string[] args)
         {
-            // TODO: WithCountU(), Branch() を正式仕様にする count は 他の With のオプションでもいいかも
             // TODO: マルチボリューム対応に挑戦
             // TODO: ZIP64対応のテスト ディスク数が65535以上になるように分割してみる。分割サイズが64KBだとして、圧縮済みサイズが合計4GBを超えれば ZIP64 EOCDR が適用されるはず。
             var optionInteractive = false;
@@ -415,7 +414,6 @@ namespace SimpleZipNormalizer.CUI
             {
                 throw new Exception($"ZIPアーカイブへの書き込みができません。: \"{sourceZipFile.FullName}\"", ex);
             }
-
         }
 
         private static bool ExistModifiedEntries(IEnumerable<(string destinationFullName, bool isDirectory, string sourceFullName, int newOrder, ZipSourceEntry? sourceEntry)> normalizedEntries)
@@ -580,15 +578,9 @@ namespace SimpleZipNormalizer.CUI
                             entryPairs
                             .All(entryPair =>
                             {
-#if DEBUG && false
-                                System.Diagnostics.Debug.WriteLine($"compare entries: entry1={entryPair.First}, entry2={entryPair.Second}");
-#endif
                                 using var stream1 = entryPair.First.GetContentStream();
                                 using var stream2 = entryPair.Second.GetContentStream();
                                 var result = stream1.StreamBytesEqual(stream2);
-#if DEBUG && false
-                                System.Diagnostics.Debug.WriteLine($"compare entries: result={(result ? "OK" : "NG")}");
-#endif
                                 return result;
                             }));
                     if (!dataMatch)
