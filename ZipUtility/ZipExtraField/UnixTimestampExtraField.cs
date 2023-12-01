@@ -13,7 +13,7 @@ namespace ZipUtility.ZipExtraField
 
         static UnixTimestampExtraField()
         {
-            _baseTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            _baseTime = DateTime.UnixEpoch;
         }
 
         /// <summary>

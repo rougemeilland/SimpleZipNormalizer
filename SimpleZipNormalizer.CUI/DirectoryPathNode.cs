@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Utility;
 using ZipUtility;
 
 namespace SimpleZipNormalizer.CUI
@@ -132,8 +133,31 @@ namespace SimpleZipNormalizer.CUI
                         _indexedChildNodes.Add(node.Name, node.Clone(this, node.SourceEntry));
                 }
             }
-        }
 
+            // ディレクトリのタイムスタンプの再設定 (子要素のうち最新の値にする)
+            if (_indexedChildNodes.Count > 0)
+            {
+                var timestampList =
+                    _indexedChildNodes.Values
+                    .Select(node =>
+                    {
+                        var lastWriteTimeUtc = node.SourceEntry?.LastWriteTimeUtc;
+                        if (lastWriteTimeUtc is not null && lastWriteTimeUtc.Value.Kind == DateTimeKind.Unspecified)
+                            throw new InternalLogicalErrorException();
+                        var lastAccessTimeUtc = node.SourceEntry?.LastAccessTimeUtc;
+                        if (lastAccessTimeUtc is not null && lastAccessTimeUtc.Value.Kind == DateTimeKind.Unspecified)
+                            throw new InternalLogicalErrorException();
+                        var creationTimeUtc = node.SourceEntry?.CreationTimeUtc;
+                        if (creationTimeUtc is not null && creationTimeUtc.Value.Kind == DateTimeKind.Unspecified)
+                            throw new InternalLogicalErrorException();
+                        return (lastWriteTimeUtc, lastAccessTimeUtc, creationTimeUtc);
+                    })
+                    .ToList();
+                LastWriteTime = GetNewestTimeStamp(timestampList, item => item.lastWriteTimeUtc);
+                LastAccessTime = GetNewestTimeStamp(timestampList, item => item.lastAccessTimeUtc);
+                CreationTime = GetNewestTimeStamp(timestampList, item => item.creationTimeUtc);
+            }
+        }
         public override PathNode Clone(DirectoryPathNode? parent, ZipSourceEntry? sourceEntry)
             => new DirectoryPathNode(Name, SourceFullName, parent, sourceEntry, _indexedChildNodes.Values);
 
@@ -203,6 +227,33 @@ namespace SimpleZipNormalizer.CUI
 
             lastNode = cache;
             return result;
+        }
+
+        private static DateTime? GetNewestTimeStamp(
+            IEnumerable<(DateTime? lastWriteTimeUtc, DateTime? lastAccessTimeUtc, DateTime? creationTimeUtc)> timestamps,
+            Func<(DateTime? lastWriteTimeUtc, DateTime? lastAccessTimeUtc, DateTime? creationTimeUtc), DateTime?> selector)
+        {
+            var initialValue = (DateTime?)new DateTime(0, DateTimeKind.Utc);
+            var result =
+                timestamps
+                .Aggregate(
+                    initialValue,
+                    (dateTime, element) =>
+                    {
+                        var otherDateTime = selector(element);
+                        return
+                            dateTime is null
+                            ? otherDateTime
+                            : otherDateTime is null
+                            ? dateTime
+                            : dateTime.Value.CompareTo(otherDateTime.Value) > 0
+                            ? dateTime
+                            : otherDateTime;
+                    });
+            return
+                result is null || result.Value.Ticks <= 0
+                ? null
+                : result;
         }
     }
 }

@@ -27,17 +27,30 @@ namespace SimpleZipNormalizer.CUI
             SourceFullName = sourceFullName;
             ParentNode = parentNode;
             SourceEntry = sourceEntry;
+            LastWriteTime = sourceEntry?.LastWriteTimeUtc;
+            LastAccessTime = sourceEntry?.LastAccessTimeUtc;
+            CreationTime = sourceEntry?.CreationTimeUtc;
         }
 
         public string Name { get; }
         public string SourceFullName { get; }
         public DirectoryPathNode? ParentNode { get; }
-        public ZipSourceEntry? SourceEntry { get; }
 
         public string CurrentFullName
-            => ParentNode is null
-                ? throw new InvalidOperationException()
-                : $"{(ParentNode.ParentNode is null ? "" : ParentNode.CurrentFullName)}{Name}{(this is DirectoryPathNode ? "/" : "")}";
+        {
+            get
+            {
+                if (ParentNode is null)
+                    throw new InvalidOperationException();
+
+                    return $"{(ParentNode.ParentNode is null ? "" : ParentNode.CurrentFullName)}{Name}{(this is DirectoryPathNode ? "/" : "")}";
+            }
+        }
+
+        public ZipSourceEntry? SourceEntry { get; }
+        public DateTime? LastWriteTime { get; protected set; }
+        public DateTime? LastAccessTime { get; protected set; }
+        public DateTime? CreationTime { get; protected set; }
 
         public abstract PathNode Clone(DirectoryPathNode? parent, ZipSourceEntry? sourceEntry);
         public abstract IEnumerable<PathNode> EnumerateTerminalNodes();
