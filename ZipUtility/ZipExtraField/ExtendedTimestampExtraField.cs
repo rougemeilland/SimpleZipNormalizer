@@ -130,6 +130,14 @@ namespace ZipUtility.ZipExtraField
                         if (flag.HasFlag(Flag.LastWriteTime))
                             LastWriteTimeUtc = FromUnixTimeStamp(reader.ReadInt32LE());
 
+                        // 本来の仕様では、セントラルディレクトリヘッダの場合に付加されるのは LastWriteTime のみであるが、
+                        // それに反して LastAccessTime および CreationTime も付加してしまう実装も存在する模様。
+                        // そのような ZIP アーカイブファイル であった場合、LastAccessTime および CreationTime も読み込むこととする。
+                        if (!reader.IsEmpty && flag.HasFlag(Flag.LastAccessTime))
+                            LastAccessTimeUtc = FromUnixTimeStamp(reader.ReadInt32LE());
+                        if (!reader.IsEmpty && flag.HasFlag(Flag.CreationTime))
+                            CreationTimeUtc = FromUnixTimeStamp(reader.ReadInt32LE());
+
                         break;
                     }
                     default:
