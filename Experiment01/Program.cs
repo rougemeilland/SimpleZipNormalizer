@@ -14,10 +14,13 @@ namespace Experiment01
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:未使用のパラメーターを削除します", Justification = "<保留中>")]
         private static void Main(string[] args)
         {
-            Console.WriteLine(new DateTime(0, DateTimeKind.Utc).Ticks);
-            var list = new int [] {  };
-            var r = list.Aggregate(-1, (x, y) => x + y);
-            Console.WriteLine(r);
+            // TODO: コンソールで進捗を表示している最中にスクロールが発生するとカーソルが正しい位置に戻らない問題の修正方法の検討
+            var minimumDateTime = new DateTime(DateTime.MinValue.Ticks, DateTimeKind.Utc);
+            var maximumDateTime = new DateTime(DateTime.MaxValue.Ticks, DateTimeKind.Utc);
+            Console.WriteLine($"DateTime.MinValue={minimumDateTime}");
+            Console.WriteLine($"DateTime.MaxValue={maximumDateTime}");
+            Console.WriteLine($"DateTime.FromFileTime(long.MinValue)={DateTime.FromFileTime(0)}");
+            Console.WriteLine($"DateTime.FromFileTime(long.MaxValue)={DateTime.FromFileTime(long.MaxValue)}");
             Console.WriteLine("Completed.");
             _ = Console.ReadLine();
         }

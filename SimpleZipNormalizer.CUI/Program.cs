@@ -324,86 +324,109 @@ namespace SimpleZipNormalizer.CUI
 
         private static bool NormalizeZipFile(FilePath sourceZipFile, FilePath destinationZipFile, IZipEntryNameEncodingProvider entryNameEncodingProvider, IProgress<double> progress)
         {
-            ValidateIfWritableFile(sourceZipFile);
-            using var sourceArchiveReader = sourceZipFile.OpenAsZipFile(entryNameEncodingProvider);
-            var sourceZipFileLength = sourceZipFile.Length;
-            var rootNode = PathNode.CreateRootNode();
-            var badEntries = sourceArchiveReader.GetEntries().Where(entry => entry.FullName.IsUnknownEncodingText()).ToList();
-            if (badEntries.Count > 0)
-                throw new Exception($".NETで認識できない名前のエントリがZIPファイルに含まれています。: ZIP file name:\"{sourceZipFile.FullName}\", Entry name: \"{badEntries.First().FullName}\"");
-
-            progress?.Report(0);
-            var sourceEntries =
-                sourceArchiveReader.GetEntries(
-                    SafetyProgress.CreateIncreasingProgress(
-                        progress,
-                        value => value * 0.05,
-                        0.0,
-                        1.0));
-            progress?.Report(0.05);
-            foreach (var entry in sourceEntries)
-                rootNode.AddChildNode(entry.FullName, entry);
-
-            // ノードのディレクトリ構成を正規化する (空ディレクトリの削除、無駄なディレクトリ階層の短縮)
-            rootNode.Normalize();
-
-            // 正規化されたノードを列挙する
-            var normalizedEntries =
-                rootNode.EnumerateTerminalNodes()
-                .Select(node => new
-                {
-                    destinationFullName = node.CurrentFullName,
-                    isDirectory = node is DirectoryPathNode,
-                    sourceFullName = node.SourceFullName,
-                    sourceEntry = node.SourceEntry,
-                    lastWriteTime = node.LastWriteTime,
-                    lastAccessTime = node.LastAccessTime,
-                    creationTime = node.CreationTime,
-                })
-                .OrderBy(item => item.destinationFullName, StringComparer.OrdinalIgnoreCase)
-                .Select((item, newOrder) => (item.destinationFullName, item.isDirectory, item.sourceFullName, newOrder, item.sourceEntry, item.lastWriteTime, item.lastAccessTime, item.creationTime))
-                .ToList();
-
-            // 正規化前後でエントリが変更する見込みがあるかどうかを調べる
-            var modified = ExistModifiedEntries(normalizedEntries);
-            if (modified)
+            try
             {
-                // 正規化の前後でパス名および順序が一致しないエントリが一つでもある場合
+                ValidateIfWritableFile(sourceZipFile);
+                using var sourceArchiveReader = sourceZipFile.OpenAsZipFile(entryNameEncodingProvider);
+                var sourceZipFileLength = sourceZipFile.Length;
+                var rootNode = PathNode.CreateRootNode();
+                var badEntries = sourceArchiveReader.GetEntries().Where(entry => entry.FullName.IsUnknownEncodingText()).ToList();
+                if (badEntries.Count > 0)
+                    throw new Exception($".NETで認識できない名前のエントリがZIPファイルに含まれています。: ZIP file name:\"{sourceZipFile.FullName}\", Entry name: \"{badEntries.First().FullName}\"");
 
-                // ZIPアーカイブの正規化を実行する
-                CreateNormalizedZipArchive(
-                    destinationZipFile,
-                    entryNameEncodingProvider,
-                    sourceZipFileLength,
-                    normalizedEntries,
-                    SafetyProgress.CreateIncreasingProgress(
-                        progress,
-                        value => 0.05 + value * 0.45,
-                        0.0,
-                        1.0));
-
-                progress?.Report(0.5);
-
-                // 元のZIPアーカイブと正規化されたZIPアーカイブの内容が一致しているかどうかを調べる
-                using var normalizedZipArchiveReader = destinationZipFile.OpenAsZipFile(entryNameEncodingProvider);
-                VerifyNormalizedEntries(
-                    sourceZipFile,
-                    sourceEntries,
-                    normalizedZipArchiveReader.GetEntries(
+                progress?.Report(0);
+                var sourceEntries =
+                    sourceArchiveReader.GetEntries(
                         SafetyProgress.CreateIncreasingProgress(
                             progress,
-                            value => 0.50 + value * 0.05,
+                            value => value * 0.05,
                             0.0,
-                            1.0)),
-                    SafetyProgress.CreateIncreasingProgress(
-                        progress,
-                        value => 0.55 + value * 0.45,
-                        0.0,
-                        1.0));
-            }
+                            1.0));
+                progress?.Report(0.05);
+                foreach (var entry in sourceEntries)
+                    rootNode.AddChildNode(entry.FullName, entry);
 
-            progress?.Report(1);
-            return modified;
+                // ノードのディレクトリ構成を正規化する (空ディレクトリの削除、無駄なディレクトリ階層の短縮)
+                rootNode.Normalize();
+
+                // 正規化されたノードを列挙する
+                var normalizedEntries =
+                    rootNode.EnumerateTerminalNodes()
+                    .Select(node => new
+                    {
+                        destinationFullName = node.CurrentFullName,
+                        isDirectory = node is DirectoryPathNode,
+                        sourceFullName = node.SourceFullName,
+                        sourceEntry = node.SourceEntry,
+                        lastWriteTime = node.LastWriteTime,
+                        lastAccessTime = node.LastAccessTime,
+                        creationTime = node.CreationTime,
+                    })
+                    .OrderBy(item => item.destinationFullName, StringComparer.OrdinalIgnoreCase)
+                    .Select((item, newOrder) => (item.destinationFullName, item.isDirectory, item.sourceFullName, newOrder, item.sourceEntry, item.lastWriteTime, item.lastAccessTime, item.creationTime))
+                    .ToList();
+
+                // 正規化前後でエントリが変更する見込みがあるかどうかを調べる
+                var modified = ExistModifiedEntries(normalizedEntries);
+                if (modified)
+                {
+                    // 正規化の前後でパス名および順序が一致しないエントリが一つでもある場合
+
+                    // ZIPアーカイブの正規化を実行する
+                    CreateNormalizedZipArchive(
+                        destinationZipFile,
+                        entryNameEncodingProvider,
+                        sourceZipFileLength,
+                        normalizedEntries,
+                        SafetyProgress.CreateIncreasingProgress(
+                            progress,
+                            value => 0.05 + value * 0.45,
+                            0.0,
+                            1.0));
+
+                    progress?.Report(0.5);
+
+                    // 元のZIPアーカイブと正規化されたZIPアーカイブの内容が一致しているかどうかを調べる
+                    using var normalizedZipArchiveReader = destinationZipFile.OpenAsZipFile(entryNameEncodingProvider);
+                    VerifyNormalizedEntries(
+                        sourceZipFile,
+                        sourceEntries,
+                        normalizedZipArchiveReader.GetEntries(
+                            SafetyProgress.CreateIncreasingProgress(
+                                progress,
+                                value => 0.50 + value * 0.05,
+                                0.0,
+                                1.0)),
+                        SafetyProgress.CreateIncreasingProgress(
+                            progress,
+                            value => 0.55 + value * 0.45,
+                            0.0,
+                            1.0));
+                }
+
+                progress?.Report(1);
+                return modified;
+            }
+            catch (CompressionMethodNotSupportedException ex)
+            {
+                throw new Exception($"ZIPアーカイブがサポートされていない圧縮方式で圧縮されているため正規化できません。: method={ex.CompresssionMethodId}, path=\"{sourceZipFile.FullName}\"", ex);
+            }
+            catch (BadZipFileFormatException ex)
+            {
+                throw new Exception($"ZIPアーカイブが破損しているため正規化できません。: path=\"{sourceZipFile.FullName}\"", ex);
+            }
+            catch (EncryptedZipFileNotSupportedException ex)
+            {
+                throw new Exception($"ZIPアーカイブが暗号化されているため正規化できません。: required=\"{ex.Required}\", path=\"{sourceZipFile.FullName}\"", ex);
+            }
+            catch (MultiVolumeDetectedException ex)
+            {
+                throw new Exception($"ZIPアーカイブがマルチボリュームであるため正規化できません。: path=\"{sourceZipFile.FullName}\"", ex);
+            }
+            catch (NotSupportedSpecificationException ex)
+            {
+                throw new Exception($"ZIPアーカイブを解凍するための機能が不足しているため正規化できません。: path=\"{sourceZipFile.FullName}\"", ex);
+            }
         }
 
         private static void ValidateIfWritableFile(FilePath sourceZipFile)
