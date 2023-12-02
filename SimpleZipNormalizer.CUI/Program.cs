@@ -684,8 +684,23 @@ namespace SimpleZipNormalizer.CUI
 
                 if (_currentProgressMessage != progressMessage)
                 {
+                    // progressMessageを表示するために予想し得る最大の表示桁数を計算する。
+                    var maximumToralColumns = progressMessage.Length * 2;
+
+                    // progressMessageを表示するために予想し得る最大の行数を計算する。
+                    var rows = (maximumToralColumns + Console.WindowWidth - 1) / Console.WindowWidth;
+
+                    // rows 行だけ改行して、rows 行だけカーソルを上に移動する。
+                    _consoleWriter.Write($"{new string('\n', rows)}\x1b[{rows}A");
+
+                    // これ以降、progressMessage を表示してもスクロールは発生しないはず。
+
+                    // 現在のカーソル位置を取得する。
                     var (cursorLeft, cursorTop) = Console.GetCursorPosition();
+
+                    // メッセージを表示して、その後の文字列を消去し、カーソル位置を元に戻す。
                     _consoleWriter.Write($"  {progressMessage}\x1b[0J\x1b[{cursorTop + 1};{cursorLeft + 1}H");
+
                     _currentProgressMessage = progressMessage;
                 }
             }
