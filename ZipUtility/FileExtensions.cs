@@ -94,6 +94,7 @@ namespace ZipUtility
                     sourceStream.Dispose();
                     var lastDiskNumber = ex.LastDiskNumber;
                     sourceStream = GetSourceStreamByLastDiskNumber(baseDirectory, sourceZipFile, lastDiskNumber);
+                    success = true;
                 }
                 finally
                 {
@@ -155,6 +156,7 @@ namespace ZipUtility
                 var entryCount = 0UL;
                 var zipArchiveSize = (UInt64)file.Length;
                 var processedUnpackedSize = 0UL;
+                var processedPackedSize = 0UL;
                 var totalProcessedRate = 0.0;
 
                 using (var zipFile = file.OpenAsZipFile(zipEntryNameEncodingProvider))
@@ -179,6 +181,7 @@ namespace ZipUtility
                                     value => totalProcessedRate + (Double)value.packedCount / zipArchiveSize * 0.9));
                             ++entryCount;
                             processedUnpackedSize += entry.Size;
+                            processedPackedSize += entry.PackedSize;
                             totalProcessedRate += (Double)entry.PackedSize / zipArchiveSize * 0.9;
                         }
                         finally
@@ -202,7 +205,7 @@ namespace ZipUtility
                 {
                 }
 
-                return new ZipArchiveValidationResult(ZipArchiveValidationResultId.Ok, $"entries = {entryCount}, total entry size = {processedUnpackedSize:N0} bytes, total compressed entry size = {totalProcessedRate:N0} bytes", null);
+                return new ZipArchiveValidationResult(ZipArchiveValidationResultId.Ok, $"entries = {entryCount}, total entry size = {processedUnpackedSize:N0} bytes, total compressed entry size = {processedPackedSize:N0} bytes", null);
             }
             catch (EncryptedZipFileNotSupportedException ex)
             {
@@ -226,49 +229,47 @@ namespace ZipUtility
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1859:可能な場合は具象型を使用してパフォーマンスを向上させる", Justification = "<保留中>")]
         private static IZipInputStream GetSourceStreamByFileNamePattern(DirectoryPath baseDirectory, FilePath sourceFile)
         {
             var match = _sevenZipMultiVolumeZipFileNamePattern.Match(sourceFile.Name);
             if (match.Success)
             {
                 var body = match.Groups["body"].Value;
-                var files = new List<FilePath>();
-                for (var index = 1UL; index <= UInt32.MaxValue; ++index)
+                var volumeFiles = new List<FilePath>();
+                for (var diskNumber = 0U; diskNumber <= UInt32.MaxValue; ++diskNumber)
                 {
-                    var file = baseDirectory.GetFile($"{body}.{index:D3}");
+                    var file = baseDirectory.GetFile($"{body}.{diskNumber + 1:D3}");
                     if (!file.Exists)
                         break;
-                    files.Add(file);
+                    volumeFiles.Add(file);
                 }
 
-                return GetMultiVolumeInputStream(files.ToArray());
+                return SevenZipStyleMultiVolumeZipInputStream.CreateInstance(volumeFiles.ToArray());
             }
             else
             {
-                return new SingleVolumeZipInputStream(sourceFile);
+                return SingleVolumeZipInputStream.CreateInstance(sourceFile);
             }
         }
 
-        private static IZipInputStream GetSourceStreamByLastDiskNumber(DirectoryPath baseDirectory, FilePath sourceFile, UInt32 lastDiskNumber)
+        private static ZipInputStream GetSourceStreamByLastDiskNumber(DirectoryPath baseDirectory, FilePath sourceFile, UInt32 lastDiskNumber)
         {
             var match = _generalMultiVolumeZipFileNamePattern.Match(sourceFile.Name);
             if (!match.Success)
                 throw new NotSupportedSpecificationException("Unknown format as multi-volume ZIP file.");
             var body = match.Groups["body"].Value;
-            var files = new List<FilePath>();
-            for (var index = 1U; index < lastDiskNumber; ++index)
+            var volumeFiles = new List<FilePath>();
+            for (var diskNumber = 0U; diskNumber < lastDiskNumber; ++diskNumber)
             {
-                var file = baseDirectory.GetFile($"{body}.z{index:D2}");
+                var file = baseDirectory.GetFile($"{body}.z{diskNumber + 1:D2}");
                 if (!file.Exists)
                     throw new BadZipFileFormatException("There is a missing disk in a multi-volume ZIP file.");
-                files.Add(file);
+                volumeFiles.Add(file);
             }
 
-            files.Add(sourceFile);
-            return GetMultiVolumeInputStream(files.ToArray());
+            volumeFiles.Add(sourceFile);
+            return MultiVolumeZipInputStream.CreateInstance(volumeFiles.ToArray());
         }
-
-        private static IZipInputStream GetMultiVolumeInputStream(ReadOnlyMemory<FilePath> disks)
-            => throw new NotSupportedSpecificationException($"Not supported \"Multi-Volume Zip File\".; disk count={disks.Length}");
     }
 }

@@ -93,34 +93,52 @@ namespace Utility
             => _bitQueue.Enqueue((bitArray as IInternalBitArray).BitArray);
 
         public Boolean DequeueBoolean()
-            => _bitQueue.Length < 1
-                ? throw new InvalidOperationException()
-                : _bitQueue.DequeueBoolean();
+        {
+            if (_bitQueue.Length < 1)
+                throw new InvalidOperationException();
+
+            return _bitQueue.DequeueBoolean();
+        }
 
         public Byte DequeueByte(BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => _bitQueue.Length < 1
-                ? throw new InvalidOperationException()
-                : (Byte)_bitQueue.DequeueInteger(_BIT_LENGTH_OF_BYTE.Minimum(_bitQueue.Length), bitPackingDirection);
+        {
+            if (_bitQueue.Length < 1)
+                throw new InvalidOperationException();
+
+            return (Byte)_bitQueue.DequeueInteger(_BIT_LENGTH_OF_BYTE.Minimum(_bitQueue.Length), bitPackingDirection);
+        }
 
         public UInt16 DequeueUInt16(BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => _bitQueue.Length < 1
-                ? throw new InvalidOperationException()
-                : (UInt16)_bitQueue.DequeueInteger(_BIT_LENGTH_OF_UINT16.Minimum(_bitQueue.Length), bitPackingDirection);
+        {
+            if (_bitQueue.Length < 1)
+                throw new InvalidOperationException();
+
+            return (UInt16)_bitQueue.DequeueInteger(_BIT_LENGTH_OF_UINT16.Minimum(_bitQueue.Length), bitPackingDirection);
+        }
 
         public UInt32 DequeueUInt32(BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => _bitQueue.Length < 1
-                ? throw new InvalidOperationException()
-                : (UInt32)_bitQueue.DequeueInteger(_BIT_LENGTH_OF_UINT32.Minimum(_bitQueue.Length), bitPackingDirection);
+        {
+            if (_bitQueue.Length < 1)
+                throw new InvalidOperationException();
+
+            return (UInt32)_bitQueue.DequeueInteger(_BIT_LENGTH_OF_UINT32.Minimum(_bitQueue.Length), bitPackingDirection);
+        }
 
         public UInt64 DequeueUInt64(BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => _bitQueue.Length < 1
-                ? throw new InvalidOperationException()
-                : _bitQueue.DequeueInteger(_BIT_LENGTH_OF_UINT64.Minimum(_bitQueue.Length), bitPackingDirection);
+        {
+            if (_bitQueue.Length < 1)
+                throw new InvalidOperationException();
+
+            return _bitQueue.DequeueInteger(_BIT_LENGTH_OF_UINT64.Minimum(_bitQueue.Length), bitPackingDirection);
+        }
 
         public TinyBitArray DequeueBitArray(Int32 bitCount)
-            => _bitQueue.Length < 1
-                ? throw new InvalidOperationException()
-                : new TinyBitArray(_bitQueue.DequeueBitQueue(bitCount.Minimum(_bitQueue.Length)));
+        {
+            if (_bitQueue.Length < 1)
+                throw new InvalidOperationException();
+
+            return new TinyBitArray(_bitQueue.DequeueBitQueue(bitCount.Minimum(_bitQueue.Length)));
+        }
 
         public void Clear() => _bitQueue.Clear();
         public String ToString(String? format) => _bitQueue.ToString(format);

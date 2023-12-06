@@ -132,40 +132,35 @@ namespace Utility.IO
             private static DirectoryPath? TryGetTrashBoxDirectory(String environmentVariableName)
             {
                 var trashBoxPath = Environment.GetEnvironmentVariable(environmentVariableName);
-                if (trashBoxPath is not null)
+                if (trashBoxPath is null)
+                    return null;
+                try
                 {
-                    if (trashBoxPath.EndsWith(Path.PathSeparator))
-                        trashBoxPath = trashBoxPath[..^1];
+                    var trashBoxDirectory = new DirectoryPath(trashBoxPath);
+                    if (!trashBoxDirectory.Exists)
+                    {
+                        trashBoxDirectory.Create();
+                        trashBoxDirectory.Refresh();
+                    }
+
+                    var temporaryFile = trashBoxDirectory.GetFile($".temporary.{Guid.NewGuid()}");
                     try
                     {
+                        temporaryFile.WriteAllText("temporary");
+                        _ = temporaryFile.ReadAllLines();
 
-                        var trashBoxDirectory = new DirectoryPath(trashBoxPath);
-                        if (!trashBoxDirectory.Exists)
-                        {
-                            trashBoxDirectory.Create();
-                            trashBoxDirectory.Refresh();
-                        }
-
-                        var temporaryFile = trashBoxDirectory.GetFile($".temporary.{Guid.NewGuid()}");
-                        try
-                        {
-                            temporaryFile.WriteAllText("temporary");
-                            _ = temporaryFile.ReadAllLines();
-
-                            trashBoxDirectory.Refresh();
-                            return trashBoxDirectory;
-                        }
-                        finally
-                        {
-                            temporaryFile.SafetyDelete();
-                        }
+                        trashBoxDirectory.Refresh();
+                        return trashBoxDirectory;
                     }
-                    catch (Exception)
+                    finally
                     {
+                        temporaryFile.SafetyDelete();
                     }
                 }
-
-                return null;
+                catch (Exception)
+                {
+                    return null;
+                }
             }
         }
 

@@ -110,9 +110,12 @@ namespace Utility.IO
             }
 
             public Task FlushAsync(CancellationToken cancellationToken = default)
-                => _isDisposed
-                    ? throw new ObjectDisposedException(GetType().FullName)
-                    : Task.CompletedTask;
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+
+                return Task.CompletedTask;
+            }
 
             public void Dispose()
             {
@@ -178,10 +181,10 @@ namespace Utility.IO
         private Int32 Read(Span<Byte> buffer)
         {
             var length = _buffer.Read(buffer);
-            return
-                length <= 0 && buffer.Length > 0 && !_buffer.IsCompleted
-                ? throw new InvalidOperationException("Buffer is empty.")
-                : length;
+            if (length <= 0 && buffer.Length > 0 && !_buffer.IsCompleted)
+                throw new InvalidOperationException("Buffer is empty.");
+
+            return length;
         }
 
         private Int32 Write(ReadOnlySpan<Byte> buffer)

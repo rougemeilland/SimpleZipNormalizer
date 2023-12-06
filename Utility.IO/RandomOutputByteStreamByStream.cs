@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace Utility.IO
 {
     class RandomOutputByteStreamByStream<BASE_STREAM_T>
-        : IRandomOutputByteStream<UInt64>
+        : IRandomOutputByteStream<UInt64, UInt64>
         where BASE_STREAM_T : Stream
     {
         private readonly BASE_STREAM_T _baseStream;

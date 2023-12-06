@@ -1032,8 +1032,7 @@ namespace ZipUtility
             if (_centralDirectoryHeaderInfo is null)
                 throw new InvalidOperationException();
 
-            using var destinationStream = _zipStream.Stream.AsPartial(_zipStream.Stream.Position, null);
-            destinationStream.WriteBytes(_centralDirectoryHeaderInfo.ToBytes());
+            _zipStream.Stream.WriteBytes(_centralDirectoryHeaderInfo.ToBytes());
         }
 
         internal void InternalFlush()
@@ -1078,8 +1077,7 @@ namespace ZipUtility
                         IsDirectory,
                         false);
 
-                using var destinationStream = _zipStream.Stream.AsPartial(LocalHeaderPosition, null);
-                destinationStream.WriteBytes(_localHeaderInfo.ToBytes());
+                _zipStream.Stream.WriteBytes(_localHeaderInfo.ToBytes());
                 _written = true;
             }
         }
@@ -1088,7 +1086,7 @@ namespace ZipUtility
         {
             var temporaryFile = (FilePath?)null;
             var packedTemporaryFile = (FilePath?)null;
-
+            var success = false;
             try
             {
                 try
@@ -1127,20 +1125,21 @@ namespace ZipUtility
                     (packedOutputStream is null ? outputStrem : outputStrem.Branch(packedOutputStream))
                     .WithCrc32Calculation(
                         resultValue => EndOfCopyingToTemporaryFile(resultValue.Crc, resultValue.Length));
-
+                success = true;
                 return tempraryFileStream;
             }
-            catch (Exception)
+            finally
             {
-                temporaryFile?.SafetyDelete();
-                packedTemporaryFile?.SafetyDelete();
-                _zipStream.UnlockStream();
-                throw;
+                if (!success)
+                {
+                    temporaryFile?.SafetyDelete();
+                    packedTemporaryFile?.SafetyDelete();
+                    _zipStream.UnlockStream();
+                }
             }
 
             void EndOfCopyingToTemporaryFile(UInt32 actualCrc, UInt64 actualSize)
             {
-                var success = false;
                 try
                 {
                     if (temporaryFile is not null && temporaryFile.Exists)
@@ -1227,11 +1226,10 @@ namespace ZipUtility
                                 IsDirectory,
                                 false);
 
-                        using var destinationStream = _zipStream.Stream.AsPartial(LocalHeaderPosition, null);
-                        destinationStream.WriteBytes(_localHeaderInfo.ToBytes());
+                        _zipStream.Stream.WriteBytes(_localHeaderInfo.ToBytes());
                         using var sourceStream = (packedTemporaryFile is null ? temporaryFile : packedTemporaryFile).OpenRead();
                         sourceStream.CopyTo(
-                            destinationStream,
+                            _zipStream.Stream,
                             SafetyProgress.CreateProgress<UInt64, UInt64>(
                                 unpackedCountProgress,
                                 value =>
@@ -1253,23 +1251,12 @@ namespace ZipUtility
                         }
 
                         _written = true;
-                        success = true;
                     }
                 }
                 finally
                 {
                     temporaryFile.SafetyDelete();
                     packedTemporaryFile?.SafetyDelete();
-
-                    try
-                    {
-                        if (!success)
-                            _zipStream.Stream.Seek(LocalHeaderPosition);
-                    }
-                    catch (Exception)
-                    {
-                    }
-
                     _zipStream.UnlockStream();
                 }
             }
@@ -1324,12 +1311,11 @@ namespace ZipUtility
                         LastWriteTimeUtc,
                         IsDirectory);
 
-                var destinationStream = _zipStream.Stream.AsPartial(LocalHeaderPosition, null);
-                destinationStream.WriteBytes(_localHeaderInfo.ToBytes());
+                _zipStream.Stream.WriteBytes(_localHeaderInfo.ToBytes());
                 var contentStream =
                     compressionMethod.GetEncodingStream(
-                        destinationStream
-                            .WithEndAction(packedSize => packedSizeHolder.Value = packedSize),
+                        _zipStream.Stream
+                            .WithEndAction(packedSize => packedSizeHolder.Value = packedSize, true),
                         null,
                         SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
                             unpackedCountProgress,
@@ -1346,7 +1332,6 @@ namespace ZipUtility
 
             void EndOfWrintingContents(UInt32 actualCrc, UInt64 actualSize)
             {
-                var success = false;
                 try
                 {
                     var actualPackedSize = packedSizeHolder.Value;
@@ -1385,19 +1370,9 @@ namespace ZipUtility
                     }
 
                     _written = true;
-                    success = true;
                 }
                 finally
                 {
-                    try
-                    {
-                        if (!success)
-                            _zipStream.Stream.Seek(LocalHeaderPosition);
-                    }
-                    catch (Exception)
-                    {
-                    }
-
                     _zipStream.UnlockStream();
                 }
             }

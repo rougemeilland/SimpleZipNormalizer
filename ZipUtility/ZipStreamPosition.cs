@@ -1,40 +1,34 @@
 ﻿using System;
-using System.IO;
+using System.Numerics;
+using Utility;
 
 namespace ZipUtility
 {
     internal readonly struct ZipStreamPosition
-        : IEquatable<ZipStreamPosition>, IComparable<ZipStreamPosition>
+        : IEquatable<ZipStreamPosition>, IComparable<ZipStreamPosition>, IAdditionOperators<ZipStreamPosition, UInt64, ZipStreamPosition>, ISubtractionOperators<ZipStreamPosition, UInt64, ZipStreamPosition>, ISubtractionOperators<ZipStreamPosition, ZipStreamPosition, UInt64>
     {
-        private readonly IVirtualZipFile _multiVolumeInfo;
-
-        internal ZipStreamPosition(UInt32 diskNumber, UInt64 offsetOnTheDisk, IVirtualZipFile multiVolumeInfo)
+        internal ZipStreamPosition(UInt32 diskNumber, UInt64 offsetOnTheDisk, IVirtualZipFile ownerVirtualDisk)
         {
-            if (multiVolumeInfo is null)
-                throw new ArgumentNullException(nameof(multiVolumeInfo));
+            if (ownerVirtualDisk is null)
+                throw new ArgumentNullException(nameof(ownerVirtualDisk));
 
             DiskNumber = diskNumber;
             OffsetOnTheDisk = offsetOnTheDisk;
-            _multiVolumeInfo = multiVolumeInfo;
+            Owner = ownerVirtualDisk;
         }
 
         public UInt32 DiskNumber { get; }
         public UInt64 OffsetOnTheDisk { get; }
-
         #region operator +
 
-        public static ZipStreamPosition operator +(ZipStreamPosition x, Int64 y) => x.Add(y);
         public static ZipStreamPosition operator +(ZipStreamPosition x, UInt64 y) => x.Add(y);
-        public static ZipStreamPosition operator +(ZipStreamPosition x, Int32 y) => x.Add(y);
 
         #endregion
 
         #region operator -
 
         public static UInt64 operator -(ZipStreamPosition x, ZipStreamPosition y) => x.Subtract(y);
-        public static ZipStreamPosition operator -(ZipStreamPosition x, Int64 y) => x.Subtract(y);
         public static ZipStreamPosition operator -(ZipStreamPosition x, UInt64 y) => x.Subtract(y);
-        public static ZipStreamPosition operator -(ZipStreamPosition x, Int32 y) => x.Subtract(y);
 
         #endregion
 
@@ -51,53 +45,26 @@ namespace ZipUtility
 
         #region Add
 
-        public ZipStreamPosition Add(Int64 x)
-            => x >= 0
-                ? checked(Add((UInt64)x))
-                : x != Int64.MinValue
-                ? checked(Subtract((UInt64)(-x)))
-                : checked(Subtract(-(Int64.MinValue + 1)).Subtract(1));
-
         public ZipStreamPosition Add(UInt64 x)
-            => _multiVolumeInfo is null
-                ? throw new InvalidOperationException("multiVolumeInfo not set")
-                : _multiVolumeInfo.Add(this, x) ?? throw new OverflowException();
-
-        public ZipStreamPosition Add(Int32 x)
-            => x >= 0
-                ? checked(Add((UInt64)x))
-                : checked(Subtract(checked((UInt64)(-(Int64)x))));
+            => Owner.Add(this, x);
 
         #endregion
 
         #region Subtract
 
         public UInt64 Subtract(ZipStreamPosition x)
-            => _multiVolumeInfo is null
-                ? throw new InvalidOperationException("multiVolumeInfo not set")
-                : _multiVolumeInfo.Subtract(this, x);
-
-        public ZipStreamPosition Subtract(Int64 x)
-            => x >= 0
-                ? checked(Subtract((UInt64)x))
-                : x != Int64.MinValue
-                ? checked(Add((UInt64)(-x)))
-                : checked(Add(-(Int64.MinValue + 1)).Add(1));
+            => Owner.Subtract(this, x);
 
         public ZipStreamPosition Subtract(UInt64 x)
-            => _multiVolumeInfo is null
-                ? throw new InvalidOperationException("multiVolumeInfo not set")
-                : _multiVolumeInfo.Subtract(this, x) ?? throw new IOException("Invalid file position");
-
-        public ZipStreamPosition Subtract(Int32 x)
-            => x >= 0
-                ? checked(Subtract((UInt64)x))
-                : checked(Add((UInt64)(-(Int64)x)));
+            => Owner.Subtract(this, x);
 
         #endregion
 
         public Int32 CompareTo(ZipStreamPosition other)
         {
+            if (!Owner.Equals(other.Owner))
+                throw new InternalLogicalErrorException();
+
             Int32 c;
             return
                 (c = DiskNumber.CompareTo(other.DiskNumber)) != 0
@@ -108,8 +75,9 @@ namespace ZipUtility
         }
 
         public Boolean Equals(ZipStreamPosition other)
-            => DiskNumber.Equals(other.DiskNumber) &&
-                OffsetOnTheDisk.Equals(other.OffsetOnTheDisk);
+            => Owner.Equals(other.Owner)
+                && DiskNumber.Equals(other.DiskNumber)
+                && OffsetOnTheDisk.Equals(other.OffsetOnTheDisk);
 
         public override Boolean Equals(Object? other)
             => other is not null
@@ -119,5 +87,7 @@ namespace ZipUtility
         public override Int32 GetHashCode() => HashCode.Combine(DiskNumber, OffsetOnTheDisk);
 
         public override String ToString() => $"0x{DiskNumber:x8}:0x{OffsetOnTheDisk:x16}";
+
+        internal IVirtualZipFile Owner { get; }
     }
 }

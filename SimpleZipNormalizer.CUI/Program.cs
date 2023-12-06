@@ -47,7 +47,8 @@ namespace SimpleZipNormalizer.CUI
 
         private static int Main(string[] args)
         {
-            // TODO: マルチボリューム対応に挑戦
+            // TODO: IInputByteStream/IOutputBitStream/IRandomInputByteStream/IRandomOutputByteStream のフィルターのための基底クラスを作ったら、コード量が削減できるか？
+            // TODO: マルチボリューム ZIP アーカイブの書き込み対応
             // TODO: ZIP64対応のテスト ディスク数が65535以上になるように分割してみる。分割サイズが64KBだとして、圧縮済みサイズが合計4GBを超えれば ZIP64 EOCDR が適用されるはず。
             var optionInteractive = false;
             var mode = CommandMode.ListZipEntries;
@@ -267,7 +268,7 @@ namespace SimpleZipNormalizer.CUI
         {
             try
             {
-                var dir = new DirectoryPath(path.EndsWith(Path.PathSeparator) ? path[..^1] : path);
+                var dir = new DirectoryPath(path);
                 return dir.Exists ? dir : null;
             }
             catch (IOException)

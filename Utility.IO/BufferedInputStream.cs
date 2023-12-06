@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Utility.IO
 {
-    internal abstract class BufferedInputStream<POSITION_T>
+    internal abstract class BufferedInputStream<POSITION_T, UNSIGNED_OFFSET_T>
         : IInputByteStream<POSITION_T>
+        where POSITION_T : struct, IAdditionOperators<POSITION_T, UNSIGNED_OFFSET_T, POSITION_T>
+        where UNSIGNED_OFFSET_T : struct, IUnsignedNumber<UNSIGNED_OFFSET_T>, IMinMaxValue<UNSIGNED_OFFSET_T>, IAdditionOperators<UNSIGNED_OFFSET_T, UNSIGNED_OFFSET_T, UNSIGNED_OFFSET_T>
     {
         private const Int32 _MAXIMUM_BUFFER_SIZE = 1024 * 1024;
         private const Int32 _DEFAULT_BUFFER_SIZE = 80 * 1024;
@@ -38,7 +41,7 @@ namespace Utility.IO
                 _bufferSize = bufferSize.Minimum(_MAXIMUM_BUFFER_SIZE).Maximum(_MINIMUM_BUFFER_SIZE);
                 _leaveOpen = leaveOpen;
                 IsDisposed = false;
-                CurrentPosition = 0;
+                CurrentPosition = UNSIGNED_OFFSET_T.MinValue;
                 _internalBuffer = new Byte[_bufferSize];
                 _internalBufferCount = 0;
                 _internalBufferIndex = 0;
@@ -61,7 +64,7 @@ namespace Utility.IO
                 if (IsDisposed)
                     throw new ObjectDisposedException(GetType().FullName);
 
-                return AddPosition(ZeroPositionValue, CurrentPosition);
+                return checked(ZeroPositionValue + CurrentPosition);
             }
         }
 
@@ -105,11 +108,9 @@ namespace Utility.IO
         }
 
         protected Boolean IsDisposed { get; private set; }
-        protected UInt64 CurrentPosition { get; set; }
-
-        // 以下のメソッドは .NET 7.0 以降では IAdditionOperators / ISubtractionOperators で代替可能で、しかもわかりやすくコード量も減る。
+        protected UNSIGNED_OFFSET_T CurrentPosition { get; set; }
         protected abstract POSITION_T ZeroPositionValue { get; }
-        protected abstract POSITION_T AddPosition(POSITION_T x, UInt64 y);
+        protected abstract UNSIGNED_OFFSET_T FromInt32ToOffset(Int32 offset);
 
         protected void ClearCache()
         {
@@ -172,16 +173,9 @@ namespace Utility.IO
         private void UpdateCurrentPosition(Int32 length)
         {
             if (length <= 0)
-            {
                 _isEndOfStream = true;
-            }
             else
-            {
-                checked
-                {
-                    CurrentPosition += (UInt32)length;
-                }
-            }
+                CurrentPosition = checked(CurrentPosition + FromInt32ToOffset(length));
         }
 
         private Boolean IsBufferEmpty

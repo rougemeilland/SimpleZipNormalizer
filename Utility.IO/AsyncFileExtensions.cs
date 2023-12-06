@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -399,48 +398,70 @@ namespace Utility.IO
         }
 
         public static Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this FileInfo sourceFile, CancellationToken cancellationToken = default)
-            => sourceFile is null
-                ? throw new ArgumentNullException(nameof(sourceFile))
-                : sourceFile.OpenRead().CalculateCrc24Async(cancellationToken);
+        {
+            if (sourceFile is null)
+                throw new ArgumentNullException(nameof(sourceFile));
+
+            return sourceFile.OpenRead().CalculateCrc24Async(cancellationToken);
+        }
 
         public static Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this FilePath sourceFile, CancellationToken cancellationToken = default)
-            => sourceFile is null
-                ? throw new ArgumentNullException(nameof(sourceFile))
-                : sourceFile.OpenRead().CalculateCrc24Async(cancellationToken);
+        {
+            if (sourceFile is null)
+                throw new ArgumentNullException(nameof(sourceFile));
+
+            return sourceFile.OpenRead().CalculateCrc24Async(cancellationToken);
+        }
 
         public static Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this FileInfo sourceFile, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
-            => sourceFile is null
-                ? throw new ArgumentNullException(nameof(sourceFile))
-                : sourceFile.OpenRead().CalculateCrc24Async(progress, cancellationToken);
+        {
+            if (sourceFile is null)
+                throw new ArgumentNullException(nameof(sourceFile));
+
+            return sourceFile.OpenRead().CalculateCrc24Async(progress, cancellationToken);
+        }
 
         public static Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this FilePath sourceFile, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
-            => sourceFile is null
-                ? throw new ArgumentNullException(nameof(sourceFile))
-                : sourceFile.OpenRead().CalculateCrc24Async(progress, cancellationToken);
+        {
+            if (sourceFile is null)
+                throw new ArgumentNullException(nameof(sourceFile));
+
+            return sourceFile.OpenRead().CalculateCrc24Async(progress, cancellationToken);
+        }
 
         public static Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this FileInfo sourceFile, CancellationToken cancellationToken = default)
-            => sourceFile is null
-                ? throw new ArgumentNullException(nameof(sourceFile))
-                : sourceFile.OpenRead().CalculateCrc32Async(cancellationToken);
+        {
+            if (sourceFile is null)
+                throw new ArgumentNullException(nameof(sourceFile));
+
+            return sourceFile.OpenRead().CalculateCrc32Async(cancellationToken);
+        }
 
         public static Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this FilePath sourceFile, CancellationToken cancellationToken = default)
-            => sourceFile is null
-                ? throw new ArgumentNullException(nameof(sourceFile))
-                : sourceFile.OpenRead().CalculateCrc32Async(cancellationToken);
+        {
+            if (sourceFile is null)
+                throw new ArgumentNullException(nameof(sourceFile));
+
+            return sourceFile.OpenRead().CalculateCrc32Async(cancellationToken);
+        }
 
         public static Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this FileInfo sourceFile, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
-            => sourceFile is null
-                ? throw new ArgumentNullException(nameof(sourceFile))
-                : sourceFile.OpenRead().CalculateCrc32Async(progress, cancellationToken);
+        {
+            if (sourceFile is null)
+                throw new ArgumentNullException(nameof(sourceFile));
+
+            return sourceFile.OpenRead().CalculateCrc32Async(progress, cancellationToken);
+        }
 
         public static Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this FilePath sourceFile, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
-            => sourceFile is null
-                ? throw new ArgumentNullException(nameof(sourceFile))
-                : sourceFile.OpenRead().CalculateCrc32Async(progress, cancellationToken);
+        {
+            if (sourceFile is null)
+                throw new ArgumentNullException(nameof(sourceFile));
+
+            return sourceFile.OpenRead().CalculateCrc32Async(progress, cancellationToken);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        /// TextWriter.FlushAsync(bool cancellationToken) のオーバーロードのサポートは .NET 8.0 以降。それ以前のランタイムでのビルド時の警告を抑止するための属性を付加した。
-        [SuppressMessage("Reliability", "CA2016:'CancellationToken' パラメーターをメソッドに転送する", Justification = "<保留中>")]
         private static async Task InternalWriteAllLinesAsync(String fileFullPath, IAsyncEnumerable<String> lines, Encoding encoding, CancellationToken cancellationToken)
         {
             var writer = new StreamWriter(fileFullPath, false, encoding);
@@ -456,6 +477,7 @@ namespace Utility.IO
                     }
                 }
 
+                /// TextWriter.FlushAsync(bool cancellationToken) のオーバーロードのサポートは .NET 8.0 以降。
                 await writer.FlushAsync().ConfigureAwait(false);
             }
         }

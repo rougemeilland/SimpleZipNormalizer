@@ -41,7 +41,7 @@ namespace Utility
                 ? checked(x + (UInt64)y)
                 : y != Int64.MinValue
                 ? checked(x - (UInt64)(-y))
-                : checked(x - (-(Int64.MinValue + 1)) - 1);
+                : checked(x - Int64.MaxValue - 1UL); // -Int64.MinValue == Int64.MaxValue + 1
 
         /// <summary>
         /// <see cref="UInt32"/> 値と <see cref="Int32"/> 値の和を計算します。
@@ -64,7 +64,7 @@ namespace Utility
                 ? checked(x + (UInt32)y)
                 : y != Int32.MinValue
                 ? checked(x - (UInt32)(-y))
-                : checked(x - (-(Int32.MinValue + 1)) - 1);
+                : checked(x - Int32.MaxValue - 1U); // -Int32.MinValue == Int32.MaxValue + 1
 
         #endregion
 
@@ -91,7 +91,7 @@ namespace Utility
                 ? checked(x - (UInt64)y)
                 : y != Int64.MinValue
                 ? checked(x + (UInt64)(-y))
-                : checked(x + -(Int64.MinValue + 1) + 1);
+                : checked(x + Int64.MaxValue + 1UL); // -Int64.MinValue == Int64.MaxValue + 1
 
         /// <summary>
         /// <see cref="UInt32"/> 値と <see cref="Int32"/> 値の差を計算します。
@@ -114,7 +114,7 @@ namespace Utility
                 ? checked(x - (UInt32)y)
                 : y != Int32.MinValue
                 ? checked(x + (UInt32)(-y))
-                : checked(x + -(Int32.MinValue + 1) - 1);
+                : checked(x + Int32.MaxValue + 1U); // -Int32.MinValue == Int32.MaxValue + 1
 
         #endregion
 
@@ -150,10 +150,6 @@ namespace Utility
             return value;
         }
 
-        #endregion
-
-        #region ReverseBitOrder
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static UInt64 ReverseBitOrder(this UInt64 value)
         {
@@ -165,6 +161,10 @@ namespace Utility
             value = ((value & 0xaaaaaaaaaaaaaaaaUL) >> 01) | ((value & 0x5555555555555555UL) << 01);
             return value;
         }
+
+        #endregion
+
+        #region ReverseByteOrder
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static UInt16 ReverseByteOrder(this UInt16 value)

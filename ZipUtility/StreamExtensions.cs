@@ -7,7 +7,7 @@ namespace ZipUtility
     static class StreamExtensions
     {
         private class PartialInputStreamForZipInputStream
-            : PartialInputStream<UInt64, ZipStreamPosition>
+            : PartialInputStream<UInt64, ZipStreamPosition, UInt64>
         {
             public PartialInputStreamForZipInputStream(IInputByteStream<ZipStreamPosition> baseStream, Boolean leaveOpen = false)
                 : base(baseStream, leaveOpen)
@@ -25,13 +25,12 @@ namespace ZipUtility
             }
 
             protected override UInt64 ZeroPositionValue => 0;
-
-            protected override UInt64 AddPosition(UInt64 x, UInt64 y)
-                => checked(x + y);
+            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
+            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
         }
 
         private class PartialOutputStreamForZipOutputStream
-            : PartialOutputStream<UInt64, ZipStreamPosition>
+            : PartialOutputStream<UInt64, ZipStreamPosition, UInt64>
         {
             public PartialOutputStreamForZipOutputStream(IOutputByteStream<ZipStreamPosition> baseStream, Boolean leaveOpen = false)
                 : base(baseStream, leaveOpen)
@@ -49,13 +48,12 @@ namespace ZipUtility
             }
 
             protected override UInt64 ZeroPositionValue => 0;
-
-            protected override UInt64 AddPosition(UInt64 x, UInt64 y)
-                => checked(x + y);
+            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
+            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
         }
 
         private class PartialRandomInputStreamForZipInputStream
-            : PartialRandomInputStream<UInt64, ZipStreamPosition>
+            : PartialRandomInputStream<UInt64, ZipStreamPosition, UInt64>
         {
             public PartialRandomInputStreamForZipInputStream(IZipInputStream baseStream, Boolean leaveOpen = false)
                 : base(baseStream, leaveOpen)
@@ -78,40 +76,9 @@ namespace ZipUtility
             }
 
             protected IZipInputStream SourceStream => (BaseStream as IZipInputStream) ?? throw new InternalLogicalErrorException();
-
             protected override UInt64 ZeroPositionValue => 0;
-
             protected override ZipStreamPosition EndBasePositionValue => SourceStream.LastDiskStartPosition + SourceStream.LastDiskSize;
-
-            protected override (Boolean Success, ZipStreamPosition Position) AddBasePosition(ZipStreamPosition x, UInt64 y)
-            {
-                try
-                {
-                    return (true, checked(x + y));
-                }
-                catch (OverflowException)
-                {
-                    return (false, EndBasePositionValue);
-                }
-            }
-
-            protected override (Boolean Success, UInt64 Position) AddPosition(UInt64 x, UInt64 y)
-            {
-                try
-                {
-                    return (true, checked(x + y));
-                }
-                catch (OverflowException)
-                {
-                    return (false, 0);
-                }
-            }
-
-            protected override (Boolean Success, UInt64 Distance) GetDistanceBetweenBasePositions(ZipStreamPosition x, ZipStreamPosition y)
-                => x >= y ? (true, x - y) : (false, 0);
-
-            protected override (Boolean Success, UInt64 Distance) GetDistanceBetweenPositions(UInt64 x, UInt64 y)
-                => x >= y ? (true, x - y) : (false, 0);
+            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
         }
 
         public static IBasicInputByteStream AsPartial(this IZipInputStream baseStream, ZipStreamPosition offset, UInt64 size)
@@ -121,7 +88,16 @@ namespace ZipUtility
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                baseStream.Seek(offset);
+                try
+                {
+                    baseStream.Seek(offset);
+                }
+                catch (ArgumentException ex)
+                {
+
+                    throw new BadZipFileFormatException($"Unable to read data on ZIP archive.: offset=\"{offset}\"", ex);
+                }
+
                 return new PartialInputStreamForZipInputStream(baseStream, size, true);
             }
             catch (Exception)
@@ -131,31 +107,14 @@ namespace ZipUtility
             }
         }
 
-        public static IBasicOutputByteStream AsPartial(this IZipOutputStream baseStream, ZipStreamPosition offset, UInt64? size)
+        public static IRandomInputByteStream<UInt64, UInt64> AsRandomPartial(this IZipInputStream baseStream, ZipStreamPosition offset, UInt64 size)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                baseStream.Seek(offset);
-                return new PartialOutputStreamForZipOutputStream(baseStream, size, true);
-            }
-            catch (Exception)
-            {
-                baseStream?.Dispose();
-                throw;
-            }
-        }
-
-        public static IRandomInputByteStream<UInt64> AsRandomPartial(this IZipInputStream baseStream, ZipStreamPosition offset, UInt64 size)
-        {
-            try
-            {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : (IRandomInputByteStream<UInt64>)new PartialRandomInputStreamForZipInputStream(baseStream, offset, size, true);
+                return new PartialRandomInputStreamForZipInputStream(baseStream, offset, size, true);
             }
             catch (Exception)
             {

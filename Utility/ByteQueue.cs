@@ -37,10 +37,10 @@ namespace Utility
                     .Minimum(_internalBuffer.Length - _startOfDataInInternalBuffer);
                 if (actualCount <= 0)
                 {
-                    return
-                        buffer.Length > 0 && !IsCompleted
-                        ? throw new InvalidOperationException("Tried to read even though the buffer is empty.")
-                        : 0;
+                    if (buffer.Length > 0 && !IsCompleted)
+                        throw new InvalidOperationException("Tried to read even though the buffer is empty.");
+
+                    return 0;
                 }
 
                 _internalBuffer.AsSpan(_startOfDataInInternalBuffer, actualCount).CopyTo(buffer[..actualCount]);

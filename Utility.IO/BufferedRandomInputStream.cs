@@ -1,25 +1,28 @@
 ﻿using System;
+using System.Numerics;
 
 namespace Utility.IO
 {
-    internal abstract class BufferedRandomInputStream<POSITION_T>
-        : BufferedInputStream<POSITION_T>
+    internal abstract class BufferedRandomInputStream<POSITION_T, UNSIGNED_OFFSET_T>
+        : BufferedInputStream<POSITION_T, UNSIGNED_OFFSET_T>
+        where POSITION_T : struct, IAdditionOperators<POSITION_T, UNSIGNED_OFFSET_T, POSITION_T>, ISubtractionOperators<POSITION_T, POSITION_T, UNSIGNED_OFFSET_T>
+        where UNSIGNED_OFFSET_T : struct, IUnsignedNumber<UNSIGNED_OFFSET_T>, IMinMaxValue<UNSIGNED_OFFSET_T>
     {
-        private readonly IRandomInputByteStream<POSITION_T> _baseStream;
+        private readonly IRandomInputByteStream<POSITION_T, UNSIGNED_OFFSET_T> _baseStream;
 
-        public BufferedRandomInputStream(IRandomInputByteStream<POSITION_T> baseStream, Boolean leaveOpen)
+        public BufferedRandomInputStream(IRandomInputByteStream<POSITION_T, UNSIGNED_OFFSET_T> baseStream, Boolean leaveOpen)
             : base(baseStream, leaveOpen)
         {
             _baseStream = baseStream;
         }
 
-        public BufferedRandomInputStream(IRandomInputByteStream<POSITION_T> baseStream, Int32 bufferSize, Boolean leaveOpen)
+        public BufferedRandomInputStream(IRandomInputByteStream<POSITION_T, UNSIGNED_OFFSET_T> baseStream, Int32 bufferSize, Boolean leaveOpen)
             : base(baseStream, bufferSize, leaveOpen)
         {
             _baseStream = baseStream;
         }
 
-        public UInt64 Length
+        public UNSIGNED_OFFSET_T Length
         {
             get
             {
@@ -39,10 +42,7 @@ namespace Utility.IO
 
             ClearCache();
             _baseStream.Seek(offset);
-            CurrentPosition = GetDistanceBetweenPositions(offset, ZeroPositionValue);
+            CurrentPosition = checked(offset - ZeroPositionValue);
         }
-
-        // 以下のメソッドは .NET 7.0 以降では IAdditionOperators / ISubtractionOperators で代替可能で、しかもわかりやすくコード量も減る。
-        protected abstract UInt64 GetDistanceBetweenPositions(POSITION_T x, POSITION_T y);
     }
 }

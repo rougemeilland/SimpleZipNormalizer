@@ -11,8 +11,6 @@ namespace ZipUtility.ZipFileHeader
                 throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.LocalHeaderPosition)} does not match between the central directory header and local directory header.: centralDirectoryIndex={centralDirectoryHeader.Index}");
             if (!centralDirectoryHeader.FullNameBytes.Span.SequenceEqual(localFileHeader.FullNameBytes.Span))
                 throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.FullNameBytes)} does not match between the central directory header and local directory header.: centralDirectoryIndex={centralDirectoryHeader.Index}");
-            if (centralDirectoryHeader.VersionNeededToExtract != localFileHeader.VersionNeededToExtract)
-                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.VersionNeededToExtract)} does not match between the central directory header and local directory header.: centralDirectoryIndex={centralDirectoryHeader.Index}");
             if (centralDirectoryHeader.CompressionMethodId != localFileHeader.CompressionMethodId)
                 throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.CompressionMethodId)} does not match between the central directory header and local directory header.: centralDirectoryIndex={centralDirectoryHeader.Index}");
             if (centralDirectoryHeader.DosDateTime != localFileHeader.DosDateTime)

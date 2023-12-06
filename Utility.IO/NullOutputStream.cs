@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 namespace Utility.IO
 {
     public class NullOutputStream
-        : IRandomOutputByteStream<UInt64>
+        : IRandomOutputByteStream<UInt64, UInt64>
     {
         public UInt64 Length { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 

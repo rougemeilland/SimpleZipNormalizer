@@ -13,21 +13,15 @@ namespace Utility.IO
         #region private class
 
         private class AsyncReverseByteSequenceByByteStream
-            : AsyncReverseByteSequenceByByteStreamEnumerable<UInt64>
+            : AsyncReverseByteSequenceByByteStreamEnumerable<UInt64, UInt64>
         {
-            public AsyncReverseByteSequenceByByteStream(IRandomInputByteStream<UInt64> inputStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen)
+            public AsyncReverseByteSequenceByByteStream(IRandomInputByteStream<UInt64, UInt64> inputStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen)
                 : base(inputStream, offset, count, progress, leaveOpen)
             {
             }
 
-            protected override UInt64 AddPositionAndDistance(UInt64 position, UInt64 distance)
-                => checked(position + distance);
-
-            protected override Int32 GetDistanceBetweenPositions(UInt64 position1, UInt64 distance2)
-                => checked((Int32)(position1 - distance2));
-
-            protected override UInt64 SubtractBufferSizeFromPosition(UInt64 position, UInt32 distance)
-                => checked(position - distance);
+            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
+            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
         }
 
         #endregion
@@ -41,10 +35,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetAsyncByteSequence();
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetAsyncByteSequence();
             }
             catch (Exception)
             {
@@ -58,10 +52,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetAsyncByteSequence(progress);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetAsyncByteSequence(progress);
             }
             catch (Exception)
             {
@@ -75,10 +69,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetAsyncByteSequence(offset);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetAsyncByteSequence(offset);
             }
             catch (Exception)
             {
@@ -92,10 +86,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetAsyncByteSequence(offset, progress);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetAsyncByteSequence(offset, progress);
             }
             catch (Exception)
             {
@@ -109,10 +103,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetAsyncByteSequence(offset, count);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetAsyncByteSequence(offset, count);
             }
             catch (Exception)
             {
@@ -126,10 +120,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetAsyncByteSequence(offset, count, progress);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetAsyncByteSequence(offset, count, progress);
             }
             catch (Exception)
             {
@@ -143,10 +137,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : InternalGetByteSequence(baseStream, null, null, null, false, cancellationToken);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return InternalGetByteSequence<UInt64, UInt64>(baseStream, null, null, null, false, cancellationToken);
             }
             catch (Exception)
             {
@@ -159,10 +153,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : InternalGetByteSequence(baseStream, null, null, null, leaveOpen, cancellationToken);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return InternalGetByteSequence<UInt64, UInt64>(baseStream, null, null, null, leaveOpen, cancellationToken);
             }
             catch (Exception)
             {
@@ -176,10 +170,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : InternalGetByteSequence(baseStream, null, null, progress, false, cancellationToken);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return InternalGetByteSequence<UInt64, UInt64>(baseStream, null, null, progress, false, cancellationToken);
             }
             catch (Exception)
             {
@@ -192,10 +186,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : InternalGetByteSequence(baseStream, null, null, progress, leaveOpen, cancellationToken);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return InternalGetByteSequence<UInt64, UInt64>(baseStream, null, null, progress, leaveOpen, cancellationToken);
             }
             catch (Exception)
             {
@@ -209,14 +203,14 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteStream
-                    ? throw new NotSupportedException()
-                    : offset > byteStream.Length
-                    ? throw new ArgumentOutOfRangeException(nameof(offset))
-                    : InternalGetByteSequence(byteStream, offset, byteStream.Length - offset, null, false, cancellationToken);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteStream)
+                    throw new NotSupportedException();
+                if (offset > byteStream.Length)
+                    throw new ArgumentOutOfRangeException(nameof(offset));
+
+                return InternalGetByteSequence<UInt64, UInt64>(byteStream, offset, byteStream.Length - offset, null, false, cancellationToken);
             }
             catch (Exception)
             {
@@ -229,14 +223,14 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteStream
-                    ? throw new NotSupportedException()
-                    : offset > byteStream.Length
-                    ? throw new ArgumentOutOfRangeException(nameof(offset))
-                    : InternalGetByteSequence(byteStream, offset, byteStream.Length - offset, null, leaveOpen, cancellationToken);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteStream)
+                    throw new NotSupportedException();
+                if (offset > byteStream.Length)
+                    throw new ArgumentOutOfRangeException(nameof(offset));
+
+                return InternalGetByteSequence<UInt64, UInt64>(byteStream, offset, byteStream.Length - offset, null, leaveOpen, cancellationToken);
             }
             catch (Exception)
             {
@@ -250,14 +244,14 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteStream
-                    ? throw new NotSupportedException()
-                    : offset > byteStream.Length
-                    ? throw new ArgumentOutOfRangeException(nameof(offset))
-                    : InternalGetByteSequence(byteStream, offset, byteStream.Length - offset, progress, false, cancellationToken);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteStream)
+                    throw new NotSupportedException();
+                if (offset > byteStream.Length)
+                    throw new ArgumentOutOfRangeException(nameof(offset));
+
+                return InternalGetByteSequence<UInt64, UInt64>(byteStream, offset, byteStream.Length - offset, progress, false, cancellationToken);
             }
             catch (Exception)
             {
@@ -270,14 +264,14 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteStream
-                    ? throw new NotSupportedException()
-                    : offset > byteStream.Length
-                    ? throw new ArgumentOutOfRangeException(nameof(offset))
-                    : InternalGetByteSequence(byteStream, offset, byteStream.Length - offset, progress, leaveOpen, cancellationToken);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteStream)
+                    throw new NotSupportedException();
+                if (offset > byteStream.Length)
+                    throw new ArgumentOutOfRangeException(nameof(offset));
+
+                return InternalGetByteSequence<UInt64, UInt64>(byteStream, offset, byteStream.Length - offset, progress, leaveOpen, cancellationToken);
             }
             catch (Exception)
             {
@@ -291,14 +285,14 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteSteram
-                    ? throw new NotSupportedException()
-                    : checked(offset + count) > byteSteram.Length
-                    ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.")
-                    : InternalGetByteSequence(byteSteram, offset, count, null, false, cancellationToken);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                    throw new NotSupportedException();
+                if (checked(offset + count) > byteSteram.Length)
+                    throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
+
+                return InternalGetByteSequence<UInt64, UInt64>(byteSteram, offset, count, null, false, cancellationToken);
             }
             catch (Exception)
             {
@@ -311,14 +305,14 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteSteram
-                    ? throw new NotSupportedException()
-                    : checked(offset + count) > byteSteram.Length
-                    ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.")
-                    : InternalGetByteSequence(byteSteram, offset, count, null, leaveOpen, cancellationToken);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                    throw new NotSupportedException();
+                if (checked(offset + count) > byteSteram.Length)
+                    throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
+
+                return InternalGetByteSequence<UInt64, UInt64>(byteSteram, offset, count, null, leaveOpen, cancellationToken);
             }
             catch (Exception)
             {
@@ -332,14 +326,14 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteSteram
-                    ? throw new NotSupportedException()
-                    : checked(offset + count) > byteSteram.Length
-                    ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.")
-                    : InternalGetByteSequence(byteSteram, offset, count, progress, false, cancellationToken);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                    throw new NotSupportedException();
+                if (checked(offset + count) > byteSteram.Length)
+                    throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
+
+                return InternalGetByteSequence<UInt64, UInt64>(byteSteram, offset, count, progress, false, cancellationToken);
             }
             catch (Exception)
             {
@@ -352,14 +346,14 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteSteram
-                    ? throw new NotSupportedException()
-                    : checked(offset + count) > byteSteram.Length
-                    ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.")
-                    : InternalGetByteSequence(byteSteram, offset, count, progress, leaveOpen, cancellationToken);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                    throw new NotSupportedException();
+                if (checked(offset + count) > byteSteram.Length)
+                    throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
+
+                return InternalGetByteSequence<UInt64, UInt64>(byteSteram, offset, count, progress, leaveOpen, cancellationToken);
             }
             catch (Exception)
             {
@@ -377,10 +371,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetAsyncReverseByteSequence();
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetAsyncReverseByteSequence();
             }
             catch (Exception)
             {
@@ -394,10 +388,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetAsyncReverseByteSequence(progress);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetAsyncReverseByteSequence(progress);
             }
             catch (Exception)
             {
@@ -411,10 +405,11 @@ namespace Utility.IO
         {
             try
             {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
                 return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen)
+                    baseStream.AsInputByteStream(leaveOpen)
                     .GetAsyncReverseByteSequence(offset);
             }
             catch (Exception)
@@ -429,10 +424,11 @@ namespace Utility.IO
         {
             try
             {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
                 return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen)
+                    baseStream.AsInputByteStream(leaveOpen)
                     .GetAsyncReverseByteSequence(offset, progress);
             }
             catch (Exception)
@@ -447,10 +443,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetAsyncReverseByteSequence(offset, count);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetAsyncReverseByteSequence(offset, count);
             }
             catch (Exception)
             {
@@ -464,10 +460,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetAsyncReverseByteSequence(offset, count, progress);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetAsyncReverseByteSequence(offset, count, progress);
             }
             catch (Exception)
             {
@@ -481,12 +477,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteSteram
-                    ? throw new NotSupportedException()
-                    : (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, 0, byteSteram.Length, null, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                    throw new NotSupportedException();
+
+                return (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, 0, byteSteram.Length, null, leaveOpen);
             }
             catch (Exception)
             {
@@ -500,12 +496,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteSteram
-                    ? throw new NotSupportedException()
-                    : (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, 0, byteSteram.Length, progress, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                    throw new NotSupportedException();
+
+                return (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, 0, byteSteram.Length, progress, leaveOpen);
             }
             catch (Exception)
             {
@@ -519,12 +515,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteSteram
-                    ? throw new NotSupportedException()
-                    : (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, offset, byteSteram.Length - offset, null, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                    throw new NotSupportedException();
+
+                return (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, offset, byteSteram.Length - offset, null, leaveOpen);
             }
             catch (Exception)
             {
@@ -538,12 +534,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteSteram
-                    ? throw new NotSupportedException()
-                    : (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, offset, byteSteram.Length - offset, progress, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                    throw new NotSupportedException();
+
+                return (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, offset, byteSteram.Length - offset, progress, leaveOpen);
             }
             catch (Exception)
             {
@@ -557,12 +553,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteSteram
-                    ? throw new NotSupportedException()
-                    : (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, offset, count, null, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                    throw new NotSupportedException();
+
+                return (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, offset, count, null, leaveOpen);
             }
             catch (Exception)
             {
@@ -576,12 +572,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteSteram
-                    ? throw new NotSupportedException()
-                    : (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, offset, count, progress, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                    throw new NotSupportedException();
+
+                return (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, offset, count, progress, leaveOpen);
             }
             catch (Exception)
             {
@@ -599,12 +595,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    stream1 is null
-                    ? throw new ArgumentNullException(nameof(stream1))
-                    : stream2 is null
-                    ? throw new ArgumentNullException(nameof(stream2))
-                    : await InternalStreamBytesEqualAsync(stream1, stream2, null, cancellationToken).ConfigureAwait(false);
+                if (stream1 is null)
+                    throw new ArgumentNullException(nameof(stream1));
+                if (stream2 is null)
+                    throw new ArgumentNullException(nameof(stream2));
+
+                return await InternalStreamBytesEqualAsync(stream1, stream2, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -619,12 +615,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    stream1 is null
-                    ? throw new ArgumentNullException(nameof(stream1))
-                    : stream2 is null
-                    ? throw new ArgumentNullException(nameof(stream2))
-                    : await InternalStreamBytesEqualAsync(stream1, stream2, null, cancellationToken).ConfigureAwait(false);
+                if (stream1 is null)
+                    throw new ArgumentNullException(nameof(stream1));
+                if (stream2 is null)
+                    throw new ArgumentNullException(nameof(stream2));
+
+                return await InternalStreamBytesEqualAsync(stream1, stream2, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -642,12 +638,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    stream1 is null
-                    ? throw new ArgumentNullException(nameof(stream1))
-                    : stream2 is null
-                    ? throw new ArgumentNullException(nameof(stream2))
-                    : await InternalStreamBytesEqualAsync(stream1, stream2, progress, cancellationToken).ConfigureAwait(false);
+                if (stream1 is null)
+                    throw new ArgumentNullException(nameof(stream1));
+                if (stream2 is null)
+                    throw new ArgumentNullException(nameof(stream2));
+
+                return await InternalStreamBytesEqualAsync(stream1, stream2, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -662,12 +658,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    stream1 is null
-                    ? throw new ArgumentNullException(nameof(stream1))
-                    : stream2 is null
-                    ? throw new ArgumentNullException(nameof(stream2))
-                    : await InternalStreamBytesEqualAsync(stream1, stream2, progress, cancellationToken).ConfigureAwait(false);
+                if (stream1 is null)
+                    throw new ArgumentNullException(nameof(stream1));
+                if (stream2 is null)
+                    throw new ArgumentNullException(nameof(stream2));
+
+                return await InternalStreamBytesEqualAsync(stream1, stream2, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -685,12 +681,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    stream1 is null
-                    ? throw new ArgumentNullException(nameof(stream1))
-                    : stream2 is null
-                    ? throw new ArgumentNullException(nameof(stream2))
-                    : await stream1.InternalStreamBytesEqualAsync(stream2, null, cancellationToken).ConfigureAwait(false);
+                if (stream1 is null)
+                    throw new ArgumentNullException(nameof(stream1));
+                if (stream2 is null)
+                    throw new ArgumentNullException(nameof(stream2));
+
+                return await stream1.InternalStreamBytesEqualAsync(stream2, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -705,12 +701,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    stream1 is null
-                    ? throw new ArgumentNullException(nameof(stream1))
-                    : stream2 is null
-                    ? throw new ArgumentNullException(nameof(stream2))
-                    : await stream1.InternalStreamBytesEqualAsync(stream2, null, cancellationToken).ConfigureAwait(false);
+                if (stream1 is null)
+                    throw new ArgumentNullException(nameof(stream1));
+                if (stream2 is null)
+                    throw new ArgumentNullException(nameof(stream2));
+
+                return await stream1.InternalStreamBytesEqualAsync(stream2, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -728,12 +724,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    stream1 is null
-                    ? throw new ArgumentNullException(nameof(stream1))
-                    : stream2 is null
-                    ? throw new ArgumentNullException(nameof(stream2))
-                    : await stream1.InternalStreamBytesEqualAsync(stream2, progress, cancellationToken).ConfigureAwait(false);
+                if (stream1 is null)
+                    throw new ArgumentNullException(nameof(stream1));
+                if (stream2 is null)
+                    throw new ArgumentNullException(nameof(stream2));
+
+                return await stream1.InternalStreamBytesEqualAsync(stream2, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -748,12 +744,12 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    stream1 is null
-                    ? throw new ArgumentNullException(nameof(stream1))
-                    : stream2 is null
-                    ? throw new ArgumentNullException(nameof(stream2))
-                    : await stream1.InternalStreamBytesEqualAsync(stream2, progress, cancellationToken).ConfigureAwait(false);
+                if (stream1 is null)
+                    throw new ArgumentNullException(nameof(stream1));
+                if (stream2 is null)
+                    throw new ArgumentNullException(nameof(stream2));
+
+                return await stream1.InternalStreamBytesEqualAsync(stream2, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -918,68 +914,92 @@ namespace Utility.IO
         }
 
         public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, CancellationToken cancellationToken = default)
-            => source is null
-                ? throw new ArgumentNullException(nameof(source))
-                : destination is null
-                ? throw new ArgumentNullException(nameof(destination))
-                : source.InternalCopyToAsync(destination, _COPY_TO_DEFAULT_BUFFER_SIZE, null, false, cancellationToken);
+        {
+            if (source is null)
+                throw new ArgumentNullException(nameof(source));
+            if (destination is null)
+                throw new ArgumentNullException(nameof(destination));
+
+            return source.InternalCopyToAsync(destination, _COPY_TO_DEFAULT_BUFFER_SIZE, null, false, cancellationToken);
+        }
 
         public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, Boolean leaveOpen, CancellationToken cancellationToken = default)
-            => source is null
-                ? throw new ArgumentNullException(nameof(source))
-                : destination is null
-                ? throw new ArgumentNullException(nameof(destination))
-                : source.InternalCopyToAsync(destination, _COPY_TO_DEFAULT_BUFFER_SIZE, null, leaveOpen, cancellationToken);
+        {
+            if (source is null)
+                throw new ArgumentNullException(nameof(source));
+            if (destination is null)
+                throw new ArgumentNullException(nameof(destination));
+
+            return source.InternalCopyToAsync(destination, _COPY_TO_DEFAULT_BUFFER_SIZE, null, leaveOpen, cancellationToken);
+        }
 
         public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
-            => source is null
-                ? throw new ArgumentNullException(nameof(source))
-                : destination is null
-                ? throw new ArgumentNullException(nameof(destination))
-                : source.InternalCopyToAsync(destination, _COPY_TO_DEFAULT_BUFFER_SIZE, progress, false, cancellationToken);
+        {
+            if (source is null)
+                throw new ArgumentNullException(nameof(source));
+            if (destination is null)
+                throw new ArgumentNullException(nameof(destination));
+
+            return source.InternalCopyToAsync(destination, _COPY_TO_DEFAULT_BUFFER_SIZE, progress, false, cancellationToken);
+        }
 
         public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
-            => source is null
-                ? throw new ArgumentNullException(nameof(source))
-                : destination is null
-                ? throw new ArgumentNullException(nameof(destination))
-                : source.InternalCopyToAsync(destination, _COPY_TO_DEFAULT_BUFFER_SIZE, progress, leaveOpen, cancellationToken);
+        {
+            if (source is null)
+                throw new ArgumentNullException(nameof(source));
+            if (destination is null)
+                throw new ArgumentNullException(nameof(destination));
+
+            return source.InternalCopyToAsync(destination, _COPY_TO_DEFAULT_BUFFER_SIZE, progress, leaveOpen, cancellationToken);
+        }
 
         public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, Int32 bufferSize, CancellationToken cancellationToken = default)
-            => source is null
-                ? throw new ArgumentNullException(nameof(source))
-                : destination is null
-                ? throw new ArgumentNullException(nameof(destination))
-                : bufferSize < 1
-                ? throw new ArgumentOutOfRangeException(nameof(bufferSize))
-                : source.InternalCopyToAsync(destination, bufferSize, null, false, cancellationToken);
+        {
+            if (source is null)
+                throw new ArgumentNullException(nameof(source));
+            if (destination is null)
+                throw new ArgumentNullException(nameof(destination));
+            if (bufferSize < 1)
+                throw new ArgumentOutOfRangeException(nameof(bufferSize));
+
+            return source.InternalCopyToAsync(destination, bufferSize, null, false, cancellationToken);
+        }
 
         public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, Int32 bufferSize, Boolean leaveOpen, CancellationToken cancellationToken = default)
-            => source is null
-                ? throw new ArgumentNullException(nameof(source))
-                : destination is null
-                ? throw new ArgumentNullException(nameof(destination))
-                : bufferSize < 1
-                ? throw new ArgumentOutOfRangeException(nameof(bufferSize))
-                : source.InternalCopyToAsync(destination, bufferSize, null, leaveOpen, cancellationToken);
+        {
+            if (source is null)
+                throw new ArgumentNullException(nameof(source));
+            if (destination is null)
+                throw new ArgumentNullException(nameof(destination));
+            if (bufferSize < 1)
+                throw new ArgumentOutOfRangeException(nameof(bufferSize));
+
+            return source.InternalCopyToAsync(destination, bufferSize, null, leaveOpen, cancellationToken);
+        }
 
         public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, Int32 bufferSize, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
-            => source is null
-                ? throw new ArgumentNullException(nameof(source))
-                : destination is null
-                ? throw new ArgumentNullException(nameof(destination))
-                : bufferSize < 1
-                ? throw new ArgumentOutOfRangeException(nameof(bufferSize))
-                : source.InternalCopyToAsync(destination, bufferSize, progress, false, cancellationToken);
+        {
+            if (source is null)
+                throw new ArgumentNullException(nameof(source));
+            if (destination is null)
+                throw new ArgumentNullException(nameof(destination));
+            if (bufferSize < 1)
+                throw new ArgumentOutOfRangeException(nameof(bufferSize));
+
+            return source.InternalCopyToAsync(destination, bufferSize, progress, false, cancellationToken);
+        }
 
         public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
-            => source is null
-                ? throw new ArgumentNullException(nameof(source))
-                : destination is null
-                ? throw new ArgumentNullException(nameof(destination))
-                : bufferSize < 1
-                ? throw new ArgumentOutOfRangeException(nameof(bufferSize))
-                : source.InternalCopyToAsync(destination, bufferSize, progress, leaveOpen, cancellationToken);
+        {
+            if (source is null)
+                throw new ArgumentNullException(nameof(source));
+            if (destination is null)
+                throw new ArgumentNullException(nameof(destination));
+            if (bufferSize < 1)
+                throw new ArgumentOutOfRangeException(nameof(bufferSize));
+
+            return source.InternalCopyToAsync(destination, bufferSize, progress, leaveOpen, cancellationToken);
+        }
 
         #endregion
 
@@ -994,28 +1014,34 @@ namespace Utility.IO
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadAsync(this Stream stream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : !offset.IsBetween(0, buffer.Length)
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : stream.ReadAsync(buffer.Slice(offset), cancellationToken).AsTask();
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (!offset.IsBetween(0, buffer.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return stream.ReadAsync(buffer.Slice(offset), cancellationToken).AsTask();
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<UInt32> ReadAsync(this Stream stream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset > (UInt32)buffer.Length
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : (UInt32)(
-                    await stream.ReadAsync(
-                        buffer.AsMemory((Int32)offset,
-                        buffer.Length - (Int32)offset),
-                        cancellationToken)
-                    .ConfigureAwait(false)).Maximum(0);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset > (UInt32)buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return (UInt32)(
+                await stream.ReadAsync(
+                    buffer.AsMemory((Int32)offset,
+                    buffer.Length - (Int32)offset),
+                    cancellationToken)
+                .ConfigureAwait(false)).Maximum(0);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadAsync(this Stream stream, Byte[] buffer, Range range, CancellationToken cancellationToken = default)
@@ -1025,49 +1051,58 @@ namespace Utility.IO
             if (buffer is null)
                 throw new ArgumentNullException(nameof(buffer));
             var (isOk, offset, count) = buffer.GetOffsetAndLength(range);
-            return
-                !isOk
-                ? throw new ArgumentOutOfRangeException(nameof(range))
-                : stream.ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+            if (!isOk)
+                throw new ArgumentOutOfRangeException(nameof(range));
+
+            return stream.ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<UInt32> ReadAsync(this Stream stream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : checked(offset + count > (UInt32)buffer.Length)
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : (UInt32)(
-                    await stream.ReadAsync(
-                        buffer.AsMemory((Int32)offset, buffer.Length - (Int32)offset),
-                        cancellationToken)
-                    .ConfigureAwait(false)).Maximum(0);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (checked(offset + count > (UInt32)buffer.Length))
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return (UInt32)(
+                await stream.ReadAsync(
+                    buffer.AsMemory((Int32)offset, buffer.Length - (Int32)offset),
+                    cancellationToken)
+                .ConfigureAwait(false)).Maximum(0);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadAsync(this IBasicInputByteStream stream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : !offset.IsBetween(0, buffer.Length)
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : stream.ReadAsync(buffer.Slice(offset), cancellationToken);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (!offset.IsBetween(0, buffer.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return stream.ReadAsync(buffer.Slice(offset), cancellationToken);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<UInt32> ReadAsync(this IBasicInputByteStream stream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset > (UInt32)buffer.Length
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : (UInt32)(
-                    await stream.ReadAsync(
-                        buffer.Slice((Int32)offset),
-                        cancellationToken)
-                    .ConfigureAwait(false)).Maximum(0);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset > (UInt32)buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return (UInt32)(
+                await stream.ReadAsync(
+                    buffer.Slice((Int32)offset),
+                    cancellationToken)
+                .ConfigureAwait(false)).Maximum(0);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadAsync(this IBasicInputByteStream stream, Byte[] buffer, Range range, CancellationToken cancellationToken = default)
@@ -1077,39 +1112,45 @@ namespace Utility.IO
             if (buffer is null)
                 throw new ArgumentNullException(nameof(buffer));
             var (isOk, offset, count) = buffer.GetOffsetAndLength(range);
-            return
-                !isOk
-                ? throw new ArgumentOutOfRangeException(nameof(range))
-                : stream.ReadAsync(buffer.Slice(offset, count), cancellationToken);
+            if (!isOk)
+                throw new ArgumentOutOfRangeException(nameof(range));
+
+            return stream.ReadAsync(buffer.Slice(offset, count), cancellationToken);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadAsync(this IBasicInputByteStream stream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(count))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : stream.ReadAsync(buffer.Slice(offset, count), cancellationToken);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return stream.ReadAsync(buffer.Slice(offset, count), cancellationToken);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<UInt32> ReadAsync(this IBasicInputByteStream stream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : checked(offset + count > (UInt32)buffer.Length)
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : (UInt32)(
-                    await stream.ReadAsync(
-                        buffer.Slice(offset, count),
-                        cancellationToken)
-                    .ConfigureAwait(false)).Maximum(0);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (checked(offset + count > (UInt32)buffer.Length))
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return (UInt32)(
+                await stream.ReadAsync(
+                    buffer.Slice(offset, count),
+                    cancellationToken)
+                .ConfigureAwait(false)).Maximum(0);
+        }
 
         #endregion
 
@@ -1152,10 +1193,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[1];
-            return
-                await sourceStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false) > 0
-                ? buffer[0]
-                : throw new UnexpectedEndOfStreamException();
+            if (await sourceStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false) <= 0)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer[0];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1165,10 +1206,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[1];
-            return
-                await sourceStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false) > 0
-                ? buffer[0]
-                : throw new UnexpectedEndOfStreamException();
+            if (await sourceStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false) <= 0)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer[0];
         }
 
         #endregion
@@ -1216,42 +1257,51 @@ namespace Utility.IO
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadBytesAsync(this Stream sourceStream, Byte[] buffer, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : InternalReadBytesAsync(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+
+            return InternalReadBytesAsync(
                     0,
                     buffer.Length,
                     (_offset, _count) => sourceStream.ReadAsync(buffer, _offset, _count, cancellationToken));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadBytesAsync(this Stream sourceStream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : !offset.IsBetween(0, buffer.Length)
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : InternalReadBytesAsync(
-                    offset,
-                    buffer.Length - offset,
-                    (_offset, _count) => sourceStream.ReadAsync(buffer, _offset, _count, cancellationToken));
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (!offset.IsBetween(0, buffer.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return InternalReadBytesAsync(
+                offset,
+                buffer.Length - offset,
+                (_offset, _count) => sourceStream.ReadAsync(buffer, _offset, _count, cancellationToken));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<UInt32> ReadBytesAsync(this Stream sourceStream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset > (UInt32)buffer.Length
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : (UInt32)(
-                    await InternalReadBytesAsync(
-                        (Int32)offset,
-                        buffer.Length - (Int32)offset,
-                        (_offset, _count) => sourceStream.ReadAsync(buffer, _offset, _count, cancellationToken))
-                    .ConfigureAwait(false)).Maximum(0);
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset > (UInt32)buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return (UInt32)(
+                await InternalReadBytesAsync(
+                    (Int32)offset,
+                    buffer.Length - (Int32)offset,
+                    (_offset, _count) => sourceStream.ReadAsync(buffer, _offset, _count, cancellationToken))
+                .ConfigureAwait(false)).Maximum(0);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadBytesAsync(this Stream sourceStream, Byte[] buffer, Range range, CancellationToken cancellationToken = default)
@@ -1261,10 +1311,11 @@ namespace Utility.IO
             if (buffer is null)
                 throw new ArgumentNullException(nameof(buffer));
             var (isOk, offset, count) = buffer.GetOffsetAndLength(range);
+            if (!isOk)
+                throw new ArgumentOutOfRangeException(nameof(range));
+
             return
-                !isOk
-                ? throw new ArgumentOutOfRangeException(nameof(range))
-                : InternalReadBytesAsync(
+                InternalReadBytesAsync(
                     offset,
                     count,
                     (_offset, _count) => sourceStream.ReadAsync(buffer, _offset, _count, cancellationToken));
@@ -1272,43 +1323,54 @@ namespace Utility.IO
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadBytesAsync(this Stream sourceStream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(count))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : InternalReadBytesAsync(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return
+                InternalReadBytesAsync(
                     offset,
                     count,
                     (_offset, _count) => sourceStream.ReadAsync(buffer, _offset, _count, cancellationToken));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<UInt32> ReadBytesAsync(this Stream sourceStream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : (UInt32)(
-                    await InternalReadBytesAsync(
-                        (Int32)offset,
-                        (Int32)count,
-                        (_offset, _count) => sourceStream.ReadAsync(buffer, _offset, _count, cancellationToken))
-                    .ConfigureAwait(false)).Maximum(0);
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return (UInt32)(
+                await InternalReadBytesAsync(
+                    (Int32)offset,
+                    (Int32)count,
+                    (_offset, _count) => sourceStream.ReadAsync(buffer, _offset, _count, cancellationToken))
+                .ConfigureAwait(false)).Maximum(0);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadBytesAsync(this Stream sourceStream, Memory<Byte> buffer, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : InternalReadBytesAsync(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+
+            return
+                InternalReadBytesAsync(
                     buffer,
                     _buffer => sourceStream.ReadAsync(_buffer, cancellationToken).AsTask());
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<ReadOnlyMemory<Byte>> ReadBytesAsync(this IBasicInputByteStream sourceStream, Int32 count, CancellationToken cancellationToken = default)
@@ -1350,42 +1412,53 @@ namespace Utility.IO
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Byte[] buffer, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : InternalReadBytesAsync(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+
+            return
+                InternalReadBytesAsync(
                     0,
                     buffer.Length,
                     (_offset, _count) => sourceStream.ReadAsync(buffer.Slice(_offset, _count), cancellationToken));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : !offset.IsBetween(0, buffer.Length)
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : InternalReadBytesAsync(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (!offset.IsBetween(0, buffer.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return
+                InternalReadBytesAsync(
                     offset,
                     buffer.Length - offset,
                     (_offset, _count) => sourceStream.ReadAsync(buffer.Slice(_offset, _count), cancellationToken));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<UInt32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset > (UInt32)buffer.Length
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : (UInt32)(
-                    await InternalReadBytesAsync(
-                        (Int32)offset,
-                        buffer.Length - (Int32)offset,
-                        (_offset, _count) => sourceStream.ReadAsync(buffer.Slice(_offset, _count), cancellationToken))
-                    .ConfigureAwait(false)).Maximum(0);
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset > (UInt32)buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return (UInt32)(
+                await InternalReadBytesAsync(
+                    (Int32)offset,
+                    buffer.Length - (Int32)offset,
+                    (_offset, _count) => sourceStream.ReadAsync(buffer.Slice(_offset, _count), cancellationToken))
+                .ConfigureAwait(false)).Maximum(0);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Byte[] buffer, Range range, CancellationToken cancellationToken = default)
@@ -1395,10 +1468,11 @@ namespace Utility.IO
             if (buffer is null)
                 throw new ArgumentNullException(nameof(buffer));
             var (isOk, offset, count) = buffer.GetOffsetAndLength(range);
+            if (!isOk)
+                throw new ArgumentOutOfRangeException(nameof(range));
+
             return
-                !isOk
-                ? throw new ArgumentOutOfRangeException(nameof(range))
-                : InternalReadBytesAsync(
+                InternalReadBytesAsync(
                     offset,
                     count,
                     (_offset, _count) => sourceStream.ReadAsync(buffer.Slice(_offset, _count), cancellationToken));
@@ -1406,43 +1480,53 @@ namespace Utility.IO
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : InternalReadBytesAsync(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+            return
+                InternalReadBytesAsync(
                     offset,
                     count,
                     (_offset, _count) => sourceStream.ReadAsync(buffer.Slice(_offset, _count), cancellationToken));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<UInt32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : (UInt32)(
-                    await InternalReadBytesAsync(
-                        (Int32)offset,
-                        (Int32)count,
-                        (_offset, _count) => sourceStream.ReadAsync(buffer.Slice(_offset, _count), cancellationToken))
-                    .ConfigureAwait(false)).Maximum(0);
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return (UInt32)(
+                await InternalReadBytesAsync(
+                    (Int32)offset,
+                    (Int32)count,
+                    (_offset, _count) => sourceStream.ReadAsync(buffer.Slice(_offset, _count), cancellationToken))
+                .ConfigureAwait(false)).Maximum(0);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Memory<Byte> buffer, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : InternalReadBytesAsync(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+
+            return
+                InternalReadBytesAsync(
                     buffer,
                     _buffer => sourceStream.ReadAsync(_buffer, cancellationToken));
+        }
 
         #endregion
 
@@ -1452,12 +1536,13 @@ namespace Utility.IO
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+
             return
-                sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(count))
-                : InternalReadByteSequenceAsync(
+                InternalReadByteSequenceAsync(
                     (UInt64)count,
                     async _count =>
                     {
@@ -1475,10 +1560,11 @@ namespace Utility.IO
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+
             return
-                sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : InternalReadByteSequenceAsync(
+                InternalReadByteSequenceAsync(
                     count,
                     async _count =>
                     {
@@ -1496,12 +1582,13 @@ namespace Utility.IO
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+
             return
-                sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(count))
-                : InternalReadByteSequenceAsync(
+                InternalReadByteSequenceAsync(
                     (UInt64)count,
                     async _count =>
                     {
@@ -1519,10 +1606,11 @@ namespace Utility.IO
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+
             return
-                sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : InternalReadByteSequenceAsync(
+                InternalReadByteSequenceAsync(
                     count,
                     async _count =>
                     {
@@ -1541,20 +1629,28 @@ namespace Utility.IO
         #region ReadAllBytesAsync
 
         public static Task<ReadOnlyMemory<Byte>> ReadAllBytesAsync(this Stream sourceStream, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : InternalReadAllBytesAsync((
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+
+            return
+                InternalReadAllBytesAsync((
                     _buffer,
                     _offset,
                     _count) => sourceStream.ReadAsync(_buffer, _offset, _count, cancellationToken));
+        }
 
         public static Task<ReadOnlyMemory<Byte>> ReadAllBytesAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : InternalReadAllBytesAsync((
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+
+            return
+                InternalReadAllBytesAsync((
                     _buffer,
                     _offset,
                     _count) => sourceStream.ReadAsync(_buffer.Slice(_offset, _count), cancellationToken));
+        }
 
         #endregion
 
@@ -1567,10 +1663,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Int16)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt16LE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt16LE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1580,10 +1676,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Int16)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt16LE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt16LE();
         }
 
         #endregion
@@ -1597,10 +1693,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(UInt16)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt16LE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt16LE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1610,10 +1706,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(UInt16)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt16LE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt16LE();
         }
 
         #endregion
@@ -1627,10 +1723,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Int32)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt32LE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt32LE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1640,10 +1736,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Int32)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt32LE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt32LE();
         }
 
         #endregion
@@ -1657,10 +1753,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(UInt32)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt32LE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt32LE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1670,10 +1766,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(UInt32)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt32LE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt32LE();
         }
 
         #endregion
@@ -1687,10 +1783,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Int64)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt64LE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt64LE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1700,10 +1796,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Int64)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt64LE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt64LE();
         }
 
         #endregion
@@ -1717,10 +1813,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(UInt64)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt64LE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt64LE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1730,10 +1826,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(UInt64)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt64LE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt64LE();
         }
 
         #endregion
@@ -1747,10 +1843,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Single)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToSingleLE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToSingleLE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1760,10 +1856,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Single)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToSingleLE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToSingleLE();
         }
 
         #endregion
@@ -1777,10 +1873,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Double)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDoubleLE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDoubleLE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1790,10 +1886,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Double)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDoubleLE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDoubleLE();
         }
 
         #endregion
@@ -1807,10 +1903,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Decimal)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDecimalLE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDecimalLE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1820,10 +1916,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Decimal)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDecimalLE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDecimalLE();
         }
 
         #endregion
@@ -1837,10 +1933,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Int16)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt16BE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt16BE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1850,10 +1946,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Int16)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt16BE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt16BE();
         }
 
         #endregion
@@ -1867,10 +1963,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(UInt16)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt16BE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt16BE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1880,10 +1976,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(UInt16)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt16BE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt16BE();
         }
 
         #endregion
@@ -1897,10 +1993,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Int32)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt32BE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt32BE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1910,10 +2006,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Int32)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt32BE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt32BE();
         }
 
         #endregion
@@ -1927,10 +2023,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(UInt32)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt32BE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt32BE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1940,10 +2036,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(UInt32)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt32BE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt32BE();
         }
 
         #endregion
@@ -1957,10 +2053,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Int64)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt64BE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt64BE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1970,10 +2066,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Int64)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt64BE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt64BE();
         }
 
         #endregion
@@ -1987,10 +2083,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(UInt64)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt64BE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt64BE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2000,10 +2096,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(UInt64)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt64BE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt64BE();
         }
 
         #endregion
@@ -2017,10 +2113,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Single)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToSingleBE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToSingleBE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2030,10 +2126,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Single)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToSingleBE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToSingleBE();
         }
 
         #endregion
@@ -2047,10 +2143,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Double)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDoubleBE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDoubleBE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2060,10 +2156,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Double)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDoubleBE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDoubleBE();
         }
 
         #endregion
@@ -2077,10 +2173,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Decimal)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDecimalBE();
+            if (await sourceStream.ReadBytesAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDecimalBE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2090,10 +2186,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             var buffer = new Byte[sizeof(Decimal)];
-            return
-                await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDecimalBE();
+            if (await sourceStream.ReadBytesAsync(buffer, cancellationToken).ConfigureAwait(false) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDecimalBE();
         }
 
         #endregion
@@ -2156,66 +2252,71 @@ namespace Utility.IO
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> WriteAsync(this IBasicOutputByteStream stream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : !offset.IsBetween(0, buffer.Length)
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : stream.WriteAsync(buffer.Slice(offset), cancellationToken);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (!offset.IsBetween(0, buffer.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return stream.WriteAsync(buffer.Slice(offset), cancellationToken);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<UInt32> WriteAsync(this IBasicOutputByteStream stream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset > buffer.Length
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : (UInt32)(
-                    await stream.WriteAsync(
-                        buffer.Slice((Int32)offset),
-                        cancellationToken)
-                    .ConfigureAwait(false)).Maximum(0);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset > buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return (UInt32)(
+                await stream.WriteAsync(
+                    buffer.Slice((Int32)offset),
+                    cancellationToken)
+                .ConfigureAwait(false)).Maximum(0);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task<Int32> WriteAsync(this IBasicOutputByteStream stream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(count))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : stream.WriteAsync(buffer.Slice(offset, count), cancellationToken);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return stream.WriteAsync(buffer.Slice(offset, count), cancellationToken);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<UInt32> WriteAsync(this IBasicOutputByteStream stream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : checked(offset + count > (UInt32)buffer.Length)
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : (UInt32)(
-                    await stream.WriteAsync(
-                        buffer.Slice(offset, count),
-                        cancellationToken)
-                    .ConfigureAwait(false)).Maximum(0);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (checked(offset + count > (UInt32)buffer.Length))
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return (UInt32)(
+                await stream.WriteAsync(
+                    buffer.Slice(offset, count),
+                    cancellationToken)
+                .ConfigureAwait(false)).Maximum(0);
+        }
 
         #endregion
 
         #region WriteByteAsync
-
-#if false
-        public static Task WriteByteAsync(this Stream stream, Byte value, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException(); // defined in System.IO.Stream.WriteByteAsync(Byte, CancellationToken) 
-        }
-#endif
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task WriteByteAsync(this IBasicOutputByteStream stream, Byte value, CancellationToken cancellationToken = default)
@@ -2231,31 +2332,40 @@ namespace Utility.IO
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task WriteBytesAsync(this Stream destinationStream, Byte[] buffer, CancellationToken cancellationToken = default)
-            => destinationStream is null
-                ? throw new ArgumentNullException(nameof(destinationStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : destinationStream.WriteAsync(buffer, 0, buffer.Length, cancellationToken);
+        {
+            if (destinationStream is null)
+                throw new ArgumentNullException(nameof(destinationStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+
+            return destinationStream.WriteAsync(buffer, 0, buffer.Length, cancellationToken);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task WriteBytesAsync(this Stream destinationStream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
-            => destinationStream is null
-                ? throw new ArgumentNullException(nameof(destinationStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : !offset.IsBetween(0, buffer.Length)
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : destinationStream.WriteAsync(buffer, offset, buffer.Length - offset, cancellationToken);
+        {
+            if (destinationStream is null)
+                throw new ArgumentNullException(nameof(destinationStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (!offset.IsBetween(0, buffer.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return destinationStream.WriteAsync(buffer, offset, buffer.Length - offset, cancellationToken);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task WriteBytesAsync(this Stream destinationStream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
-            => destinationStream is null
-                ? throw new ArgumentNullException(nameof(destinationStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset > buffer.Length
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : destinationStream.WriteAsync(buffer, (Int32)offset, buffer.Length - (Int32)offset, cancellationToken);
+        {
+            if (destinationStream is null)
+                throw new ArgumentNullException(nameof(destinationStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset > buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return destinationStream.WriteAsync(buffer, (Int32)offset, buffer.Length - (Int32)offset, cancellationToken);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task WriteBytesAsync(this Stream destinationStream, Byte[] buffer, Range range, CancellationToken cancellationToken = default)
@@ -2265,78 +2375,98 @@ namespace Utility.IO
             if (buffer is null)
                 throw new ArgumentNullException(nameof(buffer));
             var (isOk, offset, count) = buffer.GetOffsetAndLength(range);
-            return
-                !isOk
-                ? throw new ArgumentOutOfRangeException(nameof(range))
-                : destinationStream.WriteAsync(buffer, offset, count, cancellationToken);
+            if (!isOk)
+                throw new ArgumentOutOfRangeException(nameof(range));
+
+            return destinationStream.WriteAsync(buffer, offset, count, cancellationToken);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task WriteBytesAsync(this Stream destinationStream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
-            => destinationStream is null
-                ? throw new ArgumentNullException(nameof(destinationStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : destinationStream.WriteAsync(buffer, offset, count, cancellationToken);
+        {
+            if (destinationStream is null)
+                throw new ArgumentNullException(nameof(destinationStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return destinationStream.WriteAsync(buffer, offset, count, cancellationToken);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task WriteBytesAsync(this Stream destinationStream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
-            => destinationStream is null
-                ? throw new ArgumentNullException(nameof(destinationStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : checked(offset + count > (UInt32)buffer.Length)
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : destinationStream.WriteAsync(buffer, (Int32)offset, (Int32)count, cancellationToken);
+        {
+            if (destinationStream is null)
+                throw new ArgumentNullException(nameof(destinationStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (checked(offset + count > (UInt32)buffer.Length))
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return destinationStream.WriteAsync(buffer, (Int32)offset, (Int32)count, cancellationToken);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task WriteBytesAsync(this Stream destinationStream, ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
-            => destinationStream is null
-                ? throw new ArgumentNullException(nameof(destinationStream))
-                : destinationStream.WriteAsync(buffer, cancellationToken).AsTask();
+        {
+            if (destinationStream is null)
+                throw new ArgumentNullException(nameof(destinationStream));
+
+            return destinationStream.WriteAsync(buffer, cancellationToken).AsTask();
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, Byte[] buffer, CancellationToken cancellationToken = default)
-            => destinationStream is null
-                ? throw new ArgumentNullException(nameof(destinationStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : InternalWriteBytesAsync(
+        {
+            if (destinationStream is null)
+                throw new ArgumentNullException(nameof(destinationStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+
+            return
+                InternalWriteBytesAsync(
                     0,
                     buffer.Length,
                     (_offset, _count) => destinationStream.WriteAsync(buffer.Slice(_offset, _count), cancellationToken));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
-            => destinationStream is null
-                ? throw new ArgumentNullException(nameof(destinationStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : !offset.IsBetween(0, buffer.Length)
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : InternalWriteBytesAsync(
-                    0,
-                    buffer.Length,
-                    (_offset, _count) => destinationStream.WriteAsync(buffer.Slice(_offset, _count), cancellationToken));
+        {
+            if (destinationStream is null)
+                throw new ArgumentNullException(nameof(destinationStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (!offset.IsBetween(0, buffer.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return InternalWriteBytesAsync(
+                0,
+                buffer.Length,
+                (_offset, _count) => destinationStream.WriteAsync(buffer.Slice(_offset, _count), cancellationToken));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
-            => destinationStream is null
-                ? throw new ArgumentNullException(nameof(destinationStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset > (UInt32)buffer.Length
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : InternalWriteBytesAsync(
+        {
+            if (destinationStream is null)
+                throw new ArgumentNullException(nameof(destinationStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset > (UInt32)buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return
+                InternalWriteBytesAsync(
                     (Int32)offset,
                     buffer.Length - (Int32)offset,
                     (_offset, _count) => destinationStream.WriteAsync(buffer.Slice(_offset, _count), cancellationToken));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, Byte[] buffer, Range range, CancellationToken cancellationToken = default)
@@ -2344,10 +2474,11 @@ namespace Utility.IO
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
             var (isOk, offset, count) = buffer.GetOffsetAndLength(range);
+            if (!isOk)
+                throw new ArgumentOutOfRangeException(nameof(range));
+
             return
-                !isOk
-                ? throw new ArgumentOutOfRangeException(nameof(range))
-                : InternalWriteBytesAsync(
+                InternalWriteBytesAsync(
                     offset,
                     count,
                     (_offset, _count) => destinationStream.WriteAsync(buffer.Slice(_offset, _count), cancellationToken));
@@ -2355,33 +2486,41 @@ namespace Utility.IO
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
-            => destinationStream is null
-                ? throw new ArgumentNullException(nameof(destinationStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(count))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : InternalWriteBytesAsync(
+        {
+            if (destinationStream is null)
+                throw new ArgumentNullException(nameof(destinationStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return
+                InternalWriteBytesAsync(
                     offset,
                     count,
                     (_offset, _count) => destinationStream.WriteAsync(buffer.Slice(_offset, _count), cancellationToken));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
-            => destinationStream is null
-                ? throw new ArgumentNullException(nameof(destinationStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : checked(offset + count > (UInt32)buffer.Length)
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : InternalWriteBytesAsync(
+        {
+            if (destinationStream is null)
+                throw new ArgumentNullException(nameof(destinationStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (checked(offset + count > (UInt32)buffer.Length))
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return
+                InternalWriteBytesAsync(
                     (Int32)offset,
                     (Int32)count,
                     (_offset, _count) => destinationStream.WriteAsync(buffer.Slice(_offset, _count), cancellationToken));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
@@ -3002,10 +3141,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3020,10 +3159,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3041,10 +3180,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3059,10 +3198,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3078,10 +3217,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3094,10 +3233,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3113,10 +3252,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3129,10 +3268,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc24Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3150,10 +3289,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc24Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc24Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3168,10 +3307,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc24Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc24Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3189,10 +3328,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc24Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc24Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3207,10 +3346,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc24Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc24Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3226,10 +3365,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc24Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc24Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3242,10 +3381,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc24Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc24Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3261,10 +3400,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc24Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc24Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3277,10 +3416,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc24Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc24Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3302,10 +3441,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3320,10 +3459,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3341,10 +3480,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3359,10 +3498,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3378,10 +3517,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3394,10 +3533,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3413,10 +3552,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3429,10 +3568,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.AsInputByteStream(true).InternalCalculateCrc32Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3450,10 +3589,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc32Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc32Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3468,10 +3607,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc32Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc32Async(MAX_BUFFER_SIZE, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3489,10 +3628,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc32Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc32Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3507,10 +3646,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc32Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc32Async(MAX_BUFFER_SIZE, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3526,10 +3665,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc32Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc32Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3542,10 +3681,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc32Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc32Async(bufferSize, null, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3561,10 +3700,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc32Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc32Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3577,10 +3716,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : await inputStream.InternalCalculateCrc32Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return await inputStream.InternalCalculateCrc32Async(bufferSize, progress, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -3595,14 +3734,15 @@ namespace Utility.IO
         #endregion
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static async IAsyncEnumerable<Byte> InternalGetByteSequence<POSITION_T>(IInputByteStream<POSITION_T> baseStream, POSITION_T? offset, UInt64? count, IProgress<UInt64>? progress, Boolean leaveOpen, [EnumeratorCancellation] CancellationToken cancellationToken)
+        private static async IAsyncEnumerable<Byte> InternalGetByteSequence<POSITION_T, UNSIGNED_OFFSET_T>(IInputByteStream<POSITION_T> baseStream, POSITION_T? offset, UInt64? count, IProgress<UInt64>? progress, Boolean leaveOpen, [EnumeratorCancellation] CancellationToken cancellationToken)
             where POSITION_T : struct
+            where UNSIGNED_OFFSET_T : struct
         {
             const Int32 BUFFER_SIZE = 80 * 1024;
 
             try
             {
-                var randomAccessStream = baseStream as IRandomInputByteStream<POSITION_T>;
+                var randomAccessStream = baseStream as IRandomInputByteStream<POSITION_T, UNSIGNED_OFFSET_T>;
                 if (randomAccessStream is not null)
                 {
                     if (offset is not null)

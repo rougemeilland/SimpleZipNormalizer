@@ -4,7 +4,7 @@ using Utility.IO;
 namespace ZipUtility
 {
     internal interface IZipOutputStream
-        : IRandomOutputByteStream<ZipStreamPosition>
+        : IOutputByteStream<ZipStreamPosition>
     {
         /// <summary>
         /// この仮想ファイルが複数の物理ファイルから構成されるマルチボリュームZIPファイルであるかどうかの値です。
@@ -29,27 +29,94 @@ namespace ZipUtility
         /// </param>
         /// <remarks>
         /// <list type="bullet">
+        /// <item>ZIPの各種ヘッダを書き込むために <see cref="LockVolumeDisk"/> を呼び出す場合、その前に必ず <see cref="ReserveAtomicSpace(UInt64)"/> を呼び出してください。</item>
+        /// <item>パラメタ <paramref name="atomicSpaceSize"/> には、書き込む予定の ZIP のヘッダのサイズを指定してください。</item>
         /// <item>
-        /// <para>
-        /// ZIPのすべてのヘッダがそうであるように、途中で別々のディスクに分割されてはならないデータを書き込む前に、あらかじめそのサイズを <paramref name="atomicSpaceSize"/> に指定してこのメソッドを呼び出してください。
-        /// </para>
-        /// <para>
-        /// 次に書き込むヘッダの先頭位置として、このメソッドを呼び出した後の位置を使用してください。何故ならば、このメソッドの呼び出しの後でディスクの番号が変わることがあるからです。
-        /// </para>
-        /// </item>
-        /// <item>
-        /// <term>実装時の注意</term>
+        /// <term>[実装する場合の注意]</term>
         /// <description>
         /// <para>
-        /// マルチボリュームZIPファイルへ書き込み中にこのメソッドが呼び出された場合、現在書き込み中のディスクの残りのサイズを調べて、<paramref name="atomicSpaceSize"/> 未満であるかどうかを調べてください。
+        /// <see cref="ReserveAtomicSpace(UInt64)"/> が呼び出された場合、現在書き込み中のボリュームディスクの上限サイズを超えることなくパラメタ <paramref name="atomicSpaceSize"/> で指定された長さのデータを書き込むことが出来るかどうか調べてください。
         /// </para>
         /// <para>
-        /// ディスクの残りサイズが <paramref name="atomicSpaceSize"/> を超えている場合は、現在書き込み中のディスクを閉じて、次のディスクへ書き込む準備をしてください。
+        /// もし、パラメタ <paramref name="atomicSpaceSize"/> で指定された長さのデータを書き込むことによって現在のボリュームディスクの上限を超えてしまうことが予想される場合は、現在のボリュームディスクを閉じて次のボリュームディスクを開いてください。
         /// </para>
         /// </description>
         /// </item>
         /// </list>
         /// </remarks>
         void ReserveAtomicSpace(UInt64 atomicSpaceSize);
+
+        /// <summary>
+        /// ボリュームディスク間をまたぐアクセスを禁止します。
+        /// </summary>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item>
+        /// <para>
+        /// <see cref="LockVolumeDisk"/> を呼び出してから <see cref="UnlockVolumeDisk"/> を呼び出すまでの間、以下のようなボリュームディスクをまたぐアクセスをしようとすると、<see cref="InvalidOperationException"/> 例外が発生します。
+        /// </para>
+        /// <list type="bullet">
+        /// <item>ボリュームディスクのサイズの上限を超えて書き込みを行おうとした場合</item>
+        /// </list>
+        /// </item>
+        /// <item>
+        /// <para>
+        /// <see cref="LockVolumeDisk"/> および <see cref="UnlockVolumeDisk"/> は、主に ZIP の各種ヘッダを書き込み前後に使用します。
+        /// </para>
+        /// <para>
+        /// その理由は、ZIP の各種ヘッダは複数のボリュームディスクにまたがってはならない仕様であり、もしそれらのヘッダが複数のボリュームディスクにまたがっているように見えるようならそのZIPアーカイブは破損していると判断しなければならないからです。
+        /// </para>
+        /// </item>
+        /// <item>
+        /// <term>[実装する場合の注意]</term>
+        /// <description>
+        /// <para>
+        /// <see cref="LockVolumeDisk"/> が呼び出されてから <see cref="UnlockVolumeDisk"/> が呼び出されるまでの間、アクセス対象のボリュームディスクファイルを変更してはなりません。
+        /// </para>
+        /// <para>
+        /// もし、その間にアクセス対象のボリュームディスクファイルを変更しなければならない状況に陥った場合は、<see cref="InvalidOperationException"/> 例外を発生させなければなりません。
+        /// </para>
+        /// </description>
+        /// </item>
+        /// </list>
+        /// </remarks>
+        void LockVolumeDisk();
+
+        /// <summary>
+        /// <see cref="LockVolumeDisk"/> によって禁止された、ボリュームディスク間をまたぐアクセス禁止を解除します。
+        /// </summary>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item>
+        /// <para>
+        /// <see cref="LockVolumeDisk"/> を呼び出してから <see cref="UnlockVolumeDisk"/> を呼び出すまでの間、以下のようなボリュームディスクをまたぐアクセスをしようとすると、<see cref="InvalidOperationException"/> 例外が発生します。
+        /// </para>
+        /// <list type="bullet">
+        /// <item>ボリュームディスクのサイズの上限を超えて書き込みを行おうとした場合</item>
+        /// </list>
+        /// </item>
+        /// <item>
+        /// <para>
+        /// <see cref="LockVolumeDisk"/> および <see cref="UnlockVolumeDisk"/> は、主に ZIP の各種ヘッダを書き込む前後に使用します。
+        /// </para>
+        /// <para>
+        /// その理由は、ZIP の各種ヘッダは複数のボリュームディスクにまたがってはならない仕様であり、もしそれらのヘッダが複数のボリュームディスクにまたがっているように見えるようならそのZIPアーカイブは破損していると判断しなければならないからです。
+        /// </para>
+        /// </item>
+        /// <item>
+        /// <term>[実装する場合の注意]</term>
+        /// <description>
+        /// <para>
+        /// <see cref="LockVolumeDisk"/> が呼び出されてから <see cref="UnlockVolumeDisk"/> が呼び出されるまでの間、アクセス対象のボリュームディスクファイルを変更してはなりません。
+        /// </para>
+        /// <para>
+        /// もし、その間にアクセス対象のボリュームディスクファイルを変更しなければならない状況に陥った場合は、<see cref="InvalidOperationException"/> 例外を発生させなければなりません。
+        /// </para>
+        /// </description>
+        /// </item>
+        /// </list>
+        /// </remarks>
+        void UnlockVolumeDisk();
+
     }
 }

@@ -10,7 +10,7 @@ namespace Utility.IO
     {
         private readonly IBasicOutputByteStream _baseStream;
         private readonly Boolean _leaveOpen;
-        private readonly IRandomInputByteStream<UInt64>? _randomAccessStream;
+        private readonly IRandomOutputByteStream<UInt64, UInt64>? _randomAccessStream;
         private Boolean _isDisposed;
         private UInt64 _position;
 
@@ -25,7 +25,7 @@ namespace Utility.IO
                 _leaveOpen = leaveOpen;
                 _isDisposed = false;
                 _position = 0;
-                _randomAccessStream = baseStream as IRandomInputByteStream<UInt64>;
+                _randomAccessStream = baseStream as IRandomOutputByteStream<UInt64, UInt64>;
             }
             catch (Exception)
             {

@@ -141,10 +141,10 @@ namespace Utility.IO
         {
             const Int32 maximumCount = BitQueue.RecommendedMaxCount - 8;
             var actualBitCount = bitCount.Minimum(maximumCount);
-            return
-                actualBitCount < 0
-                ? throw new InternalLogicalErrorException()
-                : actualBitCount;
+            if (actualBitCount < 0)
+                throw new InternalLogicalErrorException();
+
+            return actualBitCount;
         }
 
         private void FillBitQueue(Int32 bitCount)

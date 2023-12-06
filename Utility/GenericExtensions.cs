@@ -1682,8 +1682,11 @@ namespace Utility
 
         public static VALUE_T Duplicate<VALUE_T>(this VALUE_T value)
             where VALUE_T : ICloneable<VALUE_T>
-            => value is null
-                ? throw new ArgumentNullException(nameof(value))
-                : value.Clone();
+        {
+            if (value is null)
+                throw new ArgumentNullException(nameof(value));
+
+            return value.Clone();
+        }
     }
 }

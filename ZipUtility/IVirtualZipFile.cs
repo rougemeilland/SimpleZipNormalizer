@@ -6,6 +6,7 @@ namespace ZipUtility
     /// 複数の物理的なファイルを一つの仮想的なファイルとみなしてファイル情報をアクセスするインターフェースです。
     /// </summary>
     internal interface IVirtualZipFile
+        : IEquatable<IVirtualZipFile>
     {
         /// <summary>
         /// 仮想的なファイル上の指定された位置から指定されたオフセットだけ前方に相当する物理的なファイルの情報を取得します。
@@ -20,7 +21,7 @@ namespace ZipUtility
         /// <paramref name="position"/> + <paramref name="offset"/> の位置に相当する <see cref="ZipStreamPosition"/> オブジェクトを返します。
         /// 該当する位置が存在しない場合はnullを返します。
         /// </returns>
-        ZipStreamPosition? Add(ZipStreamPosition position, UInt64 offset);
+        ZipStreamPosition Add(ZipStreamPosition position, UInt64 offset);
 
         /// <summary>
         /// 仮想的なファイル上の指定された位置から指定されたオフセットだけ後方に相当する物理的なファイルの情報を取得します。
@@ -33,9 +34,8 @@ namespace ZipUtility
         /// </param>
         /// <returns>
         /// <paramref name="position"/> - <paramref name="offset"/> の位置に相当する <see cref="ZipStreamPosition"/> オブジェクトを返します。
-        /// 該当する位置が存在しない場合はnullを返します。
         /// </returns>
-        ZipStreamPosition? Subtract(ZipStreamPosition position, UInt64 offset);
+        ZipStreamPosition Subtract(ZipStreamPosition position, UInt64 offset);
 
         /// <summary>
         /// 仮想的なファイル上の二つの位置の間の距離を取得します。

@@ -44,9 +44,12 @@ namespace Utility.Threading
                 Object? IEnumerator.Current => Current;
 
                 public Boolean MoveNext()
-                    => _isDisposed
-                        ? throw new ObjectDisposedException(GetType().FullName)
-                        : _sourceEnumerator.MoveNextAsync().AsTask().Result;
+                {
+                    if (_isDisposed)
+                        throw new ObjectDisposedException(GetType().FullName);
+
+                    return _sourceEnumerator.MoveNextAsync().AsTask().Result;
+                }
 
                 public void Dispose()
                 {
@@ -93,9 +96,12 @@ namespace Utility.Threading
         #endregion
 
         public static IEnumerable<ELEMENT_T> AsSync<ELEMENT_T>(this IAsyncEnumerable<ELEMENT_T> source, CancellationToken cancellationToken = default)
-            => source is null
-                ? throw new ArgumentNullException(nameof(source))
-                : (IEnumerable<ELEMENT_T>)new AsSyncEnumerable<ELEMENT_T>(source, cancellationToken);
+        {
+            if (source is null)
+                throw new ArgumentNullException(nameof(source));
+
+            return new AsSyncEnumerable<ELEMENT_T>(source, cancellationToken);
+        }
 
         #region Aggregate
 
@@ -458,11 +464,14 @@ namespace Utility.Threading
         #endregion
 
         public static IComparer<VALUE_T> CreateComparer<VALUE_T>(this IAsyncEnumerable<VALUE_T> source, Func<VALUE_T, VALUE_T, Int32> comparer)
-            => source is null
-                ? throw new ArgumentNullException(nameof(source))
-                : comparer is null
-                ? throw new ArgumentNullException(nameof(comparer))
-                : (IComparer<VALUE_T>)new CustomizableComparer<VALUE_T>(comparer);
+        {
+            if (source is null)
+                throw new ArgumentNullException(nameof(source));
+            if (comparer is null)
+                throw new ArgumentNullException(nameof(comparer));
+
+            return new CustomizableComparer<VALUE_T>(comparer);
+        }
 
         #region Distinct
 
@@ -569,10 +578,10 @@ namespace Utility.Threading
             await using (enumerator.ConfigureAwait(false))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                return
-                    await enumerator.MoveNextAsync().ConfigureAwait(false)
-                    ? enumerator.Current
-                    : throw new InvalidOperationException();
+                if (!await enumerator.MoveNextAsync().ConfigureAwait(false))
+                    throw new InvalidOperationException();
+
+                return enumerator.Current;
             }
         }
 
@@ -1118,10 +1127,10 @@ namespace Utility.Threading
 
         public static async IAsyncEnumerable<ELEMENT_T> Prepend<ELEMENT_T>(this IAsyncEnumerable<ELEMENT_T> source, ELEMENT_T element, [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            yield return
-                source is null
-                ? throw new ArgumentNullException(nameof(source))
-                : element;
+            if (source is null)
+                throw new ArgumentNullException(nameof(source));
+
+            yield return element;
             var enumerator = source.GetAsyncEnumerator(cancellationToken);
             await using (enumerator.ConfigureAwait(false))
             {
@@ -1762,10 +1771,10 @@ namespace Utility.Threading
                     return defaultValue;
                 var singleValue = enumerator.Current;
                 cancellationToken.ThrowIfCancellationRequested();
-                return
-                    await enumerator.MoveNextAsync().ConfigureAwait(false)
-                    ? throw new InvalidOperationException()
-                    : singleValue;
+                if (await enumerator.MoveNextAsync().ConfigureAwait(false))
+                    throw new InvalidOperationException();
+
+                return singleValue;
             }
         }
 

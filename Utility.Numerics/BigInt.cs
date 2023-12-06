@@ -224,23 +224,22 @@ namespace Utility.Numerics
         public Boolean Equals(UInt32 other) => _value.Equals(other);
 
         public override Boolean Equals([NotNullWhen(true)] Object? obj)
-            => obj is null
-                ? false
-                : obj is BigInt BigIntValue
-                ? Equals(BigIntValue)
-                : obj is UBigInt UBigIntValue
-                ? Equals(UBigIntValue)
-                : obj is BigInteger BigIntegerValue
-                ? Equals(BigIntegerValue)
-                : obj is Int64 Int64Value
-                ? Equals(Int64Value)
-                : obj is UInt64 UInt64Value
-                ? Equals(UInt64Value)
-                : obj is Int32 Int32Value
-                ? Equals(Int32Value)
-                : obj is UInt32 UInt32Value
-                ? Equals(UInt32Value)
-                : _value.Equals(obj);
+            => obj is not null
+                && (obj is BigInt BigIntValue
+                    ? Equals(BigIntValue)
+                    : obj is UBigInt UBigIntValue
+                    ? Equals(UBigIntValue)
+                    : obj is BigInteger BigIntegerValue
+                    ? Equals(BigIntegerValue)
+                    : obj is Int64 Int64Value
+                    ? Equals(Int64Value)
+                    : obj is UInt64 UInt64Value
+                    ? Equals(UInt64Value)
+                    : obj is Int32 Int32Value
+                    ? Equals(Int32Value)
+                    : obj is UInt32 UInt32Value
+                    ? Equals(UInt32Value)
+                    : _value.Equals(obj));
 
         #endregion
 

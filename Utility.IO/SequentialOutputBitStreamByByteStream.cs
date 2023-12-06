@@ -86,9 +86,12 @@ namespace Utility.IO
         }
 
         public Task FlushAsync(CancellationToken cancellationToken = default)
-            => _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : _baseStream.FlushAsync(cancellationToken);
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(GetType().FullName);
+
+            return _baseStream.FlushAsync(cancellationToken);
+        }
 
         public void Dispose()
         {

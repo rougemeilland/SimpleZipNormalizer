@@ -9,7 +9,7 @@ namespace Utility.IO
     {
         private readonly IBasicInputByteStream _baseStream;
         private readonly Boolean _leaveOpen;
-        private readonly IRandomInputByteStream<UInt64>? _randomAccessStream;
+        private readonly IRandomInputByteStream<UInt64, UInt64>? _randomAccessStream;
 
         private Boolean _isDisposed;
         private UInt64 _position;
@@ -25,7 +25,7 @@ namespace Utility.IO
                 _leaveOpen = leaveOpen;
                 _isDisposed = false;
                 _position = 0;
-                _randomAccessStream = baseStream as IRandomInputByteStream<UInt64>;
+                _randomAccessStream = baseStream as IRandomInputByteStream<UInt64, UInt64>;
             }
             catch (Exception)
             {
@@ -54,17 +54,7 @@ namespace Utility.IO
             }
         }
 
-        public override void SetLength(Int64 value)
-        {
-            if (_randomAccessStream is null)
-                throw new NotSupportedException();
-            if (_isDisposed)
-                throw new ObjectDisposedException(GetType().FullName);
-            if (value < 0)
-                throw new ArgumentOutOfRangeException(nameof(value));
-
-            _randomAccessStream.Length = checked((UInt64)value);
-        }
+        public override void SetLength(Int64 value) => throw new NotSupportedException();
 
         public override Int64 Position
         {

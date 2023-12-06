@@ -39,6 +39,8 @@ namespace Utility.IO
             return new DirectoryInfo(Path.Combine(directory.FullName, directoryName));
         }
 
+        #region ReadAllBytes
+
         public static Byte[] ReadAllBytes(this FileInfo file)
         {
             if (file is null)
@@ -54,6 +56,10 @@ namespace Utility.IO
 
             return File.ReadAllBytes(file.FullName);
         }
+
+        #endregion
+
+        #region ReadAllLines
 
         public static String[] ReadAllLines(this FileInfo file)
         {
@@ -71,6 +77,10 @@ namespace Utility.IO
             return File.ReadAllLines(file.FullName);
         }
 
+        #endregion
+
+        #region ReadLines
+
         public static IEnumerable<String> ReadLines(this FileInfo file)
         {
             if (file is null)
@@ -86,6 +96,10 @@ namespace Utility.IO
 
             return File.ReadLines(file.FullName);
         }
+
+        #endregion
+
+        #region WriteAllBytes
 
         public static void WriteAllBytes(this FileInfo file, IEnumerable<Byte> data)
         {
@@ -164,6 +178,10 @@ namespace Utility.IO
             using var stream = file.OpenWrite();
             stream.WriteBytes(data);
         }
+
+        #endregion
+
+        #region WriteAllText
 
         public static void WriteAllText(this FileInfo file, String text)
         {
@@ -297,6 +315,10 @@ namespace Utility.IO
             File.WriteAllLines(file.FullName, lines, encoding);
         }
 
+        #endregion
+
+        #region RenameFile
+
         public static (FilePath File, Boolean AlreadyExists) RenameFile(this FileInfo sourceFile, String newFileName)
             => ((FilePath)sourceFile).RenameFile(newFileName);
 
@@ -344,6 +366,10 @@ namespace Utility.IO
             }
         }
 
+        #endregion
+
+        #region SafetyDelete
+
         public static void SafetyDelete(this FileInfo file)
         {
             try
@@ -368,6 +394,8 @@ namespace Utility.IO
             }
         }
 
+        #endregion
+
         public static (UInt32 Crc, UInt64 Length) CalculateCrc24(this FileInfo sourceFile, IProgress<UInt64>? progress = null)
         {
             if (sourceFile is null)
@@ -384,7 +412,7 @@ namespace Utility.IO
             return sourceFile.OpenRead().CalculateCrc32(progress);
         }
 
-        public static IEnumerable<FilePath> EnumerateFilesFromArgument(this IEnumerable<String> args)
+        public static IEnumerable<FilePath> EnumerateFilesFromArgument(this IEnumerable<String> args, Boolean recursive = true)
         {
             if (args is null)
                 throw new ArgumentNullException(nameof(args));
@@ -399,7 +427,7 @@ namespace Utility.IO
                     var directory = TryParseAsDirectoryPath(arg);
                     return
                         directory is not null
-                        ? directory.EnumerateFiles(true)
+                        ? directory.EnumerateFiles(recursive)
                         : Array.Empty<FilePath>();
                 });
         }

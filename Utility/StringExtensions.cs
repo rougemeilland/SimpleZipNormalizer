@@ -46,11 +46,14 @@ namespace Utility
         #region Slice
 
         public static ReadOnlyMemory<Char> Slice(this String sourceString, Int32 offset)
-            => sourceString is null
-                ? throw new ArgumentNullException(nameof(sourceString))
-                : !offset.IsBetween(0, sourceString.Length)
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : (ReadOnlyMemory<Char>)sourceString[offset..].ToCharArray();
+        {
+            if (sourceString is null)
+                throw new ArgumentNullException(nameof(sourceString));
+            if (!offset.IsBetween(0, sourceString.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return (ReadOnlyMemory<Char>)sourceString[offset..].ToCharArray();
+        }
 
         public static ReadOnlyMemory<Char> Slice(this String sourceString, UInt32 offset)
             => sourceString.Slice(checked((Int32)offset));
@@ -61,22 +64,25 @@ namespace Utility
                 throw new ArgumentNullException(nameof(sourceString));
             var sourceArray = sourceString.ToCharArray();
             var (isOk, offset, count) = sourceArray.GetOffsetAndLength(range);
-            return
-                !isOk
-                ? throw new ArgumentOutOfRangeException(nameof(range))
-                : (ReadOnlyMemory<Char>)sourceString.Substring(offset, count).ToCharArray();
+            if (!isOk)
+                throw new ArgumentOutOfRangeException(nameof(range));
+
+            return sourceString.Substring(offset, count).ToCharArray();
         }
 
         public static ReadOnlyMemory<Char> Slice(this String sourceString, Int32 offset, Int32 count)
-            => sourceString is null
-                ? throw new ArgumentNullException(nameof(sourceString))
-                : offset < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(count))
-                : checked(count + offset) > sourceString.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(sourceString)}.")
-                : (ReadOnlyMemory<Char>)sourceString.Substring(offset, count).ToCharArray();
+        {
+            if (sourceString is null)
+                throw new ArgumentNullException(nameof(sourceString));
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            if (checked(count + offset) > sourceString.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(sourceString)}.");
+
+            return (ReadOnlyMemory<Char>)sourceString.Substring(offset, count).ToCharArray();
+        }
 
         public static ReadOnlyMemory<Char> Slice(this String sourceString, UInt32 offset, UInt32 count)
             => sourceString.Slice(checked((Int32)offset), checked((Int32)count));
@@ -102,7 +108,10 @@ namespace Utility
                 .Zip(s2, (c1, c2) => new { c1, c2 })
                 .Select((item, index) => new { item.c1, item.c2, index })
                 .FirstOrDefault(item => !CharacterEqual(item.c1, item.c2, ignoreCase));
-            return found is not null ? s1[..found.index] : s1;
+            return
+                found is not null
+                ? s1[..found.index]
+                : s1;
         }
 
         public static String? GetTrailingCommonPart(this String? s1, String? s2, Boolean ignoreCase = false)
@@ -124,7 +133,10 @@ namespace Utility
                 .Zip(s2.Reverse(), (c1, c2) => new { c1, c2 })
                 .Select((item, index) => new { item.c1, item.c2, index })
                 .FirstOrDefault(item => !CharacterEqual(item.c1, item.c2, ignoreCase));
-            return found is not null ? s1.Substring(s1.Length - found.index, found.index) : s1;
+            return
+                found is not null
+                ? s1.Substring(s1.Length - found.index, found.index)
+                : s1;
         }
 
         #region IsNoneOf
@@ -220,14 +232,14 @@ namespace Utility
             if (s is null)
                 throw new ArgumentNullException(nameof(s));
 
-            return encoding.GetBytes(s).AsReadOnly();
+            return encoding.GetBytes(s);
         }
 
         public static String GetRelativeLocalFilePath(this String entryPath)
             => String.Join(
                 Path.DirectorySeparatorChar,
-                entryPath.Split('/', '\\')
-                .Select(element => element.ReplaceConsecutiveExclamationAndQuestionMarks().ReplaceIllegalCharacters()));
+                entryPath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                    .Select(element => element.ReplaceConsecutiveExclamationAndQuestionMarks().ReplaceIllegalCharacters()));
 
         private static String ReplaceIllegalCharacters(this String input)
             => _localFilePathReplacePattern2.Replace(
@@ -244,7 +256,7 @@ namespace Utility
                         @"|" => "｜",
                         _ => m.Value,
                     });
-        public static String ReplaceConsecutiveExclamationAndQuestionMarks(this String element)
+        private static String ReplaceConsecutiveExclamationAndQuestionMarks(this String element)
             => _localFilePathReplacePattern1.Replace(
                 element,
                 m =>

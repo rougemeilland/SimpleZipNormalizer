@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace Utility.IO
 {
     class RandomInputByteStreamByStream
-        : IRandomInputByteStream<UInt64>
+        : IRandomInputByteStream<UInt64, UInt64>
     {
         private readonly Stream _baseStream;
         private readonly Boolean _leaveOpen;
@@ -36,41 +36,58 @@ namespace Utility.IO
         }
 
         public UInt64 Position
-            => _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : _baseStream.Position < 0
-                ? throw new IOException()
-                : (UInt64)_baseStream.Position;
+        {
+            get
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+                if (_baseStream.Position < 0)
+                    throw new IOException();
+
+                return (UInt64)_baseStream.Position;
+            }
+        }
 
         public UInt64 Length
         {
-            get =>
-                _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : _baseStream.Length < 0 ? throw new IOException() : (UInt64)_baseStream.Length;
+            get
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+                if (_baseStream.Length < 0)
+                    throw new IOException();
+
+                return (UInt64)_baseStream.Length;
+            }
 
             set => throw new NotSupportedException();
         }
 
-        public void Seek(UInt64 offset)
+        public void Seek(UInt64 position)
         {
             if (_isDisposed)
                 throw new ObjectDisposedException(GetType().FullName);
-            if (offset > Int64.MaxValue)
+            if (position > Int64.MaxValue)
                 throw new IOException();
 
-            _ = _baseStream.Seek((Int64)offset, SeekOrigin.Begin);
+            _ = _baseStream.Seek((Int64)position, SeekOrigin.Begin);
         }
 
         public Int32 Read(Span<Byte> buffer)
-            => _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : _baseStream.Read(buffer);
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(GetType().FullName);
+
+            return _baseStream.Read(buffer);
+        }
 
         public Task<Int32> ReadAsync(Memory<Byte> buffer, CancellationToken cancellationToken = default)
-            => _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : _baseStream.ReadAsync(buffer, cancellationToken).AsTask();
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(GetType().FullName);
+
+            return _baseStream.ReadAsync(buffer, cancellationToken).AsTask();
+        }
 
         public void Dispose()
         {

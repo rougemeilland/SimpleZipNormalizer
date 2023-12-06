@@ -1,8 +1,9 @@
 ﻿using System;
-using System.Globalization;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading;
 
 namespace Experiment01
 {
@@ -13,46 +14,28 @@ namespace Experiment01
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:未使用のパラメーターを削除します", Justification = "<保留中>")]
-        private static void Main(string[] args)
+        private static void Main()
         {
-            // TODO: コンソールで進捗を表示している最中にスクロールが発生するとカーソルが正しい位置に戻らない問題の修正方法の検討
-            while (true)
-            {
-                for (var count = 0; count < 40; ++count)
-                    PrintMessage($"row {count}");
-                PrintMessage("このメッセージが消えてはならない。");
-                PrintProgress($"progress: {new string('*', 300)}進捗メッセージはここまで");
-                PrintProgress($"progress: {new string('*', 300)}進捗メッセージはここまで");
-                PrintProgress($"progress: {new string('*', 300)}進捗メッセージはここまで");
-                PrintProgress($"progress: {new string('*', 300)}進捗メッセージはここまで");
-                PrintProgress($"progress: {new string('*', 300)}進捗メッセージはここまで");
-                Thread.Sleep(TimeSpan.FromSeconds(5));
-            }
-            //_ = Console.ReadLine();
+            Console.WriteLine($"{nameof(Path.VolumeSeparatorChar)}='{Path.VolumeSeparatorChar}'");
+            Console.WriteLine($"{nameof(Path.DirectorySeparatorChar)}='{Path.DirectorySeparatorChar}'");
+            Console.WriteLine($"{nameof(Path.AltDirectorySeparatorChar)}='{Path.AltDirectorySeparatorChar}'");
+            Console.WriteLine($"{nameof(Path.PathSeparator)}='{Path.PathSeparator}'");
+            Console.WriteLine($"{nameof(Path.GetInvalidFileNameChars)}()=[{FromCharSequenceToString(Path.GetInvalidFileNameChars())}]");
+            Console.WriteLine($"{nameof(Path.GetInvalidPathChars)}()=[{FromCharSequenceToString(Path.GetInvalidPathChars())}]");
+
+            _ = Console.ReadLine();
         }
 
-        private static void PrintMessage(string message)
-        {
-            Console.Write("\u001b[0J");
-            Console.WriteLine(message);
-        }
-
-        private static void PrintProgress(string message)
-        {
-#if true
-            var length = message.Length * 2;
-            var rows = (length + Console.WindowWidth - 1) / Console.WindowWidth;
-            Console.Write($"\x1b[0J{new string('\n', rows)}\x1b[{rows}A");
-            var (cursorLeft, cursorTop) = Console.GetCursorPosition();
-            Console.Write($"{message}\x1b[{cursorTop + 1};{cursorLeft + 1}H");
-            //Console.SetCursorPosition(cursorPosition.Left, cursorPosition.Top);
-#else
-            var cursorPosition = Console.GetCursorPosition();
-            Console.Write("\u001b[0J");
-            Console.Write(message);
-            Console.SetCursorPosition(cursorPosition.Left, cursorPosition.Top);
-#endif
-        }
+        private static string FromCharSequenceToString(IEnumerable<char> characters)
+            => string.Join(
+                ", ",
+                characters
+                    .OrderBy(c => c)
+                    .Select(c =>
+                        c is < ' ' or '\x7f'
+                        ? $"'\\x{(int)c:x2}'"
+                        : c == '\''
+                        ? "\\'"
+                        : $"'{c}'"));
     }
 }

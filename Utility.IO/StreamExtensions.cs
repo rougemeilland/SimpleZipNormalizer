@@ -14,25 +14,21 @@ namespace Utility.IO
         #region private class
 
         private class ReverseByteSequenceByByteStream
-            : ReverseByteSequenceByByteStreamEnumerable<UInt64>
+            : ReverseByteSequenceByByteStreamEnumerable<UInt64, UInt64>
         {
-            public ReverseByteSequenceByByteStream(IRandomInputByteStream<UInt64> inputStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen)
+            public ReverseByteSequenceByByteStream(IRandomInputByteStream<UInt64, UInt64> inputStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen)
                 : base(inputStream, offset, count, progress, leaveOpen)
             {
             }
 
-            protected override UInt64 AddPositionAndDistance(UInt64 position, UInt64 distance)
-                => checked(position + distance);
+            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
+            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
+            protected override UInt64 MinimumProgressStep => 64 * 1024UL;
 
-            protected override Int32 GetDistanceBetweenPositions(UInt64 position1, UInt64 distance2)
-                => checked((Int32)(position1 - distance2));
-
-            protected override UInt64 SubtractBufferSizeFromPosition(UInt64 position, UInt32 distance)
-                => checked(position - distance);
         }
 
         private class BufferedInputStreamUInt64
-            : BufferedInputStream<UInt64>
+            : BufferedInputStream<UInt64, UInt64>
         {
             public BufferedInputStreamUInt64(IBasicInputByteStream baseStream, Boolean leaveOpen)
                 : base(baseStream, leaveOpen)
@@ -45,13 +41,11 @@ namespace Utility.IO
             }
 
             protected override UInt64 ZeroPositionValue => 0;
-
-            protected override UInt64 AddPosition(UInt64 x, UInt64 y)
-                => checked(x + y);
+            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
         }
 
         private class BufferedOutputStreamUInt64
-            : BufferedOutputStream<UInt64>
+            : BufferedOutputStream<UInt64, UInt64>
         {
             public BufferedOutputStreamUInt64(IBasicOutputByteStream baseStream, Boolean leaveOpen)
                 : base(baseStream, leaveOpen)
@@ -64,57 +58,46 @@ namespace Utility.IO
             }
 
             protected override UInt64 ZeroPositionValue => 0;
-
-            protected override UInt64 AddPosition(UInt64 x, UInt64 y)
-                => checked(x + y);
+            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
         }
 
         private class BufferedRandomInputStreamUInt64
-            : BufferedRandomInputStream<UInt64>
+            : BufferedRandomInputStream<UInt64, UInt64>
         {
 
-            public BufferedRandomInputStreamUInt64(IRandomInputByteStream<UInt64> baseStream, Boolean leaveOpen)
+            public BufferedRandomInputStreamUInt64(IRandomInputByteStream<UInt64, UInt64> baseStream, Boolean leaveOpen)
                 : base(baseStream, leaveOpen)
             {
             }
 
-            public BufferedRandomInputStreamUInt64(IRandomInputByteStream<UInt64> baseStream, Int32 bufferSize, Boolean leaveOpen)
+            public BufferedRandomInputStreamUInt64(IRandomInputByteStream<UInt64, UInt64> baseStream, Int32 bufferSize, Boolean leaveOpen)
                 : base(baseStream, bufferSize, leaveOpen)
             {
             }
 
             protected override UInt64 ZeroPositionValue => 0;
-
-            protected override UInt64 AddPosition(UInt64 x, UInt64 y)
-                => checked(x + y);
-
-            protected override UInt64 GetDistanceBetweenPositions(UInt64 x, UInt64 y)
-                => checked(x - y);
+            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
         }
 
-        private class BufferedRandomOutputStreamUint64
-            : BufferedRandomOutputStream<UInt64>
+        private class BufferedRandomOutputStreamUInt64
+            : BufferedRandomOutputStream<UInt64, UInt64>
         {
-            public BufferedRandomOutputStreamUint64(IRandomOutputByteStream<UInt64> baseStream, Boolean leaveOpen)
+            public BufferedRandomOutputStreamUInt64(IRandomOutputByteStream<UInt64, UInt64> baseStream, Boolean leaveOpen)
                 : base(baseStream, leaveOpen)
             {
             }
 
-            public BufferedRandomOutputStreamUint64(IRandomOutputByteStream<UInt64> baseStream, Int32 bufferSize, Boolean leaveOpen)
+            public BufferedRandomOutputStreamUInt64(IRandomOutputByteStream<UInt64, UInt64> baseStream, Int32 bufferSize, Boolean leaveOpen)
                 : base(baseStream, bufferSize, leaveOpen)
             {
             }
 
             protected override UInt64 ZeroPositionValue => 0;
-
-            protected override UInt64 AddPosition(UInt64 x, UInt64 y)
-                => checked(x + y);
-
-            protected override UInt64 GetDistanceBetweenPositions(UInt64 x, UInt64 y) => x - y;
+            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
         }
 
         private class PartialInputStreamUInt64
-            : PartialInputStream<UInt64, UInt64>
+            : PartialInputStream<UInt64, UInt64, UInt64>
         {
             public PartialInputStreamUInt64(IInputByteStream<UInt64> baseStream, Boolean leaveOpen)
                 : base(baseStream, leaveOpen)
@@ -132,155 +115,93 @@ namespace Utility.IO
             }
 
             protected override UInt64 ZeroPositionValue => 0;
-
-            protected override UInt64 AddPosition(UInt64 x, UInt64 y)
-                => checked(x + y);
+            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
+            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
         }
 
-        private class PartialOutputStreamUint64
-            : PartialOutputStream<UInt64, UInt64>
+        private class PartialOutputStreamUInt64
+            : PartialOutputStream<UInt64, UInt64, UInt64>
         {
-            public PartialOutputStreamUint64(IOutputByteStream<UInt64> baseStream, Boolean leaveOpen)
+            public PartialOutputStreamUInt64(IOutputByteStream<UInt64> baseStream, Boolean leaveOpen)
                 : base(baseStream, leaveOpen)
             {
             }
 
-            public PartialOutputStreamUint64(IOutputByteStream<UInt64> baseStream, UInt64 size, Boolean leaveOpen)
+            public PartialOutputStreamUInt64(IOutputByteStream<UInt64> baseStream, UInt64 size, Boolean leaveOpen)
                 : base(baseStream, size, leaveOpen)
             {
             }
 
-            public PartialOutputStreamUint64(IOutputByteStream<UInt64> baseStream, UInt64? size, Boolean leaveOpen)
+            public PartialOutputStreamUInt64(IOutputByteStream<UInt64> baseStream, UInt64? size, Boolean leaveOpen)
                 : base(baseStream, size, leaveOpen)
             {
             }
 
             protected override UInt64 ZeroPositionValue => 0;
-
-            protected override UInt64 AddPosition(UInt64 x, UInt64 y)
-                => checked(x + y);
+            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
+            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
         }
 
-        private class PartialRandomInputStreamUint64
-            : PartialRandomInputStream<UInt64, UInt64>
+        private class PartialRandomInputStreamUInt64
+            : PartialRandomInputStream<UInt64, UInt64, UInt64>
         {
-            private readonly IRandomInputByteStream<UInt64> _baseStream;
+            private readonly IRandomInputByteStream<UInt64, UInt64> _baseStream;
 
-            public PartialRandomInputStreamUint64(IRandomInputByteStream<UInt64> baseStream, Boolean leaveOpen = false)
+            public PartialRandomInputStreamUInt64(IRandomInputByteStream<UInt64, UInt64> baseStream, Boolean leaveOpen = false)
                 : base(baseStream, leaveOpen)
             {
                 _baseStream = baseStream;
             }
 
-            public PartialRandomInputStreamUint64(IRandomInputByteStream<UInt64> baseStream, UInt64 size, Boolean leaveOpen = false)
+            public PartialRandomInputStreamUInt64(IRandomInputByteStream<UInt64, UInt64> baseStream, UInt64 size, Boolean leaveOpen = false)
                 : base(baseStream, size, leaveOpen)
             {
                 _baseStream = baseStream;
             }
 
-            public PartialRandomInputStreamUint64(IRandomInputByteStream<UInt64> baseStream, UInt64 offset, UInt64 size, Boolean leaveOpen = false)
+            public PartialRandomInputStreamUInt64(IRandomInputByteStream<UInt64, UInt64> baseStream, UInt64 offset, UInt64 size, Boolean leaveOpen = false)
                 : base(baseStream, offset, size, leaveOpen)
             {
                 _baseStream = baseStream;
             }
 
-            public PartialRandomInputStreamUint64(IRandomInputByteStream<UInt64> baseStream, UInt64? offset, UInt64? size, Boolean leaveOpen = false)
+            public PartialRandomInputStreamUInt64(IRandomInputByteStream<UInt64, UInt64> baseStream, UInt64? offset, UInt64? size, Boolean leaveOpen = false)
                 : base(baseStream, offset, size, leaveOpen)
             {
                 _baseStream = baseStream;
             }
 
             protected override UInt64 ZeroPositionValue => 0;
-
             protected override UInt64 EndBasePositionValue => _baseStream.Length;
-
-            protected override (Boolean Success, UInt64 Position) AddBasePosition(UInt64 x, UInt64 y)
-            {
-                try
-                {
-                    return (true, checked(x + y));
-                }
-                catch (OverflowException)
-                {
-                    return (false, 0);
-                }
-            }
-
-            protected override (Boolean Success, UInt64 Position) AddPosition(UInt64 x, UInt64 y)
-            {
-                try
-                {
-                    return (true, checked(x + y));
-                }
-                catch (OverflowException)
-                {
-                    return (false, 0);
-                }
-            }
-
-            protected override (Boolean Success, UInt64 Distance) GetDistanceBetweenBasePositions(UInt64 x, UInt64 y)
-                => x >= y ? (true, x - y) : (false, 0);
-
-            protected override (Boolean Success, UInt64 Distance) GetDistanceBetweenPositions(UInt64 x, UInt64 y)
-                => x >= y ? (true, x - y) : (false, 0);
+            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
         }
 
         private class PartialRandomOutputStreamUint64
-            : PartialRandomOutputStream<UInt64, UInt64>
+            : PartialRandomOutputStream<UInt64, UInt64, UInt64>
         {
-            public PartialRandomOutputStreamUint64(IRandomOutputByteStream<UInt64> baseStream, Boolean leaveOpen)
+            public PartialRandomOutputStreamUint64(IRandomOutputByteStream<UInt64, UInt64> baseStream, Boolean leaveOpen)
                 : base(baseStream, leaveOpen)
             {
             }
 
-            public PartialRandomOutputStreamUint64(IRandomOutputByteStream<UInt64> baseStream, UInt64 size, Boolean leaveOpen)
+            public PartialRandomOutputStreamUint64(IRandomOutputByteStream<UInt64, UInt64> baseStream, UInt64 size, Boolean leaveOpen)
                 : base(baseStream, size, leaveOpen)
             {
             }
 
-            public PartialRandomOutputStreamUint64(IRandomOutputByteStream<UInt64> baseStream, UInt64 offset, UInt64 size, Boolean leaveOpen)
+            public PartialRandomOutputStreamUint64(IRandomOutputByteStream<UInt64, UInt64> baseStream, UInt64 offset, UInt64 size, Boolean leaveOpen)
                 : base(baseStream, offset, size, leaveOpen)
             {
             }
 
-            public PartialRandomOutputStreamUint64(IRandomOutputByteStream<UInt64> baseStream, UInt64? offset, UInt64? size, Boolean leaveOpen)
+            public PartialRandomOutputStreamUint64(IRandomOutputByteStream<UInt64, UInt64> baseStream, UInt64? offset, UInt64? size, Boolean leaveOpen)
                 : base(baseStream, offset, size, leaveOpen)
             {
             }
 
             protected override UInt64 ZeroPositionValue => 0;
-
             protected override UInt64 ZeroBasePositionValue => 0;
-
-            protected override (Boolean Success, UInt64 Position) AddBasePosition(UInt64 x, UInt64 y)
-            {
-                try
-                {
-                    return (true, checked(x + y));
-                }
-                catch (OverflowException)
-                {
-                    return (false, 0);
-                }
-            }
-
-            protected override (Boolean Success, UInt64 Position) AddPosition(UInt64 x, UInt64 y)
-            {
-                try
-                {
-                    return (true, checked(x + y));
-                }
-                catch (OverflowException)
-                {
-                    return (false, 0);
-                }
-            }
-
-            protected override (Boolean Success, UInt64 Distance) GetDistanceBetweenBasePositions(UInt64 x, UInt64 y)
-                => x >= y ? (true, x - y) : (false, 0);
-
-            protected override (Boolean Success, UInt64 Distance) GetDistanceBetweenPositions(UInt64 x, UInt64 y)
-                => x >= y ? (true, x - y) : (false, 0);
+            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
         }
 
         private class Crc32CalculationInputStream
@@ -469,9 +390,12 @@ namespace Utility.IO
             }
 
             public Task FlushAsync(CancellationToken cancellationToken = default)
-                => _isDisposed
-                    ? throw new ObjectDisposedException(GetType().FullName)
-                : Task.CompletedTask;
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+
+                return Task.CompletedTask;
+            }
 
             public void Dispose()
             {
@@ -1134,10 +1058,11 @@ namespace Utility.IO
         {
             try
             {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
                 return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.CanSeek
+                    baseStream.CanSeek
                     ? new RandomInputByteStreamByStream(baseStream, leaveOpen)
                     : new SequentialInputByteStreamByStream(baseStream, leaveOpen);
             }
@@ -1299,10 +1224,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : (IInputBitStream)new SequentialInputBitStreamByByteStream(baseStream, BitPackingDirection.Default, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return new SequentialInputBitStreamByByteStream(baseStream, BitPackingDirection.Default, leaveOpen);
             }
             catch (Exception)
             {
@@ -1316,10 +1241,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : (IInputBitStream)new SequentialInputBitStreamByByteStream(baseStream, bitPackingDirection, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return new SequentialInputBitStreamByByteStream(baseStream, bitPackingDirection, leaveOpen);
             }
             catch (Exception)
             {
@@ -1330,18 +1255,21 @@ namespace Utility.IO
         }
 
         public static IInputBitStream AsBitStream(this IEnumerable<Byte> baseSequence, BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => baseSequence is null
-                ? throw new ArgumentNullException(nameof(baseSequence))
-                : (IInputBitStream)new SequentialInputBitStreamBySequence(baseSequence, bitPackingDirection);
+        {
+            if (baseSequence is null)
+                throw new ArgumentNullException(nameof(baseSequence));
+
+            return new SequentialInputBitStreamBySequence(baseSequence, bitPackingDirection);
+        }
 
         public static IOutputBitStream AsBitStream(this IOutputByteStream<UInt64> baseStream, Boolean leaveOpen = false)
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : (IOutputBitStream)new SequentialOutputBitStreamByByteStream(baseStream, BitPackingDirection.Default, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return new SequentialOutputBitStreamByByteStream(baseStream, BitPackingDirection.Default, leaveOpen);
             }
             catch (Exception)
             {
@@ -1355,10 +1283,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : (IOutputBitStream)new SequentialOutputBitStreamByByteStream(baseStream, bitPackingDirection, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return new SequentialOutputBitStreamByByteStream(baseStream, bitPackingDirection, leaveOpen);
             }
             catch (Exception)
             {
@@ -1380,8 +1308,8 @@ namespace Utility.IO
                     throw new ArgumentNullException(nameof(baseStream));
 
                 return
-                    baseStream is IRandomInputByteStream<UInt64> baseRandomAccessStream
-                    ? new PartialRandomInputStreamUint64(baseRandomAccessStream, leaveOpen)
+                    baseStream is IRandomInputByteStream<UInt64, UInt64> baseRandomAccessStream
+                    ? new PartialRandomInputStreamUInt64(baseRandomAccessStream, leaveOpen)
                     : new PartialInputStreamUInt64(baseStream, null, leaveOpen);
             }
             catch (Exception)
@@ -1400,8 +1328,8 @@ namespace Utility.IO
                     throw new ArgumentNullException(nameof(baseStream));
 
                 return
-                    baseStream is IRandomInputByteStream<UInt64> baseRandomAccessStream
-                    ? new PartialRandomInputStreamUint64(baseRandomAccessStream, size, null, leaveOpen)
+                    baseStream is IRandomInputByteStream<UInt64, UInt64> baseRandomAccessStream
+                    ? new PartialRandomInputStreamUInt64(baseRandomAccessStream, size, null, leaveOpen)
                     : new PartialInputStreamUInt64(baseStream, size, leaveOpen);
             }
             catch (Exception)
@@ -1418,10 +1346,10 @@ namespace Utility.IO
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64> baseRandomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRandomAccessStream)
                     throw new NotSupportedException();
 
-                return new PartialRandomInputStreamUint64(baseRandomAccessStream, offset, size, leaveOpen);
+                return new PartialRandomInputStreamUInt64(baseRandomAccessStream, offset, size, leaveOpen);
             }
             catch (Exception)
             {
@@ -1438,8 +1366,8 @@ namespace Utility.IO
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                if (baseStream is IRandomInputByteStream<UInt64> baseRandomAccessStream)
-                    return new PartialRandomInputStreamUint64(baseRandomAccessStream, offset, size, leaveOpen);
+                if (baseStream is IRandomInputByteStream<UInt64, UInt64> baseRandomAccessStream)
+                    return new PartialRandomInputStreamUInt64(baseRandomAccessStream, offset, size, leaveOpen);
 
                 if (offset is not null)
                     throw new NotSupportedException();
@@ -1462,9 +1390,9 @@ namespace Utility.IO
                     throw new ArgumentNullException(nameof(baseStream));
 
                 return
-                    baseStream is IRandomOutputByteStream<UInt64> baseRandomAccessStream
+                    baseStream is IRandomOutputByteStream<UInt64, UInt64> baseRandomAccessStream
                     ? new PartialRandomOutputStreamUint64(baseRandomAccessStream, leaveOpen)
-                    : new PartialOutputStreamUint64(baseStream, null, leaveOpen);
+                    : new PartialOutputStreamUInt64(baseStream, null, leaveOpen);
             }
             catch (Exception)
             {
@@ -1482,9 +1410,9 @@ namespace Utility.IO
                     throw new ArgumentNullException(nameof(baseStream));
 
                 return
-                    baseStream is IRandomOutputByteStream<UInt64> baseRandomAccessStream
+                    baseStream is IRandomOutputByteStream<UInt64, UInt64> baseRandomAccessStream
                     ? new PartialRandomOutputStreamUint64(baseRandomAccessStream, size, null, leaveOpen)
-                    : new PartialOutputStreamUint64(baseStream, size, leaveOpen);
+                    : new PartialOutputStreamUInt64(baseStream, size, leaveOpen);
             }
             catch (Exception)
             {
@@ -1500,7 +1428,7 @@ namespace Utility.IO
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomOutputByteStream<UInt64> baseRandomAccessStream)
+                if (baseStream is not IRandomOutputByteStream<UInt64, UInt64> baseRandomAccessStream)
                     throw new NotSupportedException();
 
                 return new PartialRandomOutputStreamUint64(baseRandomAccessStream, offset, size, leaveOpen);
@@ -1520,13 +1448,13 @@ namespace Utility.IO
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                if (baseStream is IRandomOutputByteStream<UInt64> baseRandomAccessStream)
+                if (baseStream is IRandomOutputByteStream<UInt64, UInt64> baseRandomAccessStream)
                     return new PartialRandomOutputStreamUint64(baseRandomAccessStream, offset, size, leaveOpen);
 
                 if (offset is not null)
                     throw new NotSupportedException();
 
-                return new PartialOutputStreamUint64(baseStream, size, leaveOpen);
+                return new PartialOutputStreamUInt64(baseStream, size, leaveOpen);
             }
             catch (Exception)
             {
@@ -1550,7 +1478,7 @@ namespace Utility.IO
                 return
                     baseStream switch
                     {
-                        IRandomInputByteStream<UInt64> baseRandomAccessStream
+                        IRandomInputByteStream<UInt64, UInt64> baseRandomAccessStream
                             => new BufferedRandomInputStreamUInt64(baseRandomAccessStream, leaveOpen),
                         _
                             => new BufferedInputStreamUInt64(baseStream, leaveOpen),
@@ -1576,7 +1504,7 @@ namespace Utility.IO
                 return
                     baseStream switch
                     {
-                        IRandomInputByteStream<UInt64> baseRandomAccessStream
+                        IRandomInputByteStream<UInt64, UInt64> baseRandomAccessStream
                             => new BufferedRandomInputStreamUInt64(baseRandomAccessStream, cacheSize, leaveOpen),
                         _
                             => new BufferedInputStreamUInt64(baseStream, cacheSize, leaveOpen),
@@ -1600,8 +1528,8 @@ namespace Utility.IO
                 return
                     baseStream switch
                     {
-                        IRandomOutputByteStream<UInt64> baseRandomAccessStream
-                            => new BufferedRandomOutputStreamUint64(baseRandomAccessStream, leaveOpen),
+                        IRandomOutputByteStream<UInt64, UInt64> baseRandomAccessStream
+                            => new BufferedRandomOutputStreamUInt64(baseRandomAccessStream, leaveOpen),
                         _
                             => new BufferedOutputStreamUInt64(baseStream, leaveOpen)
                     };
@@ -1626,8 +1554,8 @@ namespace Utility.IO
                 return
                     baseStream switch
                     {
-                        IRandomOutputByteStream<UInt64> baseRandomAccessStream
-                            => new BufferedRandomOutputStreamUint64(baseRandomAccessStream, cacheSize, leaveOpen),
+                        IRandomOutputByteStream<UInt64, UInt64> baseRandomAccessStream
+                            => new BufferedRandomOutputStreamUInt64(baseRandomAccessStream, cacheSize, leaveOpen),
                         _
                             => new BufferedOutputStreamUInt64(baseStream, cacheSize, leaveOpen)
                     };
@@ -1800,10 +1728,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetByteSequence();
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetByteSequence();
             }
             catch (Exception)
             {
@@ -1817,10 +1745,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetByteSequence(progress);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetByteSequence(progress);
             }
             catch (Exception)
             {
@@ -1834,10 +1762,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetByteSequence(offset);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetByteSequence(offset);
             }
             catch (Exception)
             {
@@ -1851,10 +1779,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetByteSequence(offset, progress);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetByteSequence(offset, progress);
             }
             catch (Exception)
             {
@@ -1868,10 +1796,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetByteSequence(offset, count);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetByteSequence(offset, count);
             }
             catch (Exception)
             {
@@ -1885,10 +1813,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream.AsInputByteStream(leaveOpen).GetByteSequence(offset, count, progress: progress);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return baseStream.AsInputByteStream(leaveOpen).GetByteSequence(offset, count, progress: progress);
             }
             catch (Exception)
             {
@@ -1902,10 +1830,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : InternalGetByteSequence(baseStream, null, null, null, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return InternalGetByteSequence<UInt64, UInt64>(baseStream, null, null, null, leaveOpen);
             }
             catch (Exception)
             {
@@ -1919,10 +1847,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : InternalGetByteSequence(baseStream, null, null, progress, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return InternalGetByteSequence<UInt64, UInt64>(baseStream, null, null, progress, leaveOpen);
             }
             catch (Exception)
             {
@@ -1936,14 +1864,14 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteStream
-                    ? throw new NotSupportedException()
-                    : offset > byteStream.Length
-                    ? throw new ArgumentOutOfRangeException(nameof(offset))
-                    : InternalGetByteSequence(byteStream, offset, byteStream.Length - offset, null, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteStream)
+                    throw new NotSupportedException();
+                if (offset > byteStream.Length)
+                    throw new ArgumentOutOfRangeException(nameof(offset));
+
+                return InternalGetByteSequence<UInt64, UInt64>(byteStream, offset, byteStream.Length - offset, null, leaveOpen);
             }
             catch (Exception)
             {
@@ -1957,14 +1885,14 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> byteStream
-                    ? throw new NotSupportedException()
-                    : offset > byteStream.Length
-                    ? throw new ArgumentOutOfRangeException(nameof(offset))
-                    : InternalGetByteSequence(byteStream, offset, byteStream.Length - offset, progress, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteStream)
+                    throw new NotSupportedException();
+                if (offset > byteStream.Length)
+                    throw new ArgumentOutOfRangeException(nameof(offset));
+
+                return InternalGetByteSequence<UInt64, UInt64>(byteStream, offset, byteStream.Length - offset, progress, leaveOpen);
             }
             catch (Exception)
             {
@@ -1978,14 +1906,14 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream
-                    ? throw new NotSupportedException()
-                    : checked(offset + count) > baseRamdomAccessStream.Length
-                    ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.")
-                    : InternalGetByteSequence(baseRamdomAccessStream, offset, count, null, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
+                    throw new NotSupportedException();
+                if (checked(offset + count) > baseRamdomAccessStream.Length)
+                    throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
+
+                return InternalGetByteSequence<UInt64, UInt64>(baseRamdomAccessStream, offset, count, null, leaveOpen);
             }
             catch (Exception)
             {
@@ -1999,14 +1927,14 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    baseStream is null
-                    ? throw new ArgumentNullException(nameof(baseStream))
-                    : baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream
-                    ? throw new NotSupportedException()
-                    : checked(offset + count) > baseRamdomAccessStream.Length
-                    ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.")
-                    : InternalGetByteSequence(baseRamdomAccessStream, offset, count, progress, leaveOpen);
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
+                    throw new NotSupportedException();
+                if (checked(offset + count) > baseRamdomAccessStream.Length)
+                    throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
+
+                return InternalGetByteSequence<UInt64, UInt64>(baseRamdomAccessStream, offset, count, progress, leaveOpen);
             }
             catch (Exception)
             {
@@ -2026,6 +1954,7 @@ namespace Utility.IO
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
+
                 return baseStream.AsInputByteStream(leaveOpen).GetReverseByteSequence();
             }
             catch (Exception)
@@ -2127,7 +2056,7 @@ namespace Utility.IO
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
                     throw new NotSupportedException();
 
                 return new ReverseByteSequenceByByteStream(baseRamdomAccessStream, 0, baseRamdomAccessStream.Length, null, leaveOpen);
@@ -2146,7 +2075,7 @@ namespace Utility.IO
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
                     throw new NotSupportedException();
 
                 return new ReverseByteSequenceByByteStream(baseRamdomAccessStream, 0, baseRamdomAccessStream.Length, progress, leaveOpen);
@@ -2165,7 +2094,7 @@ namespace Utility.IO
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
                     throw new NotSupportedException();
                 if (!offset.IsBetween(0UL, baseRamdomAccessStream.Length))
                     throw new ArgumentOutOfRangeException(nameof(offset));
@@ -2186,7 +2115,7 @@ namespace Utility.IO
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
                     throw new NotSupportedException();
                 if (!offset.IsBetween(0UL, baseRamdomAccessStream.Length))
                     throw new ArgumentOutOfRangeException(nameof(offset));
@@ -2207,7 +2136,7 @@ namespace Utility.IO
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
                     throw new NotSupportedException();
                 if (offset < 0)
                     throw new ArgumentOutOfRangeException(nameof(offset));
@@ -2232,7 +2161,7 @@ namespace Utility.IO
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
                     throw new NotSupportedException();
                 if (offset < 0)
                     throw new ArgumentOutOfRangeException(nameof(offset));
@@ -2399,24 +2328,31 @@ namespace Utility.IO
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Int32 Read(this Stream stream, Byte[] buffer)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : stream.Read(buffer, 0, buffer.Length);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+
+            return stream.Read(buffer, 0, buffer.Length);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Int32 Read(this Stream stream, Byte[] buffer, Int32 offset)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : !offset.IsBetween(0, buffer.Length)
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : stream.Read(
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (!offset.IsBetween(0, buffer.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return
+                stream.Read(
                     buffer,
                     offset,
                     buffer.Length - offset);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static UInt32 Read(this Stream stream, Byte[] buffer, UInt32 offset)
@@ -2447,10 +2383,10 @@ namespace Utility.IO
             if (buffer is null)
                 throw new ArgumentNullException(nameof(buffer));
             var (isOk, offset, count) = buffer.GetOffsetAndLength(range);
-            return
-                isOk
-                ? stream.Read(buffer, offset, count)
-                : throw new ArgumentOutOfRangeException(nameof(range));
+            if (!isOk)
+                throw new ArgumentOutOfRangeException(nameof(range));
+
+            return stream.Read(buffer, offset, count);
         }
 
 #if false
@@ -2462,50 +2398,66 @@ namespace Utility.IO
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static UInt32 Read(this Stream stream, Byte[] buffer, UInt32 offset, UInt32 count)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : checked(offset + count) > (UInt32)buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : (UInt32)stream.Read(
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (checked(offset + count) > (UInt32)buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return
+                (UInt32)stream.Read(
                     buffer,
                     (Int32)offset,
                     (Int32)count).Maximum(0);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Int32 Read(this Stream stream, Memory<Byte> buffer)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : stream.Read(buffer.Span);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+
+            return stream.Read(buffer.Span);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Int32 Read(this IBasicInputByteStream stream, Byte[] buffer)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : stream.Read(buffer.AsSpan());
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+
+            return stream.Read(buffer.AsSpan());
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Int32 Read(this IBasicInputByteStream stream, Byte[] buffer, Int32 offset)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : !offset.IsBetween(0, buffer.Length)
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : stream.Read(buffer.AsSpan(offset));
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (!offset.IsBetween(0, buffer.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return stream.Read(buffer.AsSpan(offset));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static UInt32 Read(this IBasicInputByteStream stream, Byte[] buffer, UInt32 offset)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset > buffer.Length
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : (UInt32)stream.Read(buffer.AsSpan(offset)).Maximum(0);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset > buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return (UInt32)stream.Read(buffer.AsSpan(offset)).Maximum(0);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Int32 Read(this IBasicInputByteStream stream, Byte[] buffer, Range range)
@@ -2515,41 +2467,50 @@ namespace Utility.IO
             if (buffer is null)
                 throw new ArgumentNullException(nameof(buffer));
             var (isOk, offset, count) = buffer.GetOffsetAndLength(range);
-            return
-                isOk
-                ? stream.Read(buffer.AsSpan(offset, count))
-                : throw new ArgumentOutOfRangeException(nameof(range));
+            if (!isOk)
+                throw new ArgumentOutOfRangeException(nameof(range));
+
+            return stream.Read(buffer.AsSpan(offset, count));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Int32 Read(this IBasicInputByteStream stream, Byte[] buffer, Int32 offset, Int32 count)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(count))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : stream.Read(buffer.AsSpan(offset, count));
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return stream.Read(buffer.AsSpan(offset, count));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static UInt32 Read(this IBasicInputByteStream stream, Byte[] buffer, UInt32 offset, UInt32 count)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : (UInt32)stream.Read(buffer.AsSpan(offset, count));
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return (UInt32)stream.Read(buffer.AsSpan(offset, count));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Int32 Read(this IBasicInputByteStream stream, Memory<Byte> buffer)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : stream.Read(buffer.Span);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+
+            return stream.Read(buffer.Span);
+        }
 
         #endregion
 
@@ -2591,10 +2552,10 @@ namespace Utility.IO
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
             Span<Byte> buffer = stackalloc Byte[1];
-            return
-                sourceStream.Read(buffer) > 0
-                ? buffer[0]
-                : throw new UnexpectedEndOfStreamException();
+            if (sourceStream.Read(buffer) <= 0)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer[0];
         }
 
         #endregion
@@ -2636,38 +2597,50 @@ namespace Utility.IO
         }
 
         public static Int32 ReadBytes(this Stream sourceStream, Byte[] buffer)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : InternalReadBytes(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+
+            return
+                InternalReadBytes(
                     0,
                     buffer.Length,
                     (_offset, _count) => sourceStream.Read(buffer, _offset, _count));
+        }
 
         public static Int32 ReadBytes(this Stream sourceStream, Byte[] buffer, Int32 offset)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : !offset.IsBetween(0, buffer.Length)
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : InternalReadBytes(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (!offset.IsBetween(0, buffer.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return
+                InternalReadBytes(
                     offset,
                     buffer.Length - offset,
                     (_offset, _count) => sourceStream.Read(buffer, _offset, _count));
+        }
 
         public static UInt32 ReadBytes(this Stream sourceStream, Byte[] buffer, UInt32 offset)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset > (UInt32)buffer.Length
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : (UInt32)InternalReadBytes(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset > (UInt32)buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return
+                (UInt32)InternalReadBytes(
                     (Int32)offset,
                     buffer.Length - (Int32)offset,
                     (_offset, _count) => sourceStream.Read(buffer, _offset, _count)).Maximum(0);
+        }
 
         public static Int32 ReadBytes(this Stream sourceStream, Byte[] buffer, Range range)
         {
@@ -2676,49 +2649,62 @@ namespace Utility.IO
             if (buffer is null)
                 throw new ArgumentNullException(nameof(buffer));
             var (isOk, offset, count) = buffer.GetOffsetAndLength(range);
-            return
-                isOk
-                ? InternalReadBytes(
-                    offset,
-                    count,
-                    (_offset, _count) => sourceStream.Read(buffer, _offset, _count))
-                : throw new ArgumentOutOfRangeException(nameof(range));
-        }
+            if (!isOk)
+                throw new ArgumentOutOfRangeException(nameof(range));
 
-        public static Int32 ReadBytes(this Stream sourceStream, Byte[] buffer, Int32 offset, Int32 count)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : InternalReadBytes(
+            return
+                InternalReadBytes(
                     offset,
                     count,
                     (_offset, _count) => sourceStream.Read(buffer, _offset, _count));
+        }
+
+        public static Int32 ReadBytes(this Stream sourceStream, Byte[] buffer, Int32 offset, Int32 count)
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return
+                InternalReadBytes(
+                    offset,
+                    count,
+                    (_offset, _count) => sourceStream.Read(buffer, _offset, _count));
+        }
 
         public static UInt32 ReadBytes(this Stream sourceStream, Byte[] buffer, UInt32 offset, UInt32 count)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : checked(offset) + count > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : (UInt32)InternalReadBytes(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (checked(offset) + count > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return
+                (UInt32)InternalReadBytes(
                     (Int32)offset,
                     (Int32)count,
                     (_offset, _count) => sourceStream.Read(buffer, _offset, _count)).Maximum(0);
+        }
 
         public static Int32 ReadBytes(this Stream sourceStream, Memory<Byte> buffer)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : InternalReadBytes(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+
+            return
+                InternalReadBytes(
                     buffer,
                     _buffer => sourceStream.Read(_buffer.Span));
+        }
 
         public static Int32 ReadBytes(this Stream sourceStream, Span<Byte> buffer)
         {
@@ -2773,38 +2759,48 @@ namespace Utility.IO
         }
 
         public static Int32 ReadBytes(this IBasicInputByteStream sourceStream, Byte[] buffer)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : InternalReadBytes(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+
+            return InternalReadBytes(
                     0,
                     buffer.Length,
                     (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count)));
+        }
 
         public static Int32 ReadBytes(this IBasicInputByteStream sourceStream, Byte[] buffer, Int32 offset)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : !offset.IsBetween(0, buffer.Length)
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : InternalReadBytes(
-                    offset,
-                    buffer.Length - offset,
-                    (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count)));
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (!offset.IsBetween(0, buffer.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return InternalReadBytes(
+                offset,
+                buffer.Length - offset,
+                (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count)));
+        }
 
         public static UInt32 ReadBytes(this IBasicInputByteStream sourceStream, Byte[] buffer, UInt32 offset)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset > (UInt32)buffer.Length
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : (UInt32)InternalReadBytes(
-                    (Int32)offset,
-                    buffer.Length - (Int32)offset,
-                    (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count))).Maximum(0);
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset > (UInt32)buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return
+                (UInt32)InternalReadBytes(
+                (Int32)offset,
+                buffer.Length - (Int32)offset,
+                (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count))).Maximum(0);
+        }
 
         public static Int32 ReadBytes(this IBasicInputByteStream sourceStream, Byte[] buffer, Range range)
         {
@@ -2813,49 +2809,58 @@ namespace Utility.IO
             if (buffer is null)
                 throw new ArgumentNullException(nameof(buffer));
             var (isOk, offset, count) = buffer.GetOffsetAndLength(range);
-            return
-                isOk
-                ? InternalReadBytes(
-                    offset,
-                    count,
-                    (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count)))
-                : throw new ArgumentOutOfRangeException(nameof(range));
+            if (!isOk)
+                throw new ArgumentOutOfRangeException(nameof(range));
+
+            return InternalReadBytes(
+                offset,
+                count,
+                (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count)));
         }
 
         public static Int32 ReadBytes(this IBasicInputByteStream sourceStream, Byte[] buffer, Int32 offset, Int32 count)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : InternalReadBytes(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return
+                InternalReadBytes(
                     offset,
                     count,
                     (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count)));
+        }
 
         public static UInt32 ReadBytes(this IBasicInputByteStream sourceStream, Byte[] buffer, UInt32 offset, UInt32 count)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : (UInt32)InternalReadBytes(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return
+                (UInt32)InternalReadBytes(
                     (Int32)offset,
                     (Int32)count,
                     (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count))).Maximum(0);
+        }
 
         public static Int32 ReadBytes(this IBasicInputByteStream sourceStream, Memory<Byte> buffer)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : InternalReadBytes(
-                    buffer,
-                    _buffer => sourceStream.Read(_buffer.Span));
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+
+            return InternalReadBytes(buffer, _buffer => sourceStream.Read(_buffer.Span));
+        }
 
         public static Int32 ReadBytes(this IBasicInputByteStream sourceStream, Span<Byte> buffer)
         {
@@ -2880,11 +2885,14 @@ namespace Utility.IO
         #region ReadByteSequence
 
         public static IEnumerable<Byte> ReadByteSequence(this Stream sourceStream, Int64 count)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(count))
-                : InternalReadByteSequence(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+
+            return
+                InternalReadByteSequence(
                     (UInt64)count,
                     _count =>
                     {
@@ -2896,11 +2904,15 @@ namespace Utility.IO
                             Array.Resize(ref buffer, length);
                         return buffer;
                     });
+        }
 
         public static IEnumerable<Byte> ReadByteSequence(this Stream sourceStream, UInt64 count)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : InternalReadByteSequence(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+
+            return
+                InternalReadByteSequence(
                     count,
                     _count =>
                     {
@@ -2912,13 +2924,17 @@ namespace Utility.IO
                             Array.Resize(ref buffer, length);
                         return buffer;
                     });
+        }
 
         public static IEnumerable<Byte> ReadByteSequence(this IBasicInputByteStream sourceStream, Int64 count)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(count))
-                : InternalReadByteSequence(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+
+            return
+                InternalReadByteSequence(
                     (UInt64)count,
                     _count =>
                     {
@@ -2930,11 +2946,15 @@ namespace Utility.IO
                             Array.Resize(ref buffer, length);
                         return buffer;
                     });
+        }
 
         public static IEnumerable<Byte> ReadByteSequence(this IBasicInputByteStream sourceStream, UInt64 count)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : InternalReadByteSequence(
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+
+            return
+                InternalReadByteSequence(
                     count,
                     _count =>
                     {
@@ -2946,20 +2966,27 @@ namespace Utility.IO
                             Array.Resize(ref buffer, length);
                         return buffer;
                     });
+        }
 
         #endregion
 
         #region ReadAllBytes
 
         public static ReadOnlyMemory<Byte> ReadAllBytes(this Stream sourceStream)
-            => sourceStream is null
-                ? throw new ArgumentNullException(nameof(sourceStream))
-                : InternalReadAllBytes(sourceStream.Read);
+        {
+            if (sourceStream is null)
+                throw new ArgumentNullException(nameof(sourceStream));
+
+            return InternalReadAllBytes(sourceStream.Read);
+        }
 
         public static ReadOnlyMemory<Byte> ReadAllBytes(this IBasicInputByteStream sourceByteStream)
-            => sourceByteStream is null
-                ? throw new ArgumentNullException(nameof(sourceByteStream))
-                : InternalReadAllBytes((_buffer, _offset, _count) => sourceByteStream.Read(_buffer.AsSpan(_offset, _count)));
+        {
+            if (sourceByteStream is null)
+                throw new ArgumentNullException(nameof(sourceByteStream));
+
+            return InternalReadAllBytes((_buffer, _offset, _count) => sourceByteStream.Read(_buffer.AsSpan(_offset, _count)));
+        }
 
         #endregion
 
@@ -2972,10 +2999,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Int16)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt16LE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt16LE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2985,10 +3012,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Int16)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt16LE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt16LE();
         }
 
         #endregion
@@ -3002,10 +3029,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(UInt16)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt16LE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt16LE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3015,10 +3042,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(UInt16)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt16LE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt16LE();
         }
 
         #endregion
@@ -3032,10 +3059,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Int32)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt32LE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt32LE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3045,10 +3072,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Int32)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt32LE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt32LE();
         }
 
         #endregion
@@ -3062,10 +3089,11 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(UInt32)];
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
             return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt32LE();
+                buffer.ToUInt32LE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3075,10 +3103,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(UInt32)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt32LE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt32LE();
         }
 
         #endregion
@@ -3092,10 +3120,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Int64)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt64LE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt64LE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3105,10 +3133,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Int64)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt64LE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt64LE();
         }
 
         #endregion
@@ -3122,10 +3150,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(UInt64)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt64LE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt64LE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3135,10 +3163,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(UInt64)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt64LE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt64LE();
         }
 
         #endregion
@@ -3152,10 +3180,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Single)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToSingleLE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToSingleLE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3165,10 +3193,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Single)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToSingleLE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToSingleLE();
         }
 
         #endregion
@@ -3182,10 +3210,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Double)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDoubleLE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDoubleLE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3195,10 +3223,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Double)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDoubleLE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDoubleLE();
         }
 
         #endregion
@@ -3212,10 +3240,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Decimal)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDecimalLE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDecimalLE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3225,10 +3253,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Decimal)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDecimalLE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDecimalLE();
         }
 
         #endregion
@@ -3242,10 +3270,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Int16)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt16BE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt16BE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3255,10 +3283,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Int16)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt16BE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt16BE();
         }
 
         #endregion
@@ -3272,10 +3300,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(UInt16)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt16BE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt16BE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3285,10 +3313,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(UInt16)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt16BE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt16BE();
         }
 
         #endregion
@@ -3302,10 +3330,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Int32)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt32BE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt32BE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3315,10 +3343,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Int32)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt32BE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt32BE();
         }
 
         #endregion
@@ -3332,10 +3360,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(UInt32)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt32BE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt32BE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3345,10 +3373,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(UInt32)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt32BE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt32BE();
         }
 
         #endregion
@@ -3362,10 +3390,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Int64)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt64BE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt64BE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3375,10 +3403,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Int64)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToInt64BE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToInt64BE();
         }
 
         #endregion
@@ -3392,10 +3420,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(UInt64)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt64BE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt64BE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3405,10 +3433,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(UInt64)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToUInt64BE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToUInt64BE();
         }
 
         #endregion
@@ -3422,10 +3450,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Single)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToSingleBE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToSingleBE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3435,10 +3463,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Single)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToSingleBE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToSingleBE();
         }
 
         #endregion
@@ -3452,10 +3480,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Double)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDoubleBE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDoubleBE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3465,10 +3493,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Double)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDoubleBE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDoubleBE();
         }
 
         #endregion
@@ -3482,10 +3510,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Decimal)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDecimalBE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDecimalBE();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3495,10 +3523,10 @@ namespace Utility.IO
                 throw new ArgumentNullException(nameof(sourceStream));
 
             Span<Byte> buffer = stackalloc Byte[sizeof(Decimal)];
-            return
-                sourceStream.ReadBytes(buffer) != buffer.Length
-                ? throw new UnexpectedEndOfStreamException()
-                : buffer.ToDecimalBE();
+            if (sourceStream.ReadBytes(buffer) != buffer.Length)
+                throw new UnexpectedEndOfStreamException();
+
+            return buffer.ToDecimalBE();
         }
 
         #endregion
@@ -3586,53 +3614,68 @@ namespace Utility.IO
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Int32 Write(this IBasicOutputByteStream stream, Byte[] buffer, Int32 offset)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : !offset.IsBetween(0, buffer.Length)
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : stream.Write(buffer.AsSpan(offset));
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (!offset.IsBetween(0, buffer.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return stream.Write(buffer.AsSpan(offset));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static UInt32 Write(this IBasicOutputByteStream stream, Byte[] buffer, UInt32 offset)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset > buffer.Length
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : (UInt32)stream.Write(buffer.AsSpan((Int32)offset)).Maximum(0);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset > buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return (UInt32)stream.Write(buffer.AsSpan((Int32)offset)).Maximum(0);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Int32 Write(this IBasicOutputByteStream stream, Byte[] buffer, Int32 offset, Int32 count)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : offset < 0
-                ? throw new ArgumentOutOfRangeException(nameof(offset))
-                : count < 0
-                ? throw new ArgumentOutOfRangeException(nameof(count))
-                : checked(offset + count) > buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : stream.Write(buffer.AsSpan(offset, count));
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            if (checked(offset + count) > buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return stream.Write(buffer.AsSpan(offset, count));
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static UInt32 Write(this IBasicOutputByteStream stream, Byte[] buffer, UInt32 offset, UInt32 count)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-                : buffer is null
-                ? throw new ArgumentNullException(nameof(buffer))
-                : checked(offset + count) > (UInt32)buffer.Length
-                ? throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.")
-                : (UInt32)stream.Write(buffer.AsSpan(offset, count)).Maximum(0);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+            if (buffer is null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (checked(offset + count) > (UInt32)buffer.Length)
+                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
+
+            return (UInt32)stream.Write(buffer.AsSpan(offset, count)).Maximum(0);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Int32 Write(this IBasicOutputByteStream stream, ReadOnlyMemory<Byte> buffer)
-            => stream is null
-                ? throw new ArgumentNullException(nameof(stream))
-            : stream.Write(buffer.Span);
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+
+            return stream.Write(buffer.Span);
+        }
 
         #endregion
 
@@ -4452,10 +4495,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.AsInputByteStream(true).InternalCalculateCrc24(MAX_BUFFER_SIZE, null);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.AsInputByteStream(true).InternalCalculateCrc24(MAX_BUFFER_SIZE, null);
             }
             finally
             {
@@ -4470,10 +4513,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.AsInputByteStream(true).InternalCalculateCrc24(MAX_BUFFER_SIZE, progress);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.AsInputByteStream(true).InternalCalculateCrc24(MAX_BUFFER_SIZE, progress);
             }
             finally
             {
@@ -4486,10 +4529,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.AsInputByteStream(true).InternalCalculateCrc24(bufferSize, null);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.AsInputByteStream(true).InternalCalculateCrc24(bufferSize, null);
             }
             finally
             {
@@ -4502,10 +4545,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.AsInputByteStream(true).InternalCalculateCrc24(bufferSize, progress);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.AsInputByteStream(true).InternalCalculateCrc24(bufferSize, progress);
             }
             finally
             {
@@ -4520,10 +4563,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.InternalCalculateCrc24(MAX_BUFFER_SIZE, null);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.InternalCalculateCrc24(MAX_BUFFER_SIZE, null);
             }
             finally
             {
@@ -4538,10 +4581,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.InternalCalculateCrc24(MAX_BUFFER_SIZE, progress);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.InternalCalculateCrc24(MAX_BUFFER_SIZE, progress);
             }
             finally
             {
@@ -4554,10 +4597,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.InternalCalculateCrc24(bufferSize, null);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.InternalCalculateCrc24(bufferSize, null);
             }
             finally
             {
@@ -4570,10 +4613,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.InternalCalculateCrc24(bufferSize, progress);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.InternalCalculateCrc24(bufferSize, progress);
             }
             finally
             {
@@ -4592,10 +4635,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.AsInputByteStream(true).InternalCalculateCrc32(MAX_BUFFER_SIZE, null);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.AsInputByteStream(true).InternalCalculateCrc32(MAX_BUFFER_SIZE, null);
             }
             finally
             {
@@ -4610,10 +4653,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.AsInputByteStream(true).InternalCalculateCrc32(MAX_BUFFER_SIZE, progress);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.AsInputByteStream(true).InternalCalculateCrc32(MAX_BUFFER_SIZE, progress);
             }
             finally
             {
@@ -4626,10 +4669,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.AsInputByteStream(true).InternalCalculateCrc32(bufferSize, null);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.AsInputByteStream(true).InternalCalculateCrc32(bufferSize, null);
             }
             finally
             {
@@ -4642,10 +4685,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.AsInputByteStream(true).InternalCalculateCrc32(bufferSize, progress);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.AsInputByteStream(true).InternalCalculateCrc32(bufferSize, progress);
             }
             finally
             {
@@ -4660,10 +4703,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.InternalCalculateCrc32(MAX_BUFFER_SIZE, null);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.InternalCalculateCrc32(MAX_BUFFER_SIZE, null);
             }
             finally
             {
@@ -4678,10 +4721,10 @@ namespace Utility.IO
 
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.InternalCalculateCrc32(MAX_BUFFER_SIZE, progress);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.InternalCalculateCrc32(MAX_BUFFER_SIZE, progress);
             }
             finally
             {
@@ -4694,10 +4737,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.InternalCalculateCrc32(bufferSize, null);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.InternalCalculateCrc32(bufferSize, null);
             }
             finally
             {
@@ -4710,10 +4753,10 @@ namespace Utility.IO
         {
             try
             {
-                return
-                    inputStream is null
-                    ? throw new ArgumentNullException(nameof(inputStream))
-                    : inputStream.InternalCalculateCrc32(bufferSize, progress);
+                if (inputStream is null)
+                    throw new ArgumentNullException(nameof(inputStream));
+
+                return inputStream.InternalCalculateCrc32(bufferSize, progress);
             }
             finally
             {
@@ -4725,15 +4768,16 @@ namespace Utility.IO
         #endregion
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static IEnumerable<Byte> InternalGetByteSequence<POSITION_T>(IInputByteStream<POSITION_T> baseStream, POSITION_T? offset, UInt64? count, IProgress<UInt64>? progress, Boolean leaveOpen)
+        private static IEnumerable<Byte> InternalGetByteSequence<POSITION_T, UNSIGNED_OFFSET_T>(IInputByteStream<POSITION_T> baseStream, POSITION_T? offset, UInt64? count, IProgress<UInt64>? progress, Boolean leaveOpen)
             where POSITION_T : struct
+            where UNSIGNED_OFFSET_T : struct
         {
             const Int32 BUFFER_SIZE = 80 * 1024;
 
             var processedCounter = new ProgressCounterUInt64(progress);
             try
             {
-                if (baseStream is IRandomInputByteStream<POSITION_T> randomAccessStream)
+                if (baseStream is IRandomInputByteStream<POSITION_T, UNSIGNED_OFFSET_T> randomAccessStream)
                 {
                     if (offset is not null)
                         randomAccessStream.Seek(offset.Value);

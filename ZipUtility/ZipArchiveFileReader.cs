@@ -108,17 +108,15 @@ namespace ZipUtility
             var paramter = new ReaderParameter(entryNameEncodingProvider, zipArchiveFile);
 
             var lastDiskHeader = ZipFileLastDiskHeader.Parse(zipInputStream);
-            if (lastDiskHeader.EOCDR.IsRequiresZip64 || lastDiskHeader.Zip64EOCDL is not null)
+            if (lastDiskHeader.Zip64EOCDL is not null)
             {
-                if (lastDiskHeader.Zip64EOCDL is null)
-                    throw new BadZipFileFormatException("Not found 'zip64 end of central directory locator' in Zip file");
-                if (!zipInputStream.IsMultiVolumeZipStream && lastDiskHeader.Zip64EOCDL.TotalNumberOfDisks > 1)
-                    throw new MultiVolumeDetectedException(lastDiskHeader.Zip64EOCDL.TotalNumberOfDisks - 1U);
                 var zip64EOCDR = ZipFileZip64EOCDR.Parse(paramter, zipInputStream, lastDiskHeader.Zip64EOCDL);
                 var centralDirectoryPosition =
                     zipInputStream.GetPosition(
                         zip64EOCDR.NumberOfTheDiskWithTheStartOfTheCentralDirectory,
-                        zip64EOCDR.OffsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber);
+                        zip64EOCDR.OffsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber)
+                    ?? throw new BadZipFileFormatException($"The central directory header position read from ZIP64 EOCDR does not point to the correct disk position.: {nameof(zip64EOCDR.NumberOfTheDiskWithTheStartOfTheCentralDirectory)}=0x{zip64EOCDR.NumberOfTheDiskWithTheStartOfTheCentralDirectory:x8}, {nameof(zip64EOCDR.OffsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber)}=0x{zip64EOCDR.OffsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber:x16}");
+
                 return
                     new ZipArchiveFileReader(
                         entryNameEncodingProvider,
@@ -130,12 +128,15 @@ namespace ZipUtility
             }
             else
             {
-                if (!zipInputStream.IsMultiVolumeZipStream && lastDiskHeader.EOCDR.NumberOfThisDisk >= 1)
-                    throw new MultiVolumeDetectedException(lastDiskHeader.EOCDR.NumberOfThisDisk);
+                if (lastDiskHeader.EOCDR.IsRequiresZip64)
+                    throw new InternalLogicalErrorException();
+
                 var centralDirectoryPosition =
                     zipInputStream.GetPosition(
                         lastDiskHeader.EOCDR.DiskWhereCentralDirectoryStarts,
-                        lastDiskHeader.EOCDR.OffsetOfStartOfCentralDirectory);
+                        lastDiskHeader.EOCDR.OffsetOfStartOfCentralDirectory)
+                    ?? throw new BadZipFileFormatException($"The central directory header position read from EOCDR does not point to the correct disk position.: {nameof(lastDiskHeader.EOCDR.DiskWhereCentralDirectoryStarts)}=0x{lastDiskHeader.EOCDR.DiskWhereCentralDirectoryStarts:x8}, {nameof(lastDiskHeader.EOCDR.OffsetOfStartOfCentralDirectory)}=0x{lastDiskHeader.EOCDR.OffsetOfStartOfCentralDirectory:x16}");
+
                 return
                     new ZipArchiveFileReader(
                         entryNameEncodingProvider,

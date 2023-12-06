@@ -21,37 +21,52 @@ namespace Utility
         }
 
         public ReadOnlyArrayPointer<ELEMENT_T> AsReadOnly()
-            => _sourceArray is null
-                ? throw new InvalidOperationException()
-                : new ReadOnlyArrayPointer<ELEMENT_T>(_sourceArray, _currentIndex);
+        {
+            if (_sourceArray is null)
+                throw new InvalidOperationException();
+
+            return new ReadOnlyArrayPointer<ELEMENT_T>(_sourceArray, _currentIndex);
+        }
 
         public Memory<ELEMENT_T> GetMemory(Int32 length)
-            => _sourceArray is null
-                ? throw new InvalidOperationException()
-                : !length.IsBetween(0, _sourceArray.Length - _currentIndex)
-                ? throw new ArgumentOutOfRangeException(nameof(length))
-                : new Memory<ELEMENT_T>(_sourceArray, _currentIndex, length);
+        {
+            if (_sourceArray is null)
+                throw new InvalidOperationException();
+            if (!length.IsBetween(0, _sourceArray.Length - _currentIndex))
+                throw new ArgumentOutOfRangeException(nameof(length));
+
+            return new Memory<ELEMENT_T>(_sourceArray, _currentIndex, length);
+        }
 
         public Memory<ELEMENT_T> GetMemory(UInt32 length)
-            => _sourceArray is null
-                ? throw new InvalidOperationException()
-                : length > (UInt32)_sourceArray.Length
-                ? throw new ArgumentOutOfRangeException(nameof(length))
-                : new Memory<ELEMENT_T>(_sourceArray, _currentIndex, (Int32)length);
+        {
+            if (_sourceArray is null)
+                throw new InvalidOperationException();
+            if (length > (UInt32)_sourceArray.Length)
+                throw new ArgumentOutOfRangeException(nameof(length));
+
+            return new Memory<ELEMENT_T>(_sourceArray, _currentIndex, (Int32)length);
+        }
 
         public Span<ELEMENT_T> GetSpan(Int32 length)
-            => _sourceArray is null
-                ? throw new InvalidOperationException()
-                : !length.IsBetween(0, checked(_sourceArray.Length - _currentIndex))
-                ? throw new ArgumentOutOfRangeException(nameof(length))
-                : new Span<ELEMENT_T>(_sourceArray, _currentIndex, length);
+        {
+            if (_sourceArray is null)
+                throw new InvalidOperationException();
+            if (!length.IsBetween(0, checked(_sourceArray.Length - _currentIndex)))
+                throw new ArgumentOutOfRangeException(nameof(length));
+
+            return new Span<ELEMENT_T>(_sourceArray, _currentIndex, length);
+        }
 
         public Span<ELEMENT_T> GetSpan(UInt32 length)
-            => _sourceArray is null
-                ? throw new InvalidOperationException()
-                : length > (UInt32)_sourceArray.Length
-                ? throw new ArgumentOutOfRangeException(nameof(length))
-                : new Span<ELEMENT_T>(_sourceArray, _currentIndex, (Int32)length);
+        {
+            if (_sourceArray is null)
+                throw new InvalidOperationException();
+            if (length > (UInt32)_sourceArray.Length)
+                throw new ArgumentOutOfRangeException(nameof(length));
+
+            return new Span<ELEMENT_T>(_sourceArray, _currentIndex, (Int32)length);
+        }
 
         public ELEMENT_T this[Int32 index]
         {
@@ -60,10 +75,10 @@ namespace Utility
                 if (_sourceArray is null)
                     throw new InvalidOperationException();
                 var offset = checked(_currentIndex + index);
-                return
-                    offset.InRange(0, _sourceArray.Length)
-                    ? _sourceArray[offset]
-                    : throw new ArgumentOutOfRangeException(nameof(index));
+                if (!offset.InRange(0, _sourceArray.Length))
+                    throw new ArgumentOutOfRangeException(nameof(index));
+
+                return _sourceArray[offset];
             }
 
             set
@@ -85,10 +100,10 @@ namespace Utility
                 if (_sourceArray is null)
                     throw new InvalidOperationException();
                 var offset = checked((UInt32)_currentIndex + index);
-                return
-                    offset >= (UInt32)_sourceArray.Length
-                    ? throw new ArgumentOutOfRangeException(nameof(index))
-                    : _sourceArray[(Int32)offset];
+                if (offset >= (UInt32)_sourceArray.Length)
+                    throw new ArgumentOutOfRangeException(nameof(index));
+
+                return _sourceArray[(Int32)offset];
             }
 
             set
@@ -108,10 +123,10 @@ namespace Utility
             if (_sourceArray is null)
                 throw new InvalidOperationException();
             var newIndex = checked(_currentIndex + offset);
-            return
-                newIndex.IsBetween(0, _sourceArray.Length)
-                ? new ArrayPointer<ELEMENT_T>(_sourceArray, newIndex)
-                : throw new ArgumentOutOfRangeException(nameof(offset));
+            if (!newIndex.IsBetween(0, _sourceArray.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return new ArrayPointer<ELEMENT_T>(_sourceArray, newIndex);
         }
 
         public ArrayPointer<ELEMENT_T> Add(UInt32 offset)
@@ -119,10 +134,10 @@ namespace Utility
             if (_sourceArray is null)
                 throw new InvalidOperationException();
             var newIndex = checked((UInt32)_currentIndex + offset);
-            return
-                newIndex <= (UInt32)_sourceArray.Length
-                ? new ArrayPointer<ELEMENT_T>(_sourceArray, (Int32)newIndex)
-                : throw new ArgumentOutOfRangeException(nameof(offset));
+            if (newIndex > (UInt32)_sourceArray.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return new ArrayPointer<ELEMENT_T>(_sourceArray, (Int32)newIndex);
         }
 
         public ArrayPointer<ELEMENT_T> Subtract(Int32 offset)
@@ -130,10 +145,10 @@ namespace Utility
             if (_sourceArray is null)
                 throw new InvalidOperationException();
             var newIndex = checked(_currentIndex - offset);
-            return
-                newIndex.IsBetween(0, _sourceArray.Length)
-                ? new ArrayPointer<ELEMENT_T>(_sourceArray, newIndex)
-                : throw new ArgumentOutOfRangeException(nameof(offset));
+            if (!newIndex.IsBetween(0, _sourceArray.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return new ArrayPointer<ELEMENT_T>(_sourceArray, newIndex);
         }
 
         public ArrayPointer<ELEMENT_T> Subtract(UInt32 offset)
@@ -141,53 +156,71 @@ namespace Utility
             if (_sourceArray is null)
                 throw new InvalidOperationException();
             var newIndex = checked((Int32)(_currentIndex - offset));
-            return
-                newIndex.IsBetween(0, _sourceArray.Length)
-                ? new ArrayPointer<ELEMENT_T>(_sourceArray, newIndex)
-                : throw new ArgumentOutOfRangeException(nameof(offset));
+            if (!newIndex.IsBetween(0, _sourceArray.Length))
+                throw new ArgumentOutOfRangeException(nameof(offset));
+
+            return new ArrayPointer<ELEMENT_T>(_sourceArray, newIndex);
         }
 
         public Int32 Subtract(ArrayPointer<ELEMENT_T> other)
-            => _sourceArray is null
-                ? throw new InvalidOperationException()
-                : !ReferenceEquals(_sourceArray, other.SourceArray)
-                ? throw new ArgumentException($"'this' and {nameof(other)} point to different arrays.")
-                : checked(_currentIndex - other.CurrentIndex);
+        {
+            if (_sourceArray is null)
+                throw new InvalidOperationException();
+            if (!ReferenceEquals(_sourceArray, other.SourceArray))
+                throw new ArgumentException($"'this' and {nameof(other)} point to different arrays.");
+
+            return checked(_currentIndex - other.CurrentIndex);
+        }
 
         public Int32 Subtract(ReadOnlyArrayPointer<ELEMENT_T> other)
-            => _sourceArray is null
-                ? throw new InvalidOperationException()
-                : !ReferenceEquals(_sourceArray, other.SourceArray)
-                ? throw new ArgumentException($"'this' and {nameof(other)} point to different arrays.")
-                : checked(_currentIndex - other.CurrentIndex);
+        {
+            if (_sourceArray is null)
+                throw new InvalidOperationException();
+            if (!ReferenceEquals(_sourceArray, other.SourceArray))
+                throw new ArgumentException($"'this' and {nameof(other)} point to different arrays.");
+
+            return checked(_currentIndex - other.CurrentIndex);
+        }
 
         public Int32 CompareTo(ArrayPointer<ELEMENT_T> other)
-            => _sourceArray is null
-                ? throw new InvalidOperationException()
-                : !ReferenceEquals(_sourceArray, other.SourceArray)
-                ? throw new ArgumentException($"'this' and {nameof(other)} point to different arrays.")
-                : _currentIndex.CompareTo(other.CurrentIndex);
+        {
+            if (_sourceArray is null)
+                throw new InvalidOperationException();
+            if (!ReferenceEquals(_sourceArray, other.SourceArray))
+                throw new ArgumentException($"'this' and {nameof(other)} point to different arrays.");
+
+            return _currentIndex.CompareTo(other.CurrentIndex);
+        }
 
         public Int32 CompareTo(ReadOnlyArrayPointer<ELEMENT_T> other)
-            => _sourceArray is null
-                ? throw new InvalidOperationException()
-                : !ReferenceEquals(_sourceArray, other.SourceArray)
-                ? throw new ArgumentException($"'this' and {nameof(other)} point to different arrays.")
-                : _currentIndex.CompareTo(other.CurrentIndex);
+        {
+            if (_sourceArray is null)
+                throw new InvalidOperationException();
+            if (!ReferenceEquals(_sourceArray, other.SourceArray))
+                throw new ArgumentException($"'this' and {nameof(other)} point to different arrays.");
+
+            return _currentIndex.CompareTo(other.CurrentIndex);
+        }
 
         public Boolean Equals(ArrayPointer<ELEMENT_T> other)
-            => _sourceArray is null
-                ? throw new InvalidOperationException()
-                : !ReferenceEquals(_sourceArray, other.SourceArray)
-                ? throw new ArgumentException($"'this' and {nameof(other)} point to different arrays.")
-                : _currentIndex == other.CurrentIndex;
+        {
+            if (_sourceArray is null)
+                throw new InvalidOperationException();
+            if (!ReferenceEquals(_sourceArray, other.SourceArray))
+                throw new ArgumentException($"'this' and {nameof(other)} point to different arrays.");
+
+            return _currentIndex == other.CurrentIndex;
+        }
 
         public Boolean Equals(ReadOnlyArrayPointer<ELEMENT_T> other)
-            => _sourceArray is null
-                ? throw new InvalidOperationException()
-                : !ReferenceEquals(_sourceArray, other.SourceArray)
-                ? throw new ArgumentException($"'this' and {nameof(other)} point to different arrays.")
-                : _currentIndex == other.CurrentIndex;
+        {
+            if (_sourceArray is null)
+                throw new InvalidOperationException();
+            if (!ReferenceEquals(_sourceArray, other.SourceArray))
+                throw new ArgumentException($"'this' and {nameof(other)} point to different arrays.");
+
+            return _currentIndex == other.CurrentIndex;
+        }
 
         public override Boolean Equals(Object? obj)
             => obj is not null && GetType() == obj.GetType() && Equals((ArrayPointer<ELEMENT_T>)obj);
@@ -258,13 +291,24 @@ namespace Utility
             => p1.CompareTo(p2) <= 0;
 
         internal ELEMENT_T[] SourceArray
-            => _sourceArray is null
-                ? throw new InvalidOperationException()
-                : _sourceArray;
+        {
+            get
+            {
+                if (_sourceArray is null)
+                    throw new InvalidOperationException();
+
+                return _sourceArray;
+            }
+        }
 
         internal Int32 CurrentIndex
-            => _sourceArray is null
-                ? throw new InvalidOperationException()
-                : _currentIndex;
+        {
+            get
+            {
+                if (_sourceArray is null)
+                    throw new InvalidOperationException();
+                return _currentIndex;
+            }
+        }
     }
 }

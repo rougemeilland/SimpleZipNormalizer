@@ -28,9 +28,15 @@ namespace Utility.IO
         }
 
         public String FullName
-            => _isDisposed
-                ? throw new ObjectDisposedException(GetType().FullName)
-                : _directoryPath ?? throw new InvalidOperationException();
+        {
+            get
+            {
+                if (_isDisposed)
+                    throw new ObjectDisposedException(GetType().FullName);
+
+                return _directoryPath ?? throw new InvalidOperationException();
+            }
+        }
 
         public static TemporaryDirectory Create()
         {

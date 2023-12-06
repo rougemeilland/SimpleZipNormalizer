@@ -38,13 +38,14 @@ namespace Utility
         public Boolean Equals(VALUE_T? x, VALUE_T? y)
             => x is null
                 ? y is null
-                : y is null
-                ? false
-                : _equalityComparer(x, y);
+                : y is not null && _equalityComparer(x, y);
 
         public Int32 GetHashCode(VALUE_T obj)
-            => obj is null
-                ? throw new ArgumentNullException(nameof(obj))
-                : _hashCalculater(obj);
+        {
+            if (obj is null)
+                throw new ArgumentNullException(nameof(obj));
+
+            return _hashCalculater(obj);
+        }
     }
 }

@@ -51,66 +51,96 @@ namespace Utility
             => new(InternalBitQueue.FromInteger(value, _BIT_LENGTH_OF_BYTE, bitPackingDirection));
 
         public static TinyBitArray FromByte(Byte value, Int32 bitCount, BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => !bitCount.IsBetween(1, _BIT_LENGTH_OF_BYTE)
-                ? throw new ArgumentOutOfRangeException(nameof(bitCount))
-                : new TinyBitArray(InternalBitQueue.FromInteger(value, bitCount, bitPackingDirection));
+        {
+            if (!bitCount.IsBetween(1, _BIT_LENGTH_OF_BYTE))
+                throw new ArgumentOutOfRangeException(nameof(bitCount));
+
+            return new TinyBitArray(InternalBitQueue.FromInteger(value, bitCount, bitPackingDirection));
+        }
 
         public static TinyBitArray FromUInt16(UInt16 value, BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
             => new(InternalBitQueue.FromInteger(value, _BIT_LENGTH_OF_UINT16, bitPackingDirection));
 
         public static TinyBitArray FromUInt16(UInt16 value, Int32 bitCount, BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => !bitCount.IsBetween(1, _BIT_LENGTH_OF_UINT16)
-                ? throw new ArgumentOutOfRangeException(nameof(bitCount))
-                : new TinyBitArray(InternalBitQueue.FromInteger(value, bitCount, bitPackingDirection));
+        {
+            if (!bitCount.IsBetween(1, _BIT_LENGTH_OF_UINT16))
+                throw new ArgumentOutOfRangeException(nameof(bitCount));
+
+            return new TinyBitArray(InternalBitQueue.FromInteger(value, bitCount, bitPackingDirection));
+        }
 
         public static TinyBitArray FromUInt32(UInt32 value, BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
             => new(InternalBitQueue.FromInteger(value, _BIT_LENGTH_OF_UINT32, bitPackingDirection));
 
         public static TinyBitArray FromUInt32(UInt32 value, Int32 bitCount, BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => !bitCount.IsBetween(1, _BIT_LENGTH_OF_UINT32)
-                ? throw new ArgumentOutOfRangeException(nameof(bitCount))
-                : new TinyBitArray(InternalBitQueue.FromInteger(value, bitCount, bitPackingDirection));
+        {
+            if (!bitCount.IsBetween(1, _BIT_LENGTH_OF_UINT32))
+                throw new ArgumentOutOfRangeException(nameof(bitCount));
+
+            return new TinyBitArray(InternalBitQueue.FromInteger(value, bitCount, bitPackingDirection));
+        }
 
         public static TinyBitArray FromUInt64(UInt64 value, BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
             => new(InternalBitQueue.FromInteger(value, _BIT_LENGTH_OF_UINT64, bitPackingDirection));
 
         public static TinyBitArray FromUInt64(UInt64 value, Int32 bitCount, BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => !bitCount.IsBetween(1, _BIT_LENGTH_OF_UINT64)
-                ? throw new ArgumentOutOfRangeException(nameof(bitCount))
-                : new TinyBitArray(InternalBitQueue.FromInteger(value, bitCount, bitPackingDirection));
+        {
+            if (!bitCount.IsBetween(1, _BIT_LENGTH_OF_UINT64))
+                throw new ArgumentOutOfRangeException(nameof(bitCount));
+
+            return new TinyBitArray(InternalBitQueue.FromInteger(value, bitCount, bitPackingDirection));
+        }
 
         public Boolean ToBoolean()
-            => _bitArray.Length < 1
-                ? throw new InvalidOperationException()
-                : _bitArray.Length > 1 ? throw new OverflowException() : _bitArray.ToBoolean();
+        {
+            if (_bitArray.Length < 1)
+                throw new InvalidOperationException();
+
+            if (_bitArray.Length > 1)
+                throw new OverflowException();
+
+            return _bitArray.ToBoolean();
+        }
 
         public Byte ToByte(BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => _bitArray.Length < 1
-                ? throw new InvalidOperationException()
-                : _bitArray.Length > _BIT_LENGTH_OF_BYTE
-                ? throw new OverflowException()
-                : (Byte)_bitArray.ToInteger(_BIT_LENGTH_OF_BYTE.Minimum(_bitArray.Length), bitPackingDirection);
+        {
+            if (_bitArray.Length < 1)
+                throw new InvalidOperationException();
+            if (_bitArray.Length > _BIT_LENGTH_OF_BYTE)
+                throw new OverflowException();
+
+            return (Byte)_bitArray.ToInteger(_BIT_LENGTH_OF_BYTE.Minimum(_bitArray.Length), bitPackingDirection);
+        }
 
         public UInt16 ToUInt16(BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => _bitArray.Length < 1
-                ? throw new InvalidOperationException()
-                : _bitArray.Length > _BIT_LENGTH_OF_UINT16
-                ? throw new OverflowException()
-                : (UInt16)_bitArray.ToInteger(_BIT_LENGTH_OF_UINT16.Minimum(_bitArray.Length), bitPackingDirection);
+        {
+            if (_bitArray.Length < 1)
+                throw new InvalidOperationException();
+            if (_bitArray.Length > _BIT_LENGTH_OF_UINT16)
+                throw new OverflowException();
+
+            return (UInt16)_bitArray.ToInteger(_BIT_LENGTH_OF_UINT16.Minimum(_bitArray.Length), bitPackingDirection);
+        }
 
         public UInt32 ToUInt32(BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => _bitArray.Length < 1
-                ? throw new InvalidOperationException()
-                : _bitArray.Length > _BIT_LENGTH_OF_UINT32
-                ? throw new OverflowException()
-                : (UInt32)_bitArray.ToInteger(_BIT_LENGTH_OF_UINT32.Minimum(_bitArray.Length), bitPackingDirection);
+        {
+            if (_bitArray.Length < 1)
+                throw new InvalidOperationException();
+            if (_bitArray.Length > _BIT_LENGTH_OF_UINT32)
+                throw new OverflowException();
+
+            return (UInt32)_bitArray.ToInteger(_BIT_LENGTH_OF_UINT32.Minimum(_bitArray.Length), bitPackingDirection);
+        }
 
         public UInt64 ToUInt64(BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => _bitArray.Length < 1
-                ? throw new InvalidOperationException()
-                : _bitArray.Length > _BIT_LENGTH_OF_UINT64
-                ? throw new OverflowException()
-                : _bitArray.ToInteger(_BIT_LENGTH_OF_UINT64.Minimum(_bitArray.Length), bitPackingDirection);
+        {
+            if (_bitArray.Length < 1)
+                throw new InvalidOperationException();
+            if (_bitArray.Length > _BIT_LENGTH_OF_UINT64)
+                throw new OverflowException();
+
+            return _bitArray.ToInteger(_BIT_LENGTH_OF_UINT64.Minimum(_bitArray.Length), bitPackingDirection);
+        }
 
         public TinyBitArray Concat(Boolean value)
         {
@@ -142,31 +172,40 @@ namespace Utility
             => ConcatInterger(value, _BIT_LENGTH_OF_UINT16, bitPackingDirection);
 
         public TinyBitArray Concat(UInt16 value, Int32 bitCount, BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => bitCount < 1
-                ? throw new ArgumentOutOfRangeException(nameof(bitCount))
-                : bitCount > _BIT_LENGTH_OF_UINT16
-                ? throw new ArgumentOutOfRangeException(nameof(bitCount))
-                : ConcatInterger(value, bitCount, bitPackingDirection);
+        {
+            if (bitCount < 1)
+                throw new ArgumentOutOfRangeException(nameof(bitCount));
+            if (bitCount > _BIT_LENGTH_OF_UINT16)
+                throw new ArgumentOutOfRangeException(nameof(bitCount));
+
+            return ConcatInterger(value, bitCount, bitPackingDirection);
+        }
 
         public TinyBitArray Concat(UInt32 value, BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
             => ConcatInterger(value, _BIT_LENGTH_OF_UINT32, bitPackingDirection);
 
         public TinyBitArray Concat(UInt32 value, Int32 bitCount, BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => bitCount < 1
-                ? throw new ArgumentOutOfRangeException(nameof(bitCount))
-                : bitCount > _BIT_LENGTH_OF_UINT32
-                ? throw new ArgumentOutOfRangeException(nameof(bitCount))
-                : ConcatInterger(value, bitCount, bitPackingDirection);
+        {
+            if (bitCount < 1)
+                throw new ArgumentOutOfRangeException(nameof(bitCount));
+            if (bitCount > _BIT_LENGTH_OF_UINT32)
+                throw new ArgumentOutOfRangeException(nameof(bitCount));
+
+            return ConcatInterger(value, bitCount, bitPackingDirection);
+        }
 
         public TinyBitArray Concat(UInt64 value, BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
             => ConcatInterger(value, _BIT_LENGTH_OF_UINT64, bitPackingDirection);
 
         public TinyBitArray Concat(UInt64 value, Int32 bitCount, BitPackingDirection bitPackingDirection = BitPackingDirection.Default)
-            => bitCount < 1
-                ? throw new ArgumentOutOfRangeException(nameof(bitCount))
-                : bitCount > _BIT_LENGTH_OF_UINT64
-                ? throw new ArgumentOutOfRangeException(nameof(bitCount))
-                : ConcatInterger(value, bitCount, bitPackingDirection);
+        {
+            if (bitCount < 1)
+                throw new ArgumentOutOfRangeException(nameof(bitCount));
+            if (bitCount > _BIT_LENGTH_OF_UINT64)
+                throw new ArgumentOutOfRangeException(nameof(bitCount));
+
+            return ConcatInterger(value, bitCount, bitPackingDirection);
+        }
 
         public TinyBitArray Concat(TinyBitArray other)
         {
@@ -193,10 +232,10 @@ namespace Utility
             }
             else
             {
-                return
-                    count != _bitArray.Length
-                    ? throw new ArgumentOutOfRangeException(nameof(count))
-                    : ((TinyBitArray FirstHalf, TinyBitArray SecondHalf))(Clone(), new TinyBitArray());
+                if (count != _bitArray.Length)
+                    throw new ArgumentOutOfRangeException(nameof(count));
+
+                return (Clone(), new TinyBitArray());
             }
         }
 

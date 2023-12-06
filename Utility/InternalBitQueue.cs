@@ -127,10 +127,10 @@ namespace Utility
                     }
 
                     index -= _queue.Length * BIT_LENGTH_OF_UINT64;
-                    return
-                        index < _lastBitArrayLength
-                        ? (_lastBitArray & (1UL << index)) != 0
-                        : throw new ArgumentOutOfRangeException(nameof(index));
+                    if (index >= _lastBitArrayLength)
+                        throw new ArgumentOutOfRangeException(nameof(index));
+
+                    return (_lastBitArray & (1UL << index)) != 0;
                 }
             }
 
@@ -440,9 +440,12 @@ namespace Utility
             => new(value ? 1UL : 0UL, 1, null);
 
         public static InternalBitQueue FromInteger(UInt64 value, Int32 bitCount, BitPackingDirection bitPackingDirection)
-            => bitCount is < 1 or > BIT_LENGTH_OF_UINT64
-                ? throw new ArgumentOutOfRangeException(nameof(bitCount))
-                : new InternalBitQueue(value.ConvertBitOrder(bitCount, bitPackingDirection), bitCount, null);
+        {
+            if (bitCount is < 1 or > BIT_LENGTH_OF_UINT64)
+                throw new ArgumentOutOfRangeException(nameof(bitCount));
+
+            return new InternalBitQueue(value.ConvertBitOrder(bitCount, bitPackingDirection), bitCount, null);
+        }
 
         public void Enqueue(Boolean value)
         {
@@ -609,18 +612,27 @@ namespace Utility
         }
 
         public Boolean ToBoolean()
-            => Length < 1
-                ? throw new InvalidOperationException()
-                : Length > 1
-                ? throw new OverflowException()
-                : (_bitArray & 1) != 0;
+        {
+            if (Length < 1)
+                throw new InvalidOperationException();
+            if (Length > 1)
+                throw new OverflowException();
+
+            return (_bitArray & 1) != 0;
+        }
 
         public UInt64 ToInteger(Int32 bitCount, BitPackingDirection bitPackingDirection)
-            => Length < 1
-                ? throw new InvalidOperationException()
-                : bitCount is < 1 or > BIT_LENGTH_OF_UINT64
-                ? throw new ArgumentOutOfRangeException(nameof(bitCount))
-                : Length > bitCount ? throw new OverflowException() : _bitArray.ConvertBitOrder(bitCount, bitPackingDirection);
+        {
+            if (Length < 1)
+                throw new InvalidOperationException();
+            if (bitCount is < 1 or > BIT_LENGTH_OF_UINT64)
+                throw new ArgumentOutOfRangeException(nameof(bitCount));
+
+            if (Length > bitCount)
+                throw new OverflowException();
+
+            return _bitArray.ConvertBitOrder(bitCount, bitPackingDirection);
+        }
 
         public void Clear()
         {
@@ -661,11 +673,17 @@ namespace Utility
         public Int32 Length { get; private set; }
 
         public Boolean this[Int32 index]
-            => index < _bitLength
-            ? (_bitArray & (1UL << index)) != 0
-            : _additionalBitArray is not null
-                ? _additionalBitArray[index - _bitLength]
-                : throw new ArgumentOutOfRangeException(nameof(index));
+        {
+            get
+            {
+                if (index < _bitLength)
+                    return (_bitArray & (1UL << index)) != 0;
+                if (_additionalBitArray is null)
+                    throw new ArgumentOutOfRangeException(nameof(index));
+
+                return _additionalBitArray[index - _bitLength];
+            }
+        }
 
         public Boolean this[UInt32 index] => this[checked((Int32)index)];
 
