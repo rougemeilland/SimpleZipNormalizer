@@ -5,34 +5,21 @@ using System.Threading.Tasks;
 namespace Utility.IO
 {
     public class NullOutputStream
-        : IRandomOutputByteStream<UInt64, UInt64>
+        : RandomOutputByteStream<UInt64>
     {
-        public UInt64 Length { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        protected override UInt64 PositionCore => throw new NotSupportedException();
+        protected override UInt64 StartOfThisStreamCore => 0;
+        protected override UInt64 LengthCore { get => throw new NotSupportedException(); set { } }
+        protected override void SeekCore(UInt64 position) { }
+        protected override Int32 WriteCore(ReadOnlySpan<Byte> buffer) => buffer.Length;
 
-        public UInt64 Position => throw new NotSupportedException();
-
-        public void Seek(UInt64 offset) => throw new NotSupportedException();
-
-        public Int32 Write(ReadOnlySpan<Byte> buffer) => buffer.Length;
-
-        public Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
+        protected override Task<Int32> WriteAsyncCore(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(buffer.Length);
         }
 
-        public void Flush()
-        {
-        }
-
-        public Task FlushAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
-
-        public void Dispose() => GC.SuppressFinalize(this);
-
-        public ValueTask DisposeAsync()
-        {
-            GC.SuppressFinalize(this);
-            return ValueTask.CompletedTask;
-        }
+        protected override void FlushCore() { }
+        protected override Task FlushAsyncCore(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

@@ -9,17 +9,17 @@ namespace ZipUtility.IO.Compression.Stored
         private class Encoder
             : HierarchicalEncoder
         {
-            public Encoder(IBasicOutputByteStream baseStream, UInt64? unpackedStreamSize, IProgress<UInt64>? unpackedCountProgress)
-                : base(baseStream, unpackedStreamSize, unpackedCountProgress)
+            public Encoder(ISequentialOutputByteStream baseStream, IProgress<UInt64>? unpackedCountProgress, Boolean leaveOpen)
+                : base(baseStream, unpackedCountProgress, leaveOpen)
             {
             }
         }
 
-        IOutputByteStream<UInt64> IHierarchicalEncoder.GetEncodingStream(
-            IBasicOutputByteStream baseStream,
+        ISequentialOutputByteStream IHierarchicalEncoder.GetEncodingStream(
+            ISequentialOutputByteStream baseStream,
             ICoderOption option,
-            UInt64? unpackedStreamSize,
-            IProgress<UInt64>? unpackedCountProgress)
-            => new Encoder(baseStream, unpackedStreamSize, unpackedCountProgress);
+            IProgress<UInt64>? unpackedCountProgress,
+            Boolean leaveOpen)
+            => new Encoder(baseStream, unpackedCountProgress, leaveOpen);
     }
 }

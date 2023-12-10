@@ -91,7 +91,7 @@ namespace Utility.IO
             }
         }
 
-        public IOutputByteStream<UInt64> Create()
+        public ISequentialOutputByteStream Create()
         {
             _file.Refresh();
             try
@@ -151,7 +151,7 @@ namespace Utility.IO
             }
         }
 
-        public IInputByteStream<UInt64> OpenRead()
+        public ISequentialInputByteStream OpenRead()
         {
             _file.Refresh();
             try
@@ -193,7 +193,7 @@ namespace Utility.IO
             }
         }
 
-        public IOutputByteStream<UInt64> OpenWrite()
+        public ISequentialOutputByteStream OpenWrite()
         {
             _file.Refresh();
             try

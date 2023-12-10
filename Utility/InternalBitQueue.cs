@@ -7,9 +7,8 @@ using Utility.Collections;
 
 namespace Utility
 {
-    class InternalBitQueue
+    internal class InternalBitQueue
         : IEnumerable<Boolean>, IEquatable<InternalBitQueue>, ICloneable<InternalBitQueue>
-
     {
         private class RandomAccessBitQueue
                 : IEnumerable<Boolean>, ICloneable<RandomAccessBitQueue>, IEquatable<RandomAccessBitQueue>

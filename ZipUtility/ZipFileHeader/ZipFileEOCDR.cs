@@ -4,7 +4,7 @@ using Utility;
 
 namespace ZipUtility.ZipFileHeader
 {
-    class ZipFileEOCDR
+    internal class ZipFileEOCDR
     {
         public const UInt32 MinimumHeaderSize = 22U;
         public const UInt32 MaximumHeaderSize = MinimumHeaderSize + UInt16.MaxValue;
@@ -75,10 +75,6 @@ namespace ZipUtility.ZipFileHeader
             {
                 var header = buffer[offset..];
                 var offsetOnLastDisk = checked(bufferStartOffsetOnLastDisk + (UInt32)offset);
-#if DEBUG
-                System.Diagnostics.Debug.WriteLine($"最後のディスクの 0x{offsetOnLastDisk:x16}バイト目に EOCDR シグニチャが見つかりました。");
-#endif
-                // シグニチャは既に一致しているのでチェックしない
                 var numberOfThisDisk = header.Slice(4, 2).ToUInt16LE();
                 var diskWhereCentralDirectoryStarts = header.Slice(6, 2).ToUInt16LE();
                 var numberOfCentralDirectoryRecordsOnThisDisk = header.Slice(8, 2).ToUInt16LE();

@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 using Utility.IO;
+using Utility;
 using ZipUtility;
 
 namespace Experiment02
@@ -15,13 +17,31 @@ namespace Experiment02
         static void Main(string[] args)
         {
             var entryNameProvider = ZipEntryNameEncodingProvider.CreateInstance();
-            foreach (var file in args.EnumerateFilesFromArgument(true))
+            var fileList = args.EnumerateFilesFromArgument(true);
+            var totalSize = fileList.Aggregate(0L, (length, file) => checked(length + file.Length));
+            var completed = 0L;
+            foreach (var file in fileList)
             {
                 if (string.Equals(file.Extension, ".zip", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(file.Extension, ".001", StringComparison.OrdinalIgnoreCase))
+                    || string.Equals(file.Extension, ".001", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(file.Extension, ".exe", StringComparison.OrdinalIgnoreCase))
                 {
-                    var result = file.ValidateAsZipFile(entryNameProvider);
-                    Console.WriteLine($"\"{file.FullName}\": {result.ResultId}, \"{result.Message}\"");
+                    try
+                    {
+                        var result = file.ValidateAsZipFile(entryNameProvider, SafetyProgress.CreateIncreasingProgress<double>(value => Console.Write($"  {(completed + value * file.Length) * 100.0 / totalSize:F2}%\r")));
+                        if (result.ResultId != ZipArchiveValidationResultId.Ok)
+                            Console.ForegroundColor = ConsoleColor.Red;
+                        checked
+                        {
+                            completed += file.Length;
+                        }
+
+                        Console.WriteLine($"\"{(double) completed * 100 / totalSize:F2}% {file.FullName}\": {result.ResultId}, \"{result.Message}\"");
+                    }
+                    finally
+                    {
+                        Console.ResetColor();
+                    }
                 }
             }
 

@@ -9,18 +9,19 @@ namespace ZipUtility.IO.Compression.Stored
         private class Decoder
             : HierarchicalDecoder
         {
-            public Decoder(IBasicInputByteStream baseStream, UInt64 unpackedStreamSize, IProgress<UInt64>? unpackedCountProgress)
-                : base(baseStream, unpackedStreamSize, unpackedCountProgress)
+            public Decoder(ISequentialInputByteStream baseStream, UInt64 unpackedStreamSize, IProgress<UInt64>? unpackedCountProgress, Boolean leaveOpen)
+                : base(baseStream, unpackedStreamSize, unpackedCountProgress, leaveOpen)
             {
             }
         }
 
-        IInputByteStream<UInt64> IHierarchicalDecoder.GetDecodingStream(
-            IBasicInputByteStream baseStream,
+        ISequentialInputByteStream IHierarchicalDecoder.GetDecodingStream(
+            ISequentialInputByteStream baseStream,
             ICoderOption option,
             UInt64 unpackedStreamSize,
             UInt64 packedStreamSize,
-            IProgress<UInt64>? unpackedCountProgress)
-            => new Decoder(baseStream, unpackedStreamSize, unpackedCountProgress);
+            IProgress<UInt64>? unpackedCountProgress,
+            Boolean leaveOpen)
+            => new Decoder(baseStream, unpackedStreamSize, unpackedCountProgress, leaveOpen);
     }
 }

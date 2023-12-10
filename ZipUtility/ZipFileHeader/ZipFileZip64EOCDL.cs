@@ -3,7 +3,7 @@ using Utility;
 
 namespace ZipUtility.ZipFileHeader
 {
-    class ZipFileZip64EOCDL
+    internal class ZipFileZip64EOCDL
     {
         public const UInt32 FixedHeaderSize = 20U;
 

@@ -7,21 +7,23 @@ namespace ZipUtility
     internal readonly struct ZipStreamPosition
         : IEquatable<ZipStreamPosition>, IComparable<ZipStreamPosition>, IAdditionOperators<ZipStreamPosition, UInt64, ZipStreamPosition>, ISubtractionOperators<ZipStreamPosition, UInt64, ZipStreamPosition>, ISubtractionOperators<ZipStreamPosition, ZipStreamPosition, UInt64>
     {
-        internal ZipStreamPosition(UInt32 diskNumber, UInt64 offsetOnTheDisk, IVirtualZipFile ownerVirtualDisk)
+        internal ZipStreamPosition(UInt32 diskNumber, UInt64 offsetOnTheDisk, IVirtualZipFile hostVirtualDisk)
         {
-            if (ownerVirtualDisk is null)
-                throw new ArgumentNullException(nameof(ownerVirtualDisk));
+            if (hostVirtualDisk is null)
+                throw new ArgumentNullException(nameof(hostVirtualDisk));
 
             DiskNumber = diskNumber;
             OffsetOnTheDisk = offsetOnTheDisk;
-            Owner = ownerVirtualDisk;
+            Host = hostVirtualDisk;
         }
 
         public UInt32 DiskNumber { get; }
         public UInt64 OffsetOnTheDisk { get; }
+
         #region operator +
 
         public static ZipStreamPosition operator +(ZipStreamPosition x, UInt64 y) => x.Add(y);
+        public static ZipStreamPosition operator +(UInt64 x, ZipStreamPosition y) => y.Add(x);
 
         #endregion
 
@@ -46,48 +48,32 @@ namespace ZipUtility
         #region Add
 
         public ZipStreamPosition Add(UInt64 x)
-            => Owner.Add(this, x);
+            => Host.Add(this, x);
 
         #endregion
 
         #region Subtract
 
         public UInt64 Subtract(ZipStreamPosition x)
-            => Owner.Subtract(this, x);
+            => Host.Subtract(this, x);
 
         public ZipStreamPosition Subtract(UInt64 x)
-            => Owner.Subtract(this, x);
+            => Host.Subtract(this, x);
 
         #endregion
 
-        public Int32 CompareTo(ZipStreamPosition other)
-        {
-            if (!Owner.Equals(other.Owner))
-                throw new InternalLogicalErrorException();
-
-            Int32 c;
-            return
-                (c = DiskNumber.CompareTo(other.DiskNumber)) != 0
-                ? c
-                : (c = OffsetOnTheDisk.CompareTo(other.OffsetOnTheDisk)) != 0
-                ? c
-                : 0;
-        }
-
-        public Boolean Equals(ZipStreamPosition other)
-            => Owner.Equals(other.Owner)
-                && DiskNumber.Equals(other.DiskNumber)
-                && OffsetOnTheDisk.Equals(other.OffsetOnTheDisk);
+        public Int32 CompareTo(ZipStreamPosition other) => Host.Compare(this, other);
+        public Boolean Equals(ZipStreamPosition other) => Host.Equal(this, other);
 
         public override Boolean Equals(Object? other)
             => other is not null
                 && GetType() == other.GetType()
                 && Equals((ZipStreamPosition)other);
 
-        public override Int32 GetHashCode() => HashCode.Combine(DiskNumber, OffsetOnTheDisk);
+        public override Int32 GetHashCode() => Host.GetHashCode(this);
 
         public override String ToString() => $"0x{DiskNumber:x8}:0x{OffsetOnTheDisk:x16}";
 
-        internal IVirtualZipFile Owner { get; }
+        internal IVirtualZipFile Host { get; }
     }
 }

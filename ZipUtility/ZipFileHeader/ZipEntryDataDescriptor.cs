@@ -4,7 +4,7 @@ using Utility.IO;
 
 namespace ZipUtility.ZipFileHeader
 {
-    class ZipEntryDataDescriptor
+    internal class ZipEntryDataDescriptor
     {
         public const Int32 MinimumHeaderSize = 12;
         public const Int32 MaximumHeaderSize = 16;

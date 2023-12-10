@@ -211,24 +211,24 @@ namespace Utility
             return await _commonCrc32.CalculateAsync(source, progress).ConfigureAwait(false);
         }
 
-        public static IEnumerable<Byte> GetSequenceWithCrc32(this IEnumerable<Byte> source, ValueHolder<(UInt32 Crc, UInt64 Length)> result, IProgress<UInt64>? progress = null)
+        public static IEnumerable<Byte> GetSequenceWithCrc32(this IEnumerable<Byte> source, ValueHolder<(UInt32 Crc, UInt64 Length)> crcValueHolder, IProgress<UInt64>? progress = null)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
-            if (result is null)
-                throw new ArgumentNullException(nameof(result));
+            if (crcValueHolder is null)
+                throw new ArgumentNullException(nameof(crcValueHolder));
 
-            return _commonCrc32.GetSequenceWithCrc(source, result, progress);
+            return _commonCrc32.GetSequenceWithCrc(source, crcValueHolder, progress);
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncSequenceWithCrc32(this IAsyncEnumerable<Byte> source, ValueHolder<(UInt32 Crc, UInt64 Length)> result, IProgress<UInt64>? progress = null)
+        public static IAsyncEnumerable<Byte> GetAsyncSequenceWithCrc32(this IAsyncEnumerable<Byte> source, ValueHolder<(UInt32 Crc, UInt64 Length)> crcValueHolder, IProgress<UInt64>? progress = null)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
-            if (result is null)
-                throw new ArgumentNullException(nameof(result));
+            if (crcValueHolder is null)
+                throw new ArgumentNullException(nameof(crcValueHolder));
 
-            return _commonCrc32.GetAsyncSequenceWithCrc(source, result, progress);
+            return _commonCrc32.GetAsyncSequenceWithCrc(source, crcValueHolder, progress);
         }
 
         public static (UInt32 Crc, UInt64 Length) CalculateCrc24(this IEnumerable<Byte> source, IProgress<UInt64>? progress = null)
@@ -247,24 +247,24 @@ namespace Utility
             return await _crc24ForRadix64.CalculateAsync(source, progress).ConfigureAwait(false);
         }
 
-        public static IEnumerable<Byte> GetSequenceWithCrc24(this IEnumerable<Byte> source, ValueHolder<(UInt32 Crc, UInt64 Length)> result, IProgress<UInt64>? progress = null)
+        public static IEnumerable<Byte> GetSequenceWithCrc24(this IEnumerable<Byte> source, ValueHolder<(UInt32 Crc, UInt64 Length)> crcValueHolder, IProgress<UInt64>? progress = null)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
-            if (result is null)
-                throw new ArgumentNullException(nameof(result));
+            if (crcValueHolder is null)
+                throw new ArgumentNullException(nameof(crcValueHolder));
 
-            return _crc24ForRadix64.GetSequenceWithCrc(source, result, progress);
+            return _crc24ForRadix64.GetSequenceWithCrc(source, crcValueHolder, progress);
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncSequenceWithCrc24(this IAsyncEnumerable<Byte> source, ValueHolder<(UInt32 Crc, UInt64 Length)> result, IProgress<UInt64>? progress = null)
+        public static IAsyncEnumerable<Byte> GetAsyncSequenceWithCrc24(this IAsyncEnumerable<Byte> source, ValueHolder<(UInt32 Crc, UInt64 Length)> crcValueHolder, IProgress<UInt64>? progress = null)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
-            if (result is null)
-                throw new ArgumentNullException(nameof(result));
+            if (crcValueHolder is null)
+                throw new ArgumentNullException(nameof(crcValueHolder));
 
-            return _crc24ForRadix64.GetAsyncSequenceWithCrc(source, result, progress);
+            return _crc24ForRadix64.GetAsyncSequenceWithCrc(source, crcValueHolder, progress);
         }
 
         public static IEnumerable<Char> GetBase64EncodedSequence(this IEnumerable<Byte> source, Char char62 = '+', Char char63 = '/')
@@ -484,32 +484,6 @@ namespace Utility
             return unchecked((Int16)array.InternalToUInt16LE());
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int16 ToInt16LE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return unchecked((Int16)((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(Int16))).InternalToUInt16LE());
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int16 ToInt16LE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return unchecked((Int16)pointer.GetSpan(sizeof(Int16)).InternalToUInt16LE());
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
         #endregion
 
         #region ToUInt16LE
@@ -563,32 +537,6 @@ namespace Utility
                 throw new ArgumentException("Too short array", nameof(array));
 
             return array.InternalToUInt16LE();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt16 ToUInt16LE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return ((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(Int16))).InternalToUInt16LE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt16 ToUInt16LE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return pointer.GetSpan(sizeof(UInt16)).InternalToUInt16LE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
         }
 
         #endregion
@@ -646,32 +594,6 @@ namespace Utility
             return unchecked((Int32)array.InternalToUInt32LE());
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 ToInt32LE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return unchecked((Int32)((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(Int32))).InternalToUInt32LE());
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 ToInt32LE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return unchecked((Int32)pointer.GetSpan(sizeof(Int32)).InternalToUInt32LE());
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
         #endregion
 
         #region ToUInt32LE
@@ -725,32 +647,6 @@ namespace Utility
                 throw new ArgumentException("Too short array", nameof(array));
 
             return array.InternalToUInt32LE();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt32 ToUInt32LE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return ((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(UInt32))).InternalToUInt32LE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt32 ToUInt32LE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return pointer.GetSpan(sizeof(UInt32)).InternalToUInt32LE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
         }
 
         #endregion
@@ -808,32 +704,6 @@ namespace Utility
             return unchecked((Int64)array.InternalToUInt64LE());
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int64 ToInt64LE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return unchecked((Int64)((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(Int64))).InternalToUInt64LE());
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int64 ToInt64LE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return unchecked((Int64)pointer.GetSpan(sizeof(Int64)).InternalToUInt64LE());
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
         #endregion
 
         #region ToUInt64LE
@@ -886,32 +756,6 @@ namespace Utility
             if (sizeof(UInt64) > array.Length)
                 throw new ArgumentException("Too short array", nameof(array));
             return array.InternalToUInt64LE();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt64 ToUInt64LE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return ((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(UInt64))).InternalToUInt64LE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt64 ToUInt64LE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return pointer.GetSpan(sizeof(UInt64)).InternalToUInt64LE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
         }
 
         #endregion
@@ -969,32 +813,6 @@ namespace Utility
             return array.InternalToSingleLE();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Single ToSingleLE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return ((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(Single))).InternalToSingleLE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Single ToSingleLE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return pointer.GetSpan(sizeof(Single)).InternalToSingleLE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
         #endregion
 
         #region ToDoubleLE
@@ -1048,32 +866,6 @@ namespace Utility
                 throw new ArgumentException("Too short array", nameof(array));
 
             return array.InternalToDoubleLE();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Double ToDoubleLE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return ((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(Double))).InternalToDoubleLE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Double ToDoubleLE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return pointer.GetSpan(sizeof(Double)).InternalToDoubleLE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
         }
 
         #endregion
@@ -1131,32 +923,6 @@ namespace Utility
             return array.InternalToDecimalLE();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Decimal ToDecimalLE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return ((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(Decimal))).InternalToDecimalLE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Decimal ToDecimalLE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return pointer.GetSpan(sizeof(Decimal)).InternalToDecimalLE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
         #endregion
 
         #region ToInt16BE
@@ -1210,32 +976,6 @@ namespace Utility
                 throw new ArgumentException("Too short array", nameof(array));
 
             return unchecked((Int16)array.InternalToUInt16BE());
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int16 ToInt16BE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return unchecked((Int16)((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(Int16))).InternalToUInt16BE());
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int16 ToInt16BE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return unchecked((Int16)pointer.GetSpan(sizeof(Int16)).InternalToUInt16BE());
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
         }
 
         #endregion
@@ -1293,32 +1033,6 @@ namespace Utility
             return array.InternalToUInt16BE();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt16 ToUInt16BE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return ((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(UInt16))).InternalToUInt16BE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt16 ToUInt16BE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return pointer.GetSpan(sizeof(UInt16)).InternalToUInt16BE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
         #endregion
 
         #region ToInt32BE
@@ -1372,32 +1086,6 @@ namespace Utility
                 throw new ArgumentException("Too short array", nameof(array));
 
             return unchecked((Int32)array.InternalToUInt32BE());
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 ToInt32BE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return unchecked((Int32)((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(Int32))).InternalToUInt32BE());
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 ToInt32BE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return unchecked((Int32)pointer.GetSpan(sizeof(Int32)).InternalToUInt32BE());
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
         }
 
         #endregion
@@ -1455,32 +1143,6 @@ namespace Utility
             return array.InternalToUInt32BE();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt32 ToUInt32BE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return ((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(UInt32))).InternalToUInt32BE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt32 ToUInt32BE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return pointer.GetSpan(sizeof(UInt32)).InternalToUInt32BE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
         #endregion
 
         #region ToInt64BE
@@ -1534,32 +1196,6 @@ namespace Utility
                 throw new ArgumentException("Too short array", nameof(array));
 
             return unchecked((Int64)array.InternalToUInt64BE());
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int64 ToInt64BE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return unchecked((Int64)((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(Int64))).InternalToUInt64BE());
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int64 ToInt64BE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return unchecked((Int64)pointer.GetSpan(sizeof(Int64)).InternalToUInt64BE());
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
         }
 
         #endregion
@@ -1617,32 +1253,6 @@ namespace Utility
             return array.InternalToUInt64BE();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt64 ToUInt64BE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return ((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(UInt64))).InternalToUInt64BE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt64 ToUInt64BE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return pointer.GetSpan(sizeof(UInt64)).InternalToUInt64BE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
         #endregion
 
         #region ToSingleBE
@@ -1696,32 +1306,6 @@ namespace Utility
                 throw new ArgumentException("Too short array", nameof(array));
 
             return array.InternalToSingleBE();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Single ToSingleBE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return ((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(Single))).InternalToSingleBE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Single ToSingleBE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return pointer.GetSpan(sizeof(Single)).InternalToSingleBE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
         }
 
         #endregion
@@ -1779,32 +1363,6 @@ namespace Utility
             return array.InternalToDoubleBE();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Double ToDoubleBE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return ((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(Double))).InternalToDoubleBE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Double ToDoubleBE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return pointer.GetSpan(sizeof(Double)).InternalToDoubleBE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
         #endregion
 
         #region ToDecimalBE
@@ -1858,32 +1416,6 @@ namespace Utility
                 throw new ArgumentException("Too short array", nameof(array));
 
             return array.InternalToDecimalBE();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Decimal ToDecimalBE(this ArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return ((ReadOnlySpan<Byte>)pointer.GetSpan(sizeof(Decimal))).InternalToDecimalBE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Decimal ToDecimalBE(this ReadOnlyArrayPointer<Byte> pointer)
-        {
-            try
-            {
-                return pointer.GetSpan(sizeof(Decimal)).InternalToDecimalBE();
-            }
-            catch (ArgumentOutOfRangeException ex)
-            {
-                throw new ArgumentOutOfRangeException($"Illegal {nameof(pointer)} value", ex);
-            }
         }
 
         #endregion
@@ -2115,9 +1647,9 @@ namespace Utility
 
         #endregion
 
-        internal static ICrcCalculationState<UInt32, UInt64> CreateCrc32CalculationState() => _commonCrc32.CreateSession();
+        internal static ICrcCalculationState<UInt32> CreateCrc32CalculationState() => _commonCrc32.CreateSession();
 
-        internal static ICrcCalculationState<UInt32, UInt64> CreateCrc24CalculationState() => _crc24ForRadix64.CreateSession();
+        internal static ICrcCalculationState<UInt32> CreateCrc24CalculationState() => _crc24ForRadix64.CreateSession();
 
         private static String InternalEncodeBase64(IEnumerable<Byte> source, Base64EncodingType encodingType, IProgress<UInt64>? progress)
         {

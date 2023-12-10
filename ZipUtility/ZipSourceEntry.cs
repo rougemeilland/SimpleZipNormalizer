@@ -403,17 +403,17 @@ namespace ZipUtility
         /// <returns>
         /// エントリのデータを読み込むためのストリームオブジェクトです。
         /// </returns>
-        public IBasicInputByteStream GetContentStream(IProgress<(UInt64 unpackedCount, UInt64 packedCount)>? progress = null)
+        public ISequentialInputByteStream GetContentStream(IProgress<(UInt64 unpackedCount, UInt64 packedCount)>? progress = null)
         {
             return
                 CompressionMethodId
                 .GetCompressionMethod(_generalPurposeBitFlag)
                 .GetDecodingStream(
-                    _zipStream.Stream.AsPartial(DataPosition, PackedSize),
+                    _zipStream.Stream.WithPartial(DataPosition, PackedSize, true),
                     Size,
                     PackedSize,
                     progress)
-                .WithCrc32Calculation(resultValue => EndOfReadingStream(resultValue.Crc, resultValue.Length));
+                .WithCrc32Calculation(EndOfReadingStream);
 
             void EndOfReadingStream(UInt32 actualCrc, UInt64 actualSize)
             {

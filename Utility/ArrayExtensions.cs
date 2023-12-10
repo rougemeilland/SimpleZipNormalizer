@@ -420,30 +420,6 @@ namespace Utility
 
         #endregion
 
-        #region GetPointer
-
-        public static ArrayPointer<ELEMENT_T> GetPointer<ELEMENT_T>(this ELEMENT_T[] sourceArray, Int32 initialIndex = 0)
-        {
-            if (sourceArray is null)
-                throw new ArgumentNullException(nameof(sourceArray));
-            if (!initialIndex.IsBetween(0, sourceArray.Length))
-                throw new ArgumentOutOfRangeException(nameof(initialIndex));
-
-            return new ArrayPointer<ELEMENT_T>(sourceArray, initialIndex);
-        }
-
-        public static ArrayPointer<ELEMENT_T> GetPointer<ELEMENT_T>(this ELEMENT_T[] sourceArray, UInt32 initialIndex)
-        {
-            if (sourceArray is null)
-                throw new ArgumentNullException(nameof(sourceArray));
-            if (initialIndex > sourceArray.Length)
-                throw new ArgumentOutOfRangeException(nameof(initialIndex));
-
-            return new ArrayPointer<ELEMENT_T>(sourceArray, (Int32)initialIndex);
-        }
-
-        #endregion
-
         #region QuickSort
 
         public static ELEMENT_T[] QuickSort<ELEMENT_T>(this ELEMENT_T[] sourceArray)

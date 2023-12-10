@@ -2,1069 +2,33 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
 using Utility;
+using Utility.IO.StreamFilters;
 
 namespace Utility.IO
 {
     public static class StreamExtensions
     {
-        #region private class
-
-        private class ReverseByteSequenceByByteStream
-            : ReverseByteSequenceByByteStreamEnumerable<UInt64, UInt64>
-        {
-            public ReverseByteSequenceByByteStream(IRandomInputByteStream<UInt64, UInt64> inputStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen)
-                : base(inputStream, offset, count, progress, leaveOpen)
-            {
-            }
-
-            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
-            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
-            protected override UInt64 MinimumProgressStep => 64 * 1024UL;
-
-        }
-
-        private class BufferedInputStreamUInt64
-            : BufferedInputStream<UInt64, UInt64>
-        {
-            public BufferedInputStreamUInt64(IBasicInputByteStream baseStream, Boolean leaveOpen)
-                : base(baseStream, leaveOpen)
-            {
-            }
-
-            public BufferedInputStreamUInt64(IBasicInputByteStream baseStream, Int32 bufferSize, Boolean leaveOpen)
-                : base(baseStream, bufferSize, leaveOpen)
-            {
-            }
-
-            protected override UInt64 ZeroPositionValue => 0;
-            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
-        }
-
-        private class BufferedOutputStreamUInt64
-            : BufferedOutputStream<UInt64, UInt64>
-        {
-            public BufferedOutputStreamUInt64(IBasicOutputByteStream baseStream, Boolean leaveOpen)
-                : base(baseStream, leaveOpen)
-            {
-            }
-
-            public BufferedOutputStreamUInt64(IBasicOutputByteStream baseStream, Int32 bufferSize, Boolean leaveOpen)
-                : base(baseStream, bufferSize, leaveOpen)
-            {
-            }
-
-            protected override UInt64 ZeroPositionValue => 0;
-            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
-        }
-
-        private class BufferedRandomInputStreamUInt64
-            : BufferedRandomInputStream<UInt64, UInt64>
-        {
-
-            public BufferedRandomInputStreamUInt64(IRandomInputByteStream<UInt64, UInt64> baseStream, Boolean leaveOpen)
-                : base(baseStream, leaveOpen)
-            {
-            }
-
-            public BufferedRandomInputStreamUInt64(IRandomInputByteStream<UInt64, UInt64> baseStream, Int32 bufferSize, Boolean leaveOpen)
-                : base(baseStream, bufferSize, leaveOpen)
-            {
-            }
-
-            protected override UInt64 ZeroPositionValue => 0;
-            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
-        }
-
-        private class BufferedRandomOutputStreamUInt64
-            : BufferedRandomOutputStream<UInt64, UInt64>
-        {
-            public BufferedRandomOutputStreamUInt64(IRandomOutputByteStream<UInt64, UInt64> baseStream, Boolean leaveOpen)
-                : base(baseStream, leaveOpen)
-            {
-            }
-
-            public BufferedRandomOutputStreamUInt64(IRandomOutputByteStream<UInt64, UInt64> baseStream, Int32 bufferSize, Boolean leaveOpen)
-                : base(baseStream, bufferSize, leaveOpen)
-            {
-            }
-
-            protected override UInt64 ZeroPositionValue => 0;
-            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
-        }
-
-        private class PartialInputStreamUInt64
-            : PartialInputStream<UInt64, UInt64, UInt64>
-        {
-            public PartialInputStreamUInt64(IInputByteStream<UInt64> baseStream, Boolean leaveOpen)
-                : base(baseStream, leaveOpen)
-            {
-            }
-
-            public PartialInputStreamUInt64(IInputByteStream<UInt64> baseStream, UInt64 size, Boolean leaveOpen)
-                : base(baseStream, size, leaveOpen)
-            {
-            }
-
-            public PartialInputStreamUInt64(IInputByteStream<UInt64> baseStream, UInt64? size, Boolean leaveOpen)
-                : base(baseStream, size, leaveOpen)
-            {
-            }
-
-            protected override UInt64 ZeroPositionValue => 0;
-            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
-            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
-        }
-
-        private class PartialOutputStreamUInt64
-            : PartialOutputStream<UInt64, UInt64, UInt64>
-        {
-            public PartialOutputStreamUInt64(IOutputByteStream<UInt64> baseStream, Boolean leaveOpen)
-                : base(baseStream, leaveOpen)
-            {
-            }
-
-            public PartialOutputStreamUInt64(IOutputByteStream<UInt64> baseStream, UInt64 size, Boolean leaveOpen)
-                : base(baseStream, size, leaveOpen)
-            {
-            }
-
-            public PartialOutputStreamUInt64(IOutputByteStream<UInt64> baseStream, UInt64? size, Boolean leaveOpen)
-                : base(baseStream, size, leaveOpen)
-            {
-            }
-
-            protected override UInt64 ZeroPositionValue => 0;
-            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
-            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
-        }
-
-        private class PartialRandomInputStreamUInt64
-            : PartialRandomInputStream<UInt64, UInt64, UInt64>
-        {
-            private readonly IRandomInputByteStream<UInt64, UInt64> _baseStream;
-
-            public PartialRandomInputStreamUInt64(IRandomInputByteStream<UInt64, UInt64> baseStream, Boolean leaveOpen = false)
-                : base(baseStream, leaveOpen)
-            {
-                _baseStream = baseStream;
-            }
-
-            public PartialRandomInputStreamUInt64(IRandomInputByteStream<UInt64, UInt64> baseStream, UInt64 size, Boolean leaveOpen = false)
-                : base(baseStream, size, leaveOpen)
-            {
-                _baseStream = baseStream;
-            }
-
-            public PartialRandomInputStreamUInt64(IRandomInputByteStream<UInt64, UInt64> baseStream, UInt64 offset, UInt64 size, Boolean leaveOpen = false)
-                : base(baseStream, offset, size, leaveOpen)
-            {
-                _baseStream = baseStream;
-            }
-
-            public PartialRandomInputStreamUInt64(IRandomInputByteStream<UInt64, UInt64> baseStream, UInt64? offset, UInt64? size, Boolean leaveOpen = false)
-                : base(baseStream, offset, size, leaveOpen)
-            {
-                _baseStream = baseStream;
-            }
-
-            protected override UInt64 ZeroPositionValue => 0;
-            protected override UInt64 EndBasePositionValue => _baseStream.Length;
-            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
-        }
-
-        private class PartialRandomOutputStreamUint64
-            : PartialRandomOutputStream<UInt64, UInt64, UInt64>
-        {
-            public PartialRandomOutputStreamUint64(IRandomOutputByteStream<UInt64, UInt64> baseStream, Boolean leaveOpen)
-                : base(baseStream, leaveOpen)
-            {
-            }
-
-            public PartialRandomOutputStreamUint64(IRandomOutputByteStream<UInt64, UInt64> baseStream, UInt64 size, Boolean leaveOpen)
-                : base(baseStream, size, leaveOpen)
-            {
-            }
-
-            public PartialRandomOutputStreamUint64(IRandomOutputByteStream<UInt64, UInt64> baseStream, UInt64 offset, UInt64 size, Boolean leaveOpen)
-                : base(baseStream, offset, size, leaveOpen)
-            {
-            }
-
-            public PartialRandomOutputStreamUint64(IRandomOutputByteStream<UInt64, UInt64> baseStream, UInt64? offset, UInt64? size, Boolean leaveOpen)
-                : base(baseStream, offset, size, leaveOpen)
-            {
-            }
-
-            protected override UInt64 ZeroPositionValue => 0;
-            protected override UInt64 ZeroBasePositionValue => 0;
-            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
-        }
-
-        private class Crc32CalculationInputStream
-            : IInputByteStream<UInt64>
-        {
-            private readonly IBasicInputByteStream _baseStream;
-            private readonly ICrcCalculationState<UInt32, UInt64> _session;
-            private readonly Action<(UInt32 Crc, UInt64 Length)> _onCompleted;
-            private readonly Boolean _leaveOpen;
-
-            private Boolean _isDisposed;
-            private UInt64 _position;
-
-            public Crc32CalculationInputStream(IBasicInputByteStream baseStream, ICrcCalculationState<UInt32, UInt64> session, Action<(UInt32 Crc, UInt64 Length)> onCompleted, Boolean leaveOpen)
-            {
-                _baseStream = baseStream;
-                _session = session;
-                _onCompleted = onCompleted;
-                _leaveOpen = leaveOpen;
-            }
-
-            public UInt64 Position
-            {
-                get
-                {
-                    if (_isDisposed)
-                        throw new ObjectDisposedException(GetType().FullName);
-
-                    return _position;
-                }
-            }
-
-            public Int32 Read(Span<Byte> buffer)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = _baseStream.Read(buffer);
-                ProgressCalculation(buffer, length);
-                return length;
-            }
-
-            public async Task<Int32> ReadAsync(Memory<Byte> buffer, CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = await _baseStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-                ProgressCalculation(buffer.Span, length);
-                return length;
-            }
-
-            public void Dispose()
-            {
-                Dispose(disposing: true);
-                GC.SuppressFinalize(this);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                await DisposeAsyncCore().ConfigureAwait(false);
-                Dispose(disposing: false);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(Boolean disposing)
-            {
-                if (!_isDisposed)
-                {
-                    try
-                    {
-                        if (disposing)
-                        {
-                            if (!_leaveOpen)
-                                _baseStream.Dispose();
-                        }
-                    }
-                    finally
-                    {
-                        _isDisposed = true;
-                        var calculationResult = _session.GetResult();
-                        try
-                        {
-                            _onCompleted(calculationResult);
-                        }
-                        catch (Exception)
-                        {
-                        }
-                    }
-                }
-            }
-
-            protected virtual async ValueTask DisposeAsyncCore()
-            {
-                if (!_isDisposed)
-                {
-                    try
-                    {
-                        if (!_leaveOpen)
-                            await _baseStream.DisposeAsync().ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        _isDisposed = true;
-                        var calculationResult = _session.GetResult();
-                        try
-                        {
-                            _onCompleted(calculationResult);
-                        }
-                        catch (Exception)
-                        {
-                        }
-                    }
-                }
-            }
-
-            private void ProgressCalculation(Span<Byte> buffer, Int32 length)
-            {
-                if (length > 0)
-                {
-                    _session.Put(buffer[..length]);
-
-                    checked
-                    {
-                        _position += (UInt32)length;
-                    }
-                }
-            }
-        }
-
-        private class Crc32CalculationOutputStream
-            : IOutputByteStream<UInt64>
-        {
-            private readonly IBasicOutputByteStream _baseStream;
-            private readonly ICrcCalculationState<UInt32, UInt64> _session;
-            private readonly Action<(UInt32 Crc, UInt64 Length)> _onCompleted;
-            private readonly Boolean _leaveOpen;
-
-            private Boolean _isDisposed;
-            private UInt64 _position;
-
-            public Crc32CalculationOutputStream(IBasicOutputByteStream baseStream, ICrcCalculationState<UInt32, UInt64> session, Action<(UInt32 Crc, UInt64 Length)> onCompleted, Boolean leaveOpen)
-            {
-                _baseStream = baseStream;
-                _session = session;
-                _onCompleted = onCompleted;
-                _leaveOpen = leaveOpen;
-            }
-
-            public UInt64 Position
-            {
-                get
-                {
-                    if (_isDisposed)
-                        throw new ObjectDisposedException(GetType().FullName);
-
-                    return _position;
-                }
-            }
-
-            public Int32 Write(ReadOnlySpan<Byte> buffer)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = _baseStream.Write(buffer);
-                CalculateCrc(buffer, length);
-                return length;
-            }
-
-            public async Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = await _baseStream.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
-                CalculateCrc(buffer.Span, length);
-                return length;
-            }
-
-            public void Flush()
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-            }
-
-            public Task FlushAsync(CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                return Task.CompletedTask;
-            }
-
-            public void Dispose()
-            {
-                Dispose(disposing: true);
-                GC.SuppressFinalize(this);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                await DisposeAsyncCore().ConfigureAwait(false);
-                Dispose(disposing: false);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(Boolean disposing)
-            {
-                if (!_isDisposed)
-                {
-                    try
-                    {
-                        if (disposing)
-                        {
-                            if (!_leaveOpen)
-                                _baseStream.Dispose();
-                        }
-                    }
-                    finally
-                    {
-                        _isDisposed = true;
-                        var calculationResult = _session.GetResult();
-                        try
-                        {
-                            _onCompleted(calculationResult);
-                        }
-                        catch (Exception)
-                        {
-                        }
-                    }
-                }
-            }
-
-            protected virtual async ValueTask DisposeAsyncCore()
-            {
-                if (!_isDisposed)
-                {
-                    try
-                    {
-                        if (!_leaveOpen)
-                            await _baseStream.DisposeAsync().ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        _isDisposed = true;
-                        var calculationResult = _session.GetResult();
-                        try
-                        {
-                            _onCompleted(calculationResult);
-                        }
-                        catch (Exception)
-                        {
-                        }
-                    }
-                }
-            }
-
-            private void CalculateCrc(ReadOnlySpan<Byte> buffer, Int32 length)
-            {
-                if (length > 0)
-                {
-                    _session.Put(buffer[..length]);
-
-                    checked
-                    {
-                        _position += (UInt32)length;
-                    }
-                }
-            }
-        }
-
-        private class BranchOutputStreamUInt64
-            : IOutputByteStream<UInt64>
-        {
-            private readonly IBasicOutputByteStream _baseStream1;
-            private readonly IBasicOutputByteStream _baseStream2;
-            private readonly Boolean _leaveOpen;
-            private Boolean _isDisposed;
-            private UInt64 _position;
-
-            public BranchOutputStreamUInt64(IBasicOutputByteStream baseStream1, IBasicOutputByteStream baseStream2, Boolean leaveOpen)
-            {
-                _baseStream1 = baseStream1;
-                _baseStream2 = baseStream2;
-                _leaveOpen = leaveOpen;
-                _isDisposed = false;
-                _position = 0;
-            }
-
-            public UInt64 Position
-            {
-                get
-                {
-                    if (_isDisposed)
-                        throw new ObjectDisposedException(GetType().FullName);
-
-                    return _position;
-                }
-            }
-
-            public Int32 Write(ReadOnlySpan<Byte> buffer)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                _baseStream1.WriteBytes(buffer);
-                _baseStream2.WriteBytes(buffer);
-                var length = buffer.Length;
-                UpdatePosition(length);
-                return length;
-            }
-
-            public async Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                await _baseStream1.WriteBytesAsync(buffer, cancellationToken).ConfigureAwait(false);
-                await _baseStream2.WriteBytesAsync(buffer, cancellationToken).ConfigureAwait(false);
-                var length = buffer.Length;
-                UpdatePosition(length);
-                return length;
-            }
-
-            public void Flush()
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                _baseStream1.Flush();
-                _baseStream2.Flush();
-            }
-
-            public async Task FlushAsync(CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                await _baseStream1.FlushAsync(cancellationToken).ConfigureAwait(false);
-                await _baseStream2.FlushAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            public void Dispose()
-            {
-                Dispose(disposing: true);
-                GC.SuppressFinalize(this);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                await DisposeAsyncCore().ConfigureAwait(false);
-                Dispose(disposing: false);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(Boolean disposing)
-            {
-                if (!_isDisposed)
-                {
-                    if (disposing)
-                    {
-                        if (!_leaveOpen)
-                        {
-                            _baseStream1.Dispose();
-                            _baseStream2.Dispose();
-                        }
-                    }
-
-                    _isDisposed = true;
-                }
-            }
-
-            protected virtual async ValueTask DisposeAsyncCore()
-            {
-                if (!_isDisposed)
-                {
-                    if (!_leaveOpen)
-                    {
-                        await _baseStream1.DisposeAsync().ConfigureAwait(false);
-                        await _baseStream2.DisposeAsync().ConfigureAwait(false);
-                    }
-
-                    _isDisposed = true;
-                }
-            }
-
-            private void UpdatePosition(Int32 length)
-            {
-                if (length > 0)
-                {
-                    checked
-                    {
-                        _position += (UInt32)length;
-                    }
-                }
-            }
-        }
-
-        private class InputStreamWithProgressUInt64
-            : IInputByteStream<UInt64>
-        {
-            private readonly IBasicInputByteStream _baseStream;
-            private readonly Boolean _leaveOpen;
-            private readonly ProgressCounterUInt64 _progressCounter;
-            private Boolean _isDisposed;
-
-            public InputStreamWithProgressUInt64(IBasicInputByteStream baseStream, IProgress<UInt64> progress, Boolean leaveOpen)
-            {
-                _baseStream = baseStream;
-                _leaveOpen = leaveOpen;
-                _progressCounter = new ProgressCounterUInt64(progress);
-                _isDisposed = false;
-            }
-
-            public UInt64 Position
-            {
-                get
-                {
-                    if (_isDisposed)
-                        throw new ObjectDisposedException(GetType().FullName);
-
-                    return _progressCounter.Value;
-                }
-            }
-
-            public Int32 Read(Span<Byte> buffer)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = _baseStream.Read(buffer);
-                UpdatePosition(length);
-                return length;
-            }
-
-            public async Task<Int32> ReadAsync(Memory<Byte> buffer, CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = await _baseStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-                UpdatePosition(length);
-                return length;
-            }
-
-            public void Dispose()
-            {
-                Dispose(disposing: true);
-                GC.SuppressFinalize(this);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                await DisposeAsyncCore().ConfigureAwait(false);
-                Dispose(disposing: false);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(Boolean disposing)
-            {
-                if (!_isDisposed)
-                {
-                    if (disposing)
-                    {
-                        if (!_leaveOpen)
-                            _baseStream.Dispose();
-                    }
-
-                    _isDisposed = true;
-                    _progressCounter.Report();
-                }
-            }
-
-            protected virtual async ValueTask DisposeAsyncCore()
-            {
-                if (!_isDisposed)
-                {
-                    if (!_leaveOpen)
-                        await _baseStream.DisposeAsync().ConfigureAwait(false);
-                    _isDisposed = true;
-                    _progressCounter.Report();
-                }
-            }
-
-            private void UpdatePosition(Int32 length)
-            {
-                if (length > 0)
-                    _progressCounter.AddValue(checked((UInt32)length));
-            }
-        }
-
-        private class OutputStreamWithProgressUInt64
-            : IOutputByteStream<UInt64>
-        {
-            private readonly IBasicOutputByteStream _baseStream;
-            private readonly Boolean _leaveOpen;
-            private readonly ProgressCounterUInt64 _progressCounter;
-            private Boolean _isDisposed;
-
-            public OutputStreamWithProgressUInt64(IBasicOutputByteStream baseStream, IProgress<UInt64> progress, Boolean leaveOpen)
-            {
-                _baseStream = baseStream;
-                _leaveOpen = leaveOpen;
-                _progressCounter = new ProgressCounterUInt64(progress);
-                _isDisposed = false;
-            }
-
-            public UInt64 Position
-            {
-                get
-                {
-                    if (_isDisposed)
-                        throw new ObjectDisposedException(GetType().FullName);
-
-                    return _progressCounter.Value;
-                }
-            }
-
-            public Int32 Write(ReadOnlySpan<Byte> buffer)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = _baseStream.Write(buffer);
-                UpdatePosition(length);
-                return length;
-            }
-
-            public async Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = await _baseStream.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
-                UpdatePosition(length);
-                return length;
-            }
-
-            public void Flush()
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                _baseStream.Flush();
-            }
-
-            public Task FlushAsync(CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                return _baseStream.FlushAsync(cancellationToken);
-            }
-
-            public void Dispose()
-            {
-                Dispose(disposing: true);
-                GC.SuppressFinalize(this);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                await DisposeAsyncCore().ConfigureAwait(false);
-                Dispose(disposing: false);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(Boolean disposing)
-            {
-                if (!_isDisposed)
-                {
-                    if (disposing)
-                    {
-                        if (!_leaveOpen)
-                            _baseStream.Dispose();
-                        _progressCounter.Report();
-                    }
-
-                    _isDisposed = true;
-                }
-            }
-
-            protected virtual async ValueTask DisposeAsyncCore()
-            {
-                if (!_isDisposed)
-                {
-                    if (!_leaveOpen)
-                        await _baseStream.DisposeAsync().ConfigureAwait(false);
-                    _progressCounter.Report();
-                    _isDisposed = true;
-                }
-            }
-
-            private void UpdatePosition(Int32 length)
-            {
-                if (length > 0)
-                    _progressCounter.AddValue(checked((UInt32)length));
-            }
-        }
-
-        private class InputStreamWithEndAction
-            : IInputByteStream<UInt64>
-        {
-            private readonly IBasicInputByteStream _baseStream;
-            private readonly Action<UInt64> _endAction;
-            private readonly Boolean _leaveOpen;
-            private Boolean _isDisposed;
-            private UInt64 _position;
-
-            public InputStreamWithEndAction(IBasicInputByteStream baseStream, Action<UInt64> endAction, Boolean leaveOpen)
-            {
-                _baseStream = baseStream;
-                _leaveOpen = leaveOpen;
-                _endAction = endAction;
-                _isDisposed = false;
-                _position = 0;
-            }
-
-            public UInt64 Position
-            {
-                get
-                {
-                    if (_isDisposed)
-                        throw new ObjectDisposedException(GetType().FullName);
-
-                    return _position;
-                }
-            }
-
-            public Int32 Read(Span<Byte> buffer)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = _baseStream.Read(buffer);
-                UpdatePosition(length);
-                return length;
-            }
-
-            public async Task<Int32> ReadAsync(Memory<Byte> buffer, CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = await _baseStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-                UpdatePosition(length);
-                return length;
-            }
-
-            public void Dispose()
-            {
-                Dispose(disposing: true);
-                GC.SuppressFinalize(this);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                await DisposeAsyncCore().ConfigureAwait(false);
-                Dispose(disposing: false);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(Boolean disposing)
-            {
-                if (!_isDisposed)
-                {
-                    if (disposing)
-                    {
-                        if (!_leaveOpen)
-                            _baseStream.Dispose();
-                    }
-
-                    _isDisposed = true;
-
-                    try
-                    {
-                        _endAction(_position);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
-            }
-
-            protected virtual async ValueTask DisposeAsyncCore()
-            {
-                if (!_isDisposed)
-                {
-                    if (!_leaveOpen)
-                        await _baseStream.DisposeAsync().ConfigureAwait(false);
-                    _isDisposed = true;
-
-                    try
-                    {
-                        _endAction(_position);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
-            }
-
-            private void UpdatePosition(Int32 length)
-            {
-                if (length > 0)
-                {
-                    checked
-                    {
-                        _position += (UInt32)length;
-                    }
-                }
-            }
-        }
-
-        private class OutputStreamWithEndAction
-            : IOutputByteStream<UInt64>
-        {
-            private readonly IBasicOutputByteStream _baseStream;
-            private readonly Action<UInt64> _endAction;
-            private readonly Boolean _leaveOpen;
-            private Boolean _isDisposed;
-            private UInt64 _position;
-
-            public OutputStreamWithEndAction(IBasicOutputByteStream baseStream, Action<UInt64> endAction, Boolean leaveOpen)
-            {
-                _baseStream = baseStream;
-                _leaveOpen = leaveOpen;
-                _endAction = endAction;
-                _isDisposed = false;
-                _position = 0;
-            }
-
-            public UInt64 Position
-            {
-                get
-                {
-                    if (_isDisposed)
-                        throw new ObjectDisposedException(GetType().FullName);
-
-                    return _position;
-                }
-            }
-
-            public Int32 Write(ReadOnlySpan<Byte> buffer)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = _baseStream.Write(buffer);
-                UpdatePosition(length);
-                return length;
-            }
-
-            public async Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = await _baseStream.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
-                UpdatePosition(length);
-                return length;
-            }
-
-            public void Flush()
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                _baseStream.Flush();
-            }
-
-            public Task FlushAsync(CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                return _baseStream.FlushAsync(cancellationToken);
-            }
-
-            public void Dispose()
-            {
-                Dispose(disposing: true);
-                GC.SuppressFinalize(this);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                await DisposeAsyncCore().ConfigureAwait(false);
-                Dispose(disposing: false);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(Boolean disposing)
-            {
-                if (!_isDisposed)
-                {
-                    if (disposing)
-                    {
-                        if (!_leaveOpen)
-                            _baseStream.Dispose();
-                    }
-
-                    _isDisposed = true;
-
-                    try
-                    {
-                        _endAction(_position);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
-            }
-
-            protected virtual async ValueTask DisposeAsyncCore()
-            {
-                if (!_isDisposed)
-                {
-                    if (!_leaveOpen)
-                        await _baseStream.DisposeAsync().ConfigureAwait(false);
-                    _isDisposed = true;
-                    try
-                    {
-                        _endAction(_position);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                }
-            }
-
-            private void UpdatePosition(Int32 length)
-            {
-                if (length > 0)
-                {
-                    checked
-                    {
-                        _position += (UInt32)length;
-                    }
-                }
-            }
-        }
-
-        #endregion
-
         private const Int32 _COPY_TO_DEFAULT_BUFFER_SIZE = 81920;
         private const Int32 _WRITE_BYTE_SEQUENCE_DEFAULT_BUFFER_SIZE = 81920;
 
         #region AsInputByteStream
 
-        public static IInputByteStream<UInt64> AsInputByteStream(this Stream baseStream, Boolean leaveOpen = false)
+        public static ISequentialInputByteStream AsInputByteStream(this Stream baseStream, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
+                if (!baseStream.CanRead)
+                    throw new ArgumentException($"The stream specified by parameter {nameof(baseStream)} is not readable.", nameof(baseStream));
 
                 return
                     baseStream.CanSeek
-                    ? new RandomInputByteStreamByStream(baseStream, leaveOpen)
-                    : new SequentialInputByteStreamByStream(baseStream, leaveOpen);
+                    ? new RandomInputByteStreamByDotNetStream(baseStream, leaveOpen)
+                    : new SequentialInputByteStreamByDotNetStream(baseStream, leaveOpen);
             }
             catch (Exception)
             {
@@ -1078,17 +42,18 @@ namespace Utility.IO
 
         #region AsOutputByteStream
 
-        public static IOutputByteStream<UInt64> AsOutputByteStream<BASE_STREAM_T>(this BASE_STREAM_T baseStream, Boolean leaveOpen = false)
-            where BASE_STREAM_T : Stream
+        public static ISequentialOutputByteStream AsOutputByteStream(this Stream baseStream, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
+                if (!baseStream.CanWrite)
+                    throw new ArgumentException($"The stream specified by parameter {nameof(baseStream)} is not writable.", nameof(baseStream));
 
                 return baseStream.CanSeek
-                    ? new RandomOutputByteStreamByStream<BASE_STREAM_T>(baseStream, leaveOpen)
-                    : new SequentialOutputByteStreamByStream<BASE_STREAM_T>(baseStream, leaveOpen);
+                    ? new RandomOutputByteStreamByDotNetStream(baseStream, leaveOpen)
+                    : new SequentialOutputByteStreamByDotNetStream(baseStream, leaveOpen);
             }
             catch (Exception)
             {
@@ -1100,16 +65,16 @@ namespace Utility.IO
 
         #endregion
 
-        #region AsStream
+        #region AsDotNetStream
 
-        public static Stream AsStream(this IBasicInputByteStream baseStream, Boolean leaveOpen = false)
+        public static Stream AsDotNetStream(this ISequentialInputByteStream baseStream, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                return new StreamByInputByteStream(baseStream, leaveOpen);
+                return new DotNetStreamBySequentialInputByteStream(baseStream, leaveOpen);
             }
             catch (Exception)
             {
@@ -1119,14 +84,14 @@ namespace Utility.IO
             }
         }
 
-        public static Stream AsStream(this IBasicOutputByteStream baseStream, Boolean leaveOpen = false)
+        public static Stream AsDotNetStream(this ISequentialOutputByteStream baseStream, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                return new StreamByOutputByteStream(baseStream, leaveOpen);
+                return new DotNetStreamBySequentialOutputByteStream(baseStream, leaveOpen);
             }
             catch (Exception)
             {
@@ -1140,7 +105,7 @@ namespace Utility.IO
 
         #region AsByteStream
 
-        public static IInputByteStream<UInt64> AsByteStream(this IEnumerable<Byte> baseSequence)
+        public static ISequentialInputByteStream AsByteStream(this IEnumerable<Byte> baseSequence)
         {
             if (baseSequence is null)
                 throw new ArgumentNullException(nameof(baseSequence));
@@ -1148,7 +113,7 @@ namespace Utility.IO
             return new SequentialInputByteStreamBySequence(baseSequence);
         }
 
-        public static IInputByteStream<UInt64> AsByteStream(this IInputBitStream baseStream, Boolean leaveOpen = false)
+        public static ISequentialInputByteStream AsByteStream(this IInputBitStream baseStream, Boolean leaveOpen = false)
         {
             try
             {
@@ -1165,7 +130,7 @@ namespace Utility.IO
             }
         }
 
-        public static IInputByteStream<UInt64> AsByteStream(this IInputBitStream baseStream, BitPackingDirection bitPackingDirection, Boolean leaveOpen = false)
+        public static ISequentialInputByteStream AsByteStream(this IInputBitStream baseStream, BitPackingDirection bitPackingDirection, Boolean leaveOpen = false)
         {
             try
             {
@@ -1182,7 +147,7 @@ namespace Utility.IO
             }
         }
 
-        public static IOutputByteStream<UInt64> AsByteStream(this IOutputBitStream baseStream, Boolean leaveOpen = false)
+        public static ISequentialOutputByteStream AsByteStream(this IOutputBitStream baseStream, Boolean leaveOpen = false)
         {
             try
             {
@@ -1199,7 +164,7 @@ namespace Utility.IO
             }
         }
 
-        public static IOutputByteStream<UInt64> AsByteStream(this IOutputBitStream baseStream, BitPackingDirection bitPackingDirection, Boolean leaveOpen = false)
+        public static ISequentialOutputByteStream AsByteStream(this IOutputBitStream baseStream, BitPackingDirection bitPackingDirection, Boolean leaveOpen = false)
         {
             try
             {
@@ -1220,7 +185,7 @@ namespace Utility.IO
 
         #region AsBitStream
 
-        public static IInputBitStream AsBitStream(this IInputByteStream<UInt64> baseStream, Boolean leaveOpen = false)
+        public static IInputBitStream AsBitStream(this ISequentialInputByteStream baseStream, Boolean leaveOpen = false)
         {
             try
             {
@@ -1237,7 +202,7 @@ namespace Utility.IO
             }
         }
 
-        public static IInputBitStream AsBitStream(this IInputByteStream<UInt64> baseStream, BitPackingDirection bitPackingDirection, Boolean leaveOpen = false)
+        public static IInputBitStream AsBitStream(this ISequentialInputByteStream baseStream, BitPackingDirection bitPackingDirection, Boolean leaveOpen = false)
         {
             try
             {
@@ -1262,7 +227,7 @@ namespace Utility.IO
             return new SequentialInputBitStreamBySequence(baseSequence, bitPackingDirection);
         }
 
-        public static IOutputBitStream AsBitStream(this IOutputByteStream<UInt64> baseStream, Boolean leaveOpen = false)
+        public static IOutputBitStream AsBitStream(this ISequentialOutputByteStream baseStream, Boolean leaveOpen = false)
         {
             try
             {
@@ -1279,7 +244,7 @@ namespace Utility.IO
             }
         }
 
-        public static IOutputBitStream AsBitStream(this IOutputByteStream<UInt64> baseStream, BitPackingDirection bitPackingDirection, Boolean leaveOpen = false)
+        public static IOutputBitStream AsBitStream(this ISequentialOutputByteStream baseStream, BitPackingDirection bitPackingDirection, Boolean leaveOpen = false)
         {
             try
             {
@@ -1298,9 +263,51 @@ namespace Utility.IO
 
         #endregion
 
+        #region AsSequentialAccess
+
+        public static ISequentialInputByteStream AsSequentialAccess<POSITION_T>(this IRandomInputByteStream<POSITION_T> baseStream)
+        {
+            if (baseStream is null)
+                throw new ArgumentNullException(nameof(baseStream));
+
+            return baseStream;
+        }
+
+        public static ISequentialOutputByteStream AsSequentialAccess<POSITION_T>(this IRandomOutputByteStream<POSITION_T> baseStream)
+        {
+            if (baseStream is null)
+                throw new ArgumentNullException(nameof(baseStream));
+
+            return baseStream;
+        }
+
+        #endregion
+
+        #region AsRandomAccess
+
+        public static IRandomInputByteStream<POSITION_T> AsRandomAccess<POSITION_T>(this ISequentialInputByteStream baseStream)
+            where POSITION_T : struct
+        {
+            if (baseStream is not IRandomInputByteStream<POSITION_T>)
+                throw new ArgumentException($"Stream object {nameof(baseStream)} does not support interface {nameof(IRandomInputByteStream<POSITION_T>)}.", nameof(baseStream));
+
+            return (IRandomInputByteStream<POSITION_T>)baseStream;
+        }
+
+        public static IRandomOutputByteStream<POSITION_T> AsRandomAccess<POSITION_T>(this ISequentialOutputByteStream baseStream)
+            where POSITION_T : struct
+        {
+            if (baseStream is not IRandomOutputByteStream<POSITION_T>)
+                throw new ArgumentException($"Stream object {nameof(baseStream)} does not support interface {nameof(IRandomOutputByteStream<POSITION_T>)}.", nameof(baseStream));
+
+            return (IRandomOutputByteStream<POSITION_T>)baseStream;
+        }
+
+        #endregion
+
         #region WithPartial
 
-        public static IInputByteStream<UInt64> WithPartial(this IInputByteStream<UInt64> baseStream, Boolean leaveOpen = false)
+        public static ISequentialInputByteStream WithPartial(this ISequentialInputByteStream baseStream, UInt64 size, Boolean leaveOpen = false)
         {
             try
             {
@@ -1308,9 +315,13 @@ namespace Utility.IO
                     throw new ArgumentNullException(nameof(baseStream));
 
                 return
-                    baseStream is IRandomInputByteStream<UInt64, UInt64> baseRandomAccessStream
-                    ? new PartialRandomInputStreamUInt64(baseRandomAccessStream, leaveOpen)
-                    : new PartialInputStreamUInt64(baseStream, null, leaveOpen);
+                    baseStream switch
+                    {
+                        IRandomInputByteStream<UInt64> randomAccessStream
+                            => new PartialRandomInputStream<UInt64, UInt64>(randomAccessStream, size, 0UL, leaveOpen),
+                        _
+                            => new PartialSequentialInputStream(baseStream, size, leaveOpen),
+                    };
             }
             catch (Exception)
             {
@@ -1320,7 +331,7 @@ namespace Utility.IO
             }
         }
 
-        public static IInputByteStream<UInt64> WithPartial(this IInputByteStream<UInt64> baseStream, UInt64 size, Boolean leaveOpen = false)
+        public static ISequentialInputByteStream WithPartial(this ISequentialInputByteStream baseStream, UInt64 offset, UInt64? size, Boolean leaveOpen = false)
         {
             try
             {
@@ -1328,9 +339,13 @@ namespace Utility.IO
                     throw new ArgumentNullException(nameof(baseStream));
 
                 return
-                    baseStream is IRandomInputByteStream<UInt64, UInt64> baseRandomAccessStream
-                    ? new PartialRandomInputStreamUInt64(baseRandomAccessStream, size, null, leaveOpen)
-                    : new PartialInputStreamUInt64(baseStream, size, leaveOpen);
+                    baseStream switch
+                    {
+                        IRandomInputByteStream<UInt64> randomAccessStream
+                            => new PartialRandomInputStream<UInt64, UInt64>(randomAccessStream, offset, size, 0UL, leaveOpen),
+                        _
+                            => throw new ArgumentException($"Stream object {nameof(baseStream)} does not support interface {nameof(IRandomInputByteStream<UInt64>)}.", nameof(baseStream))
+                    };
             }
             catch (Exception)
             {
@@ -1340,39 +355,15 @@ namespace Utility.IO
             }
         }
 
-        public static IInputByteStream<UInt64> WithPartial(this IInputByteStream<UInt64> baseStream, UInt64 offset, UInt64 size, Boolean leaveOpen = false)
-        {
-            try
-            {
-                if (baseStream is null)
-                    throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRandomAccessStream)
-                    throw new NotSupportedException();
-
-                return new PartialRandomInputStreamUInt64(baseRandomAccessStream, offset, size, leaveOpen);
-            }
-            catch (Exception)
-            {
-                if (!leaveOpen)
-                    baseStream?.Dispose();
-                throw;
-            }
-        }
-
-        public static IInputByteStream<UInt64> WithPartial(this IInputByteStream<UInt64> baseStream, UInt64? offset, UInt64? size, Boolean leaveOpen = false)
+        public static IRandomInputByteStream<UInt64> WithPartial<BASE_POSITION_T>(this IRandomInputByteStream<BASE_POSITION_T> baseStream, UInt64? size, Boolean leaveOpen = false)
+            where BASE_POSITION_T : struct, IComparable<BASE_POSITION_T>, IAdditionOperators<BASE_POSITION_T, UInt64, BASE_POSITION_T>, ISubtractionOperators<BASE_POSITION_T, BASE_POSITION_T, UInt64>
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                if (baseStream is IRandomInputByteStream<UInt64, UInt64> baseRandomAccessStream)
-                    return new PartialRandomInputStreamUInt64(baseRandomAccessStream, offset, size, leaveOpen);
-
-                if (offset is not null)
-                    throw new NotSupportedException();
-
-                return new PartialInputStreamUInt64(baseStream, size, leaveOpen);
+                return new PartialRandomInputStream<UInt64, BASE_POSITION_T>(baseStream, size, 0UL, leaveOpen);
             }
             catch (Exception)
             {
@@ -1382,7 +373,63 @@ namespace Utility.IO
             }
         }
 
-        public static IOutputByteStream<UInt64> WithPartial(this IOutputByteStream<UInt64> baseStream, Boolean leaveOpen = false)
+        public static IRandomInputByteStream<UInt64> WithPartial<BASE_POSITION_T>(this IRandomInputByteStream<BASE_POSITION_T> baseStream, BASE_POSITION_T offset, UInt64? size, Boolean leaveOpen = false)
+            where BASE_POSITION_T : struct, IComparable<BASE_POSITION_T>, IAdditionOperators<BASE_POSITION_T, UInt64, BASE_POSITION_T>, ISubtractionOperators<BASE_POSITION_T, BASE_POSITION_T, UInt64>
+        {
+            try
+            {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return new PartialRandomInputStream<UInt64, BASE_POSITION_T>(baseStream, offset, size, 0UL, leaveOpen);
+            }
+            catch (Exception)
+            {
+                if (!leaveOpen)
+                    baseStream?.Dispose();
+                throw;
+            }
+        }
+
+        public static IRandomInputByteStream<POSITION_T> WithPartial<POSITION_T, BASE_POSITION_T>(this IRandomInputByteStream<BASE_POSITION_T> baseStream, UInt64? size, POSITION_T zeroPositionValue, Boolean leaveOpen = false)
+            where POSITION_T : struct, IComparable<POSITION_T>, IAdditionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, POSITION_T, UInt64>
+            where BASE_POSITION_T : struct, IComparable<BASE_POSITION_T>, IAdditionOperators<BASE_POSITION_T, UInt64, BASE_POSITION_T>, ISubtractionOperators<BASE_POSITION_T, BASE_POSITION_T, UInt64>
+        {
+            try
+            {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return new PartialRandomInputStream<POSITION_T, BASE_POSITION_T>(baseStream, size, zeroPositionValue, leaveOpen);
+            }
+            catch (Exception)
+            {
+                if (!leaveOpen)
+                    baseStream?.Dispose();
+                throw;
+            }
+        }
+
+        public static IRandomInputByteStream<POSITION_T> WithPartial<POSITION_T, BASE_POSITION_T>(this IRandomInputByteStream<BASE_POSITION_T> baseStream, BASE_POSITION_T offset, UInt64? size, POSITION_T zeroPositionValue, Boolean leaveOpen = false)
+            where POSITION_T : struct, IComparable<POSITION_T>, IAdditionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, POSITION_T, UInt64>
+            where BASE_POSITION_T : struct, IComparable<BASE_POSITION_T>, IAdditionOperators<BASE_POSITION_T, UInt64, BASE_POSITION_T>, ISubtractionOperators<BASE_POSITION_T, BASE_POSITION_T, UInt64>
+        {
+            try
+            {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return new PartialRandomInputStream<POSITION_T, BASE_POSITION_T>(baseStream, offset, size, zeroPositionValue, leaveOpen);
+            }
+            catch (Exception)
+            {
+                if (!leaveOpen)
+                    baseStream?.Dispose();
+                throw;
+            }
+        }
+
+        public static ISequentialOutputByteStream WithPartial(this ISequentialOutputByteStream baseStream, UInt64 size, Boolean leaveOpen = false)
         {
             try
             {
@@ -1390,9 +437,13 @@ namespace Utility.IO
                     throw new ArgumentNullException(nameof(baseStream));
 
                 return
-                    baseStream is IRandomOutputByteStream<UInt64, UInt64> baseRandomAccessStream
-                    ? new PartialRandomOutputStreamUint64(baseRandomAccessStream, leaveOpen)
-                    : new PartialOutputStreamUInt64(baseStream, null, leaveOpen);
+                    baseStream switch
+                    {
+                        IRandomOutputByteStream<UInt64> randomAccessStream
+                            => new PartialRandomOutputStream<UInt64, UInt64>(randomAccessStream, size, 0UL, leaveOpen),
+                        _
+                            => new PartialSequentialOutputStream(baseStream, size, leaveOpen),
+                    };
             }
             catch (Exception)
             {
@@ -1402,7 +453,7 @@ namespace Utility.IO
             }
         }
 
-        public static IOutputByteStream<UInt64> WithPartial(this IOutputByteStream<UInt64> baseStream, UInt64 size, Boolean leaveOpen = false)
+        public static ISequentialOutputByteStream WithPartial(this ISequentialOutputByteStream baseStream, UInt64 offset, UInt64? size, Boolean leaveOpen = false)
         {
             try
             {
@@ -1410,9 +461,13 @@ namespace Utility.IO
                     throw new ArgumentNullException(nameof(baseStream));
 
                 return
-                    baseStream is IRandomOutputByteStream<UInt64, UInt64> baseRandomAccessStream
-                    ? new PartialRandomOutputStreamUint64(baseRandomAccessStream, size, null, leaveOpen)
-                    : new PartialOutputStreamUInt64(baseStream, size, leaveOpen);
+                    baseStream switch
+                    {
+                        IRandomOutputByteStream<UInt64> randomAccessStream
+                            => new PartialRandomOutputStream<UInt64, UInt64>(randomAccessStream, offset, size, 0UL, leaveOpen),
+                        _
+                            => throw new ArgumentException($"Stream object {nameof(baseStream)} does not support interface {nameof(IRandomOutputByteStream<UInt64>)}.", nameof(baseStream))
+                    };
             }
             catch (Exception)
             {
@@ -1422,16 +477,15 @@ namespace Utility.IO
             }
         }
 
-        public static IOutputByteStream<UInt64> WithPartial(this IOutputByteStream<UInt64> baseStream, UInt64 offset, UInt64 size, Boolean leaveOpen = false)
+        public static IRandomOutputByteStream<UInt64> WithPartial<BASE_POSITION_T>(this IRandomOutputByteStream<BASE_POSITION_T> baseStream, UInt64 size, Boolean leaveOpen = false)
+            where BASE_POSITION_T : struct, IComparable<BASE_POSITION_T>, IAdditionOperators<BASE_POSITION_T, UInt64, BASE_POSITION_T>, ISubtractionOperators<BASE_POSITION_T, BASE_POSITION_T, UInt64>
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomOutputByteStream<UInt64, UInt64> baseRandomAccessStream)
-                    throw new NotSupportedException();
 
-                return new PartialRandomOutputStreamUint64(baseRandomAccessStream, offset, size, leaveOpen);
+                return new PartialRandomOutputStream<UInt64, BASE_POSITION_T>(baseStream, size, 0UL, leaveOpen);
             }
             catch (Exception)
             {
@@ -1441,20 +495,53 @@ namespace Utility.IO
             }
         }
 
-        public static IOutputByteStream<UInt64> WithPartial(this IOutputByteStream<UInt64> baseStream, UInt64? offset, UInt64? size, Boolean leaveOpen = false)
+        public static IRandomOutputByteStream<UInt64> WithPartial<BASE_POSITION_T>(this IRandomOutputByteStream<BASE_POSITION_T> baseStream, BASE_POSITION_T offset, UInt64? size, Boolean leaveOpen = false)
+            where BASE_POSITION_T : struct, IComparable<BASE_POSITION_T>, IAdditionOperators<BASE_POSITION_T, UInt64, BASE_POSITION_T>, ISubtractionOperators<BASE_POSITION_T, BASE_POSITION_T, UInt64>
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                if (baseStream is IRandomOutputByteStream<UInt64, UInt64> baseRandomAccessStream)
-                    return new PartialRandomOutputStreamUint64(baseRandomAccessStream, offset, size, leaveOpen);
+                return new PartialRandomOutputStream<UInt64, BASE_POSITION_T>(baseStream, offset, size, 0UL, leaveOpen);
+            }
+            catch (Exception)
+            {
+                if (!leaveOpen)
+                    baseStream?.Dispose();
+                throw;
+            }
+        }
 
-                if (offset is not null)
-                    throw new NotSupportedException();
+        public static IRandomOutputByteStream<POSITION_T> WithPartial<POSITION_T, BASE_POSITION_T>(this IRandomOutputByteStream<BASE_POSITION_T> baseStream, UInt64 size, POSITION_T zeroPositionValue, Boolean leaveOpen = false)
+            where POSITION_T : struct, IComparable<POSITION_T>, IAdditionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, POSITION_T, UInt64>
+            where BASE_POSITION_T : struct, IComparable<BASE_POSITION_T>, IAdditionOperators<BASE_POSITION_T, UInt64, BASE_POSITION_T>, ISubtractionOperators<BASE_POSITION_T, BASE_POSITION_T, UInt64>
+        {
+            try
+            {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
 
-                return new PartialOutputStreamUInt64(baseStream, size, leaveOpen);
+                return new PartialRandomOutputStream<POSITION_T, BASE_POSITION_T>(baseStream, size, zeroPositionValue, leaveOpen);
+            }
+            catch (Exception)
+            {
+                if (!leaveOpen)
+                    baseStream?.Dispose();
+                throw;
+            }
+        }
+
+        public static IRandomOutputByteStream<POSITION_T> WithPartial<POSITION_T, BASE_POSITION_T>(this IRandomOutputByteStream<BASE_POSITION_T> baseStream, BASE_POSITION_T offset, UInt64? size, POSITION_T zeroPositionValue, Boolean leaveOpen = false)
+            where POSITION_T : struct, IComparable<POSITION_T>, IAdditionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, POSITION_T, UInt64>
+            where BASE_POSITION_T : struct, IComparable<BASE_POSITION_T>, IAdditionOperators<BASE_POSITION_T, UInt64, BASE_POSITION_T>, ISubtractionOperators<BASE_POSITION_T, BASE_POSITION_T, UInt64>
+        {
+            try
+            {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return new PartialRandomOutputStream<POSITION_T, BASE_POSITION_T>(baseStream, offset, size, zeroPositionValue, leaveOpen);
             }
             catch (Exception)
             {
@@ -1468,7 +555,7 @@ namespace Utility.IO
 
         #region WithCache
 
-        public static IInputByteStream<UInt64> WithCache(this IBasicInputByteStream baseStream, Boolean leaveOpen = false)
+        public static ISequentialInputByteStream WithCache(this ISequentialInputByteStream baseStream, Boolean leaveOpen = false)
         {
             try
             {
@@ -1478,10 +565,10 @@ namespace Utility.IO
                 return
                     baseStream switch
                     {
-                        IRandomInputByteStream<UInt64, UInt64> baseRandomAccessStream
-                            => new BufferedRandomInputStreamUInt64(baseRandomAccessStream, leaveOpen),
+                        IRandomInputByteStream<UInt64> baseRandomAccessStream
+                            => new BufferedRandomInputStream<UInt64>(baseRandomAccessStream, leaveOpen),
                         _
-                            => new BufferedInputStreamUInt64(baseStream, leaveOpen),
+                            => new BufferedSequentialInputStream(baseStream, leaveOpen),
                     };
             }
             catch (Exception)
@@ -1492,7 +579,7 @@ namespace Utility.IO
             }
         }
 
-        public static IInputByteStream<UInt64> WithCache(this IBasicInputByteStream baseStream, Int32 cacheSize, Boolean leaveOpen = false)
+        public static ISequentialInputByteStream WithCache(this ISequentialInputByteStream baseStream, Int32 cacheSize, Boolean leaveOpen = false)
         {
             try
             {
@@ -1504,10 +591,10 @@ namespace Utility.IO
                 return
                     baseStream switch
                     {
-                        IRandomInputByteStream<UInt64, UInt64> baseRandomAccessStream
-                            => new BufferedRandomInputStreamUInt64(baseRandomAccessStream, cacheSize, leaveOpen),
+                        IRandomInputByteStream<UInt64> baseRandomAccessStream
+                            => new BufferedRandomInputStream<UInt64>(baseRandomAccessStream, cacheSize, leaveOpen),
                         _
-                            => new BufferedInputStreamUInt64(baseStream, cacheSize, leaveOpen),
+                            => new BufferedSequentialInputStream(baseStream, cacheSize, leaveOpen),
                     };
             }
             catch (Exception)
@@ -1518,7 +605,45 @@ namespace Utility.IO
             }
         }
 
-        public static IOutputByteStream<UInt64> WithCache(this IBasicOutputByteStream baseStream, Boolean leaveOpen = false)
+        public static IRandomInputByteStream<POSITION_T> WithCache<POSITION_T>(this IRandomInputByteStream<POSITION_T> baseStream, Boolean leaveOpen = false)
+            where POSITION_T : struct, IAdditionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, POSITION_T, UInt64>
+        {
+            try
+            {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return new BufferedRandomInputStream<POSITION_T>(baseStream, leaveOpen);
+            }
+            catch (Exception)
+            {
+                if (!leaveOpen)
+                    baseStream?.Dispose();
+                throw;
+            }
+        }
+
+        public static IRandomInputByteStream<POSITION_T> WithCache<POSITION_T>(this IRandomInputByteStream<POSITION_T> baseStream, Int32 cacheSize, Boolean leaveOpen = false)
+            where POSITION_T : struct, IAdditionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, POSITION_T, UInt64>
+        {
+            try
+            {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (cacheSize <= 0)
+                    throw new ArgumentOutOfRangeException(nameof(cacheSize));
+
+                return new BufferedRandomInputStream<POSITION_T>(baseStream, cacheSize, leaveOpen);
+            }
+            catch (Exception)
+            {
+                if (!leaveOpen)
+                    baseStream?.Dispose();
+                throw;
+            }
+        }
+
+        public static ISequentialOutputByteStream WithCache(this ISequentialOutputByteStream baseStream, Boolean leaveOpen = false)
         {
             try
             {
@@ -1528,10 +653,10 @@ namespace Utility.IO
                 return
                     baseStream switch
                     {
-                        IRandomOutputByteStream<UInt64, UInt64> baseRandomAccessStream
-                            => new BufferedRandomOutputStreamUInt64(baseRandomAccessStream, leaveOpen),
+                        IRandomOutputByteStream<UInt64> baseRandomAccessStream
+                            => new BufferedRandomOutputStream<UInt64>(baseRandomAccessStream, leaveOpen),
                         _
-                            => new BufferedOutputStreamUInt64(baseStream, leaveOpen)
+                            => new BufferedSequentialOutputStream(baseStream, leaveOpen)
                     };
             }
             catch (Exception)
@@ -1542,7 +667,7 @@ namespace Utility.IO
             }
         }
 
-        public static IOutputByteStream<UInt64> WithCache(this IBasicOutputByteStream baseStream, Int32 cacheSize, Boolean leaveOpen = false)
+        public static ISequentialOutputByteStream WithCache(this ISequentialOutputByteStream baseStream, Int32 cacheSize, Boolean leaveOpen = false)
         {
             try
             {
@@ -1554,11 +679,49 @@ namespace Utility.IO
                 return
                     baseStream switch
                     {
-                        IRandomOutputByteStream<UInt64, UInt64> baseRandomAccessStream
-                            => new BufferedRandomOutputStreamUInt64(baseRandomAccessStream, cacheSize, leaveOpen),
+                        IRandomOutputByteStream<UInt64> baseRandomAccessStream
+                            => new BufferedRandomOutputStream<UInt64>(baseRandomAccessStream, cacheSize, leaveOpen),
                         _
-                            => new BufferedOutputStreamUInt64(baseStream, cacheSize, leaveOpen)
+                            => new BufferedSequentialOutputStream(baseStream, cacheSize, leaveOpen)
                     };
+            }
+            catch (Exception)
+            {
+                if (!leaveOpen)
+                    baseStream?.Dispose();
+                throw;
+            }
+        }
+
+        public static IRandomOutputByteStream<POSITION_T> WithCache<POSITION_T>(this IRandomOutputByteStream<POSITION_T> baseStream, Boolean leaveOpen = false)
+            where POSITION_T : struct, IAdditionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, POSITION_T, UInt64>
+        {
+            try
+            {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                return new BufferedRandomOutputStream<POSITION_T>(baseStream, leaveOpen);
+            }
+            catch (Exception)
+            {
+                if (!leaveOpen)
+                    baseStream?.Dispose();
+                throw;
+            }
+        }
+
+        public static IRandomOutputByteStream<POSITION_T> WithCache<POSITION_T>(this IRandomOutputByteStream<POSITION_T> baseStream, Int32 cacheSize, Boolean leaveOpen = false)
+            where POSITION_T : struct, IAdditionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, POSITION_T, UInt64>
+        {
+            try
+            {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (cacheSize <= 0)
+                    throw new ArgumentOutOfRangeException(nameof(cacheSize));
+
+                return new BufferedRandomOutputStream<POSITION_T>(baseStream, cacheSize, leaveOpen);
             }
             catch (Exception)
             {
@@ -1570,70 +733,98 @@ namespace Utility.IO
 
         #endregion
 
-        #region WithProgress
+        #region WithProgression
 
-        public static IInputByteStream<UInt64> WithProgress(this IBasicInputByteStream baseStream, IProgress<UInt64> progress, Boolean leaveOpen = false)
+        public static ISequentialInputByteStream WithProgression(this ISequentialInputByteStream baseStream, IProgress<UInt64> progress, Boolean leaveOpen = false)
         {
             if (baseStream is null)
                 throw new ArgumentNullException(nameof(baseStream));
             if (progress is null)
                 throw new ArgumentNullException(nameof(progress));
 
-            return new InputStreamWithProgressUInt64(baseStream, progress, leaveOpen);
+            return new SequentialInputByteStreamWithProgression(baseStream, progress, leaveOpen);
         }
 
-        public static IOutputByteStream<UInt64> WithProgress(this IBasicOutputByteStream baseStream, IProgress<UInt64> progress, Boolean leaveOpen = false)
+        public static ISequentialOutputByteStream WithProgression(this ISequentialOutputByteStream baseStream, IProgress<UInt64> progress, Boolean leaveOpen = false)
         {
             if (baseStream is null)
                 throw new ArgumentNullException(nameof(baseStream));
             if (progress is null)
                 throw new ArgumentNullException(nameof(progress));
 
-            return new OutputStreamWithProgressUInt64(baseStream, progress, leaveOpen);
+            return new SequentialOutputByteStreamWithProgression(baseStream, progress, leaveOpen);
         }
 
         #endregion
 
         #region WithEndAction
 
-        public static IInputByteStream<UInt64> WithEndAction(this IBasicInputByteStream baseStream, Action<UInt64> endAction, Boolean leaveOpen = false)
+        public static ISequentialInputByteStream WithEndAction(this ISequentialInputByteStream baseStream, Action<UInt64> endAction, Boolean leaveOpen = false)
         {
             if (baseStream is null)
                 throw new ArgumentNullException(nameof(baseStream));
             if (endAction is null)
                 throw new ArgumentNullException(nameof(endAction));
 
-            return new InputStreamWithEndAction(baseStream, endAction, leaveOpen);
+            return new SequentialInputByteStreamWithEndAction(baseStream, endAction, leaveOpen);
         }
 
-        public static IOutputByteStream<UInt64> WithEndAction(this IBasicOutputByteStream baseStream, Action<UInt64> endAction, Boolean leaveOpen = false)
+        public static ISequentialOutputByteStream WithEndAction(this ISequentialOutputByteStream baseStream, Action<UInt64> endAction, Boolean leaveOpen = false)
         {
             if (baseStream is null)
                 throw new ArgumentNullException(nameof(baseStream));
             if (endAction is null)
                 throw new ArgumentNullException(nameof(endAction));
 
-            return new OutputStreamWithEndAction(baseStream, endAction, leaveOpen);
+            return new SequentialOutputByteStreamWithEndAction(baseStream, endAction, leaveOpen);
         }
 
         #endregion
 
         #region WithCrc32Calculation
 
-        public static IInputByteStream<UInt64> WithCrc32Calculation(this IBasicInputByteStream baseStream, ValueHolder<UInt32> crcHolder, Boolean leaveOpen = false)
+        public static ISequentialInputByteStream WithCrc32Calculation(this ISequentialInputByteStream baseStream, ValueHolder<(UInt32 Crc, UInt64 Length)> resultValueHolder, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (crcHolder is null)
-                    throw new ArgumentNullException(nameof(crcHolder));
+                if (resultValueHolder is null)
+                    throw new ArgumentNullException(nameof(resultValueHolder));
+
+                return new SequentialInputByteStreamWithCrc32Calculation(baseStream, Crc32.CreateCalculationState(), resultValue => resultValueHolder.Value = resultValue, leaveOpen);
+            }
+            catch (Exception)
+            {
+                if (!leaveOpen)
+                    baseStream?.Dispose();
+                throw;
+            }
+        }
+
+        public static ISequentialInputByteStream WithCrc32Calculation(this ISequentialInputByteStream baseStream, Action<UInt32, UInt64> onCompleted, Boolean leaveOpen = false)
+        {
+            try
+            {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+                if (onCompleted is null)
+                    throw new ArgumentNullException(nameof(onCompleted));
 
                 return
-                    new Crc32CalculationInputStream(
+                    new SequentialInputByteStreamWithCrc32Calculation(
                         baseStream,
                         Crc32.CreateCalculationState(),
-                        resultValue => crcHolder.Value = resultValue.Crc,
+                        resultValue =>
+                        {
+                            try
+                            {
+                                onCompleted(resultValue.Crc, resultValue.Length);
+                            }
+                            catch (Exception)
+                            {
+                            }
+                        },
                         leaveOpen);
             }
             catch (Exception)
@@ -1644,16 +835,16 @@ namespace Utility.IO
             }
         }
 
-        public static IInputByteStream<UInt64> WithCrc32Calculation(this IBasicInputByteStream baseStream, Action<(UInt32 Crc, UInt64 Length)> onCompleted, Boolean leaveOpen = false)
+        public static ISequentialOutputByteStream WithCrc32Calculation(this ISequentialOutputByteStream baseStream, ValueHolder<(UInt32 Crc, UInt64 Length)> resultValueHolder, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (onCompleted is null)
-                    throw new ArgumentNullException(nameof(onCompleted));
+                if (resultValueHolder is null)
+                    throw new ArgumentNullException(nameof(resultValueHolder));
 
-                return new Crc32CalculationInputStream(baseStream, Crc32.CreateCalculationState(), onCompleted, leaveOpen);
+                return new SequentialOutputByteStreamWithCrc32Calculation(baseStream, Crc32.CreateCalculationState(), resultValue => resultValueHolder.Value = resultValue, leaveOpen);
             }
             catch (Exception)
             {
@@ -1663,40 +854,30 @@ namespace Utility.IO
             }
         }
 
-        public static IOutputByteStream<UInt64> WithCrc32Calculation(this IBasicOutputByteStream baseStream, ValueHolder<UInt32> crcHolder, Boolean leaveOpen = false)
+        public static ISequentialOutputByteStream WithCrc32Calculation(this ISequentialOutputByteStream baseStream, Action<UInt32, UInt64> onCompleted, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (crcHolder is null)
-                    throw new ArgumentNullException(nameof(crcHolder));
+                if (onCompleted is null)
+                    throw new ArgumentNullException(nameof(onCompleted));
 
                 return
-                    new Crc32CalculationOutputStream(
+                    new SequentialOutputByteStreamWithCrc32Calculation(
                         baseStream,
                         Crc32.CreateCalculationState(),
-                        resultValue => crcHolder.Value = resultValue.Crc,
+                        resultValue =>
+                        {
+                            try
+                            {
+                                onCompleted(resultValue.Crc, resultValue.Length);
+                            }
+                            catch (Exception)
+                            {
+                            }
+                        },
                         leaveOpen);
-            }
-            catch (Exception)
-            {
-                if (!leaveOpen)
-                    baseStream?.Dispose();
-                throw;
-            }
-        }
-
-        public static IOutputByteStream<UInt64> WithCrc32Calculation(this IBasicOutputByteStream baseStream, Action<(UInt32 Crc, UInt64 Length)> onCompleted, Boolean leaveOpen = false)
-        {
-            try
-            {
-                if (baseStream is null)
-                    throw new ArgumentNullException(nameof(baseStream));
-                if (onCompleted is null)
-                    throw new ArgumentNullException(nameof(onCompleted));
-
-                return new Crc32CalculationOutputStream(baseStream, Crc32.CreateCalculationState(), onCompleted, leaveOpen);
             }
             catch (Exception)
             {
@@ -1710,14 +891,14 @@ namespace Utility.IO
 
         #region Branch
 
-        public static IOutputByteStream<UInt64> Branch(this IBasicOutputByteStream baseStream1, IBasicOutputByteStream baseStream2, Boolean leaveOpen = false)
+        public static ISequentialOutputByteStream Branch(this ISequentialOutputByteStream baseStream1, ISequentialOutputByteStream baseStream2, Boolean leaveOpen = false)
         {
             if (baseStream1 is null)
                 throw new ArgumentNullException(nameof(baseStream1));
             if (baseStream2 is null)
                 throw new ArgumentNullException(nameof(baseStream2));
 
-            return new BranchOutputStreamUInt64(baseStream1, baseStream2, leaveOpen);
+            return new BranchOutputStream(baseStream1, baseStream2, leaveOpen);
         }
 
         #endregion
@@ -1826,14 +1007,14 @@ namespace Utility.IO
             }
         }
 
-        public static IEnumerable<Byte> GetByteSequence(this IInputByteStream<UInt64> baseStream, Boolean leaveOpen = false)
+        public static IEnumerable<Byte> GetByteSequence(this ISequentialInputByteStream baseStream, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                return InternalGetByteSequence<UInt64, UInt64>(baseStream, null, null, null, leaveOpen);
+                return InternalGetByteSequence<UInt64>(baseStream, null, null, leaveOpen);
             }
             catch (Exception)
             {
@@ -1843,14 +1024,14 @@ namespace Utility.IO
             }
         }
 
-        public static IEnumerable<Byte> GetByteSequence(this IInputByteStream<UInt64> baseStream, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static IEnumerable<Byte> GetByteSequence(this ISequentialInputByteStream baseStream, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                return InternalGetByteSequence<UInt64, UInt64>(baseStream, null, null, progress, leaveOpen);
+                return InternalGetByteSequence<UInt64>(baseStream, null, progress, leaveOpen);
             }
             catch (Exception)
             {
@@ -1860,18 +1041,18 @@ namespace Utility.IO
             }
         }
 
-        public static IEnumerable<Byte> GetByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, Boolean leaveOpen = false)
+        public static IEnumerable<Byte> GetByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteStream)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteStream)
                     throw new NotSupportedException();
                 if (offset > byteStream.Length)
                     throw new ArgumentOutOfRangeException(nameof(offset));
 
-                return InternalGetByteSequence<UInt64, UInt64>(byteStream, offset, byteStream.Length - offset, null, leaveOpen);
+                return InternalGetByteSequence(byteStream, offset, byteStream.Length - offset, null, leaveOpen);
             }
             catch (Exception)
             {
@@ -1881,18 +1062,18 @@ namespace Utility.IO
             }
         }
 
-        public static IEnumerable<Byte> GetByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static IEnumerable<Byte> GetByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteStream)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteStream)
                     throw new NotSupportedException();
                 if (offset > byteStream.Length)
                     throw new ArgumentOutOfRangeException(nameof(offset));
 
-                return InternalGetByteSequence<UInt64, UInt64>(byteStream, offset, byteStream.Length - offset, progress, leaveOpen);
+                return InternalGetByteSequence(byteStream, offset, byteStream.Length - offset, progress, leaveOpen);
             }
             catch (Exception)
             {
@@ -1902,18 +1083,18 @@ namespace Utility.IO
             }
         }
 
-        public static IEnumerable<Byte> GetByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, UInt64 count, Boolean leaveOpen = false)
+        public static IEnumerable<Byte> GetByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, UInt64 count, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
                     throw new NotSupportedException();
                 if (checked(offset + count) > baseRamdomAccessStream.Length)
                     throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
 
-                return InternalGetByteSequence<UInt64, UInt64>(baseRamdomAccessStream, offset, count, null, leaveOpen);
+                return InternalGetByteSequence(baseRamdomAccessStream, offset, count, null, leaveOpen);
             }
             catch (Exception)
             {
@@ -1923,18 +1104,18 @@ namespace Utility.IO
             }
         }
 
-        public static IEnumerable<Byte> GetByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static IEnumerable<Byte> GetByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
                     throw new NotSupportedException();
                 if (checked(offset + count) > baseRamdomAccessStream.Length)
                     throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
 
-                return InternalGetByteSequence<UInt64, UInt64>(baseRamdomAccessStream, offset, count, progress, leaveOpen);
+                return InternalGetByteSequence(baseRamdomAccessStream, offset, count, progress, leaveOpen);
             }
             catch (Exception)
             {
@@ -1972,7 +1153,7 @@ namespace Utility.IO
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                return baseStream.AsInputByteStream(leaveOpen).GetReverseByteSequence(progress: progress);
+                return baseStream.AsInputByteStream(leaveOpen).GetReverseByteSequence(progress);
             }
             catch (Exception)
             {
@@ -2050,16 +1231,16 @@ namespace Utility.IO
             }
         }
 
-        public static IEnumerable<Byte> GetReverseByteSequence(this IInputByteStream<UInt64> baseStream, Boolean leaveOpen = false)
+        public static IEnumerable<Byte> GetReverseByteSequence(this ISequentialInputByteStream baseStream, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
-                    throw new NotSupportedException();
+                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
+                    throw new ArgumentException($"The stream specified by parameter {nameof(baseStream)} must be a random access stream.", nameof(baseStream));
 
-                return new ReverseByteSequenceByByteStream(baseRamdomAccessStream, 0, baseRamdomAccessStream.Length, null, leaveOpen);
+                return baseRamdomAccessStream.InternalGetReverseByteSequence<UInt64>(0, baseRamdomAccessStream.Length, null, leaveOpen);
             }
             catch (Exception)
             {
@@ -2069,16 +1250,16 @@ namespace Utility.IO
             }
         }
 
-        public static IEnumerable<Byte> GetReverseByteSequence(this IInputByteStream<UInt64> baseStream, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static IEnumerable<Byte> GetReverseByteSequence(this ISequentialInputByteStream baseStream, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
                     throw new NotSupportedException();
 
-                return new ReverseByteSequenceByByteStream(baseRamdomAccessStream, 0, baseRamdomAccessStream.Length, progress, leaveOpen);
+                return baseRamdomAccessStream.InternalGetReverseByteSequence<UInt64>(0, baseRamdomAccessStream.Length, progress, leaveOpen);
             }
             catch (Exception)
             {
@@ -2088,18 +1269,18 @@ namespace Utility.IO
             }
         }
 
-        public static IEnumerable<Byte> GetReverseByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, Boolean leaveOpen = false)
+        public static IEnumerable<Byte> GetReverseByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
                     throw new NotSupportedException();
-                if (!offset.IsBetween(0UL, baseRamdomAccessStream.Length))
+                if (!offset.IsBetween(0UL, (UInt64)baseRamdomAccessStream.Length))
                     throw new ArgumentOutOfRangeException(nameof(offset));
 
-                return new ReverseByteSequenceByByteStream(baseRamdomAccessStream, offset, baseRamdomAccessStream.Length - offset, null, leaveOpen);
+                return baseRamdomAccessStream.InternalGetReverseByteSequence(offset, baseRamdomAccessStream.Length - offset, null, leaveOpen);
             }
             catch (Exception)
             {
@@ -2109,18 +1290,18 @@ namespace Utility.IO
             }
         }
 
-        public static IEnumerable<Byte> GetReverseByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static IEnumerable<Byte> GetReverseByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
                     throw new NotSupportedException();
-                if (!offset.IsBetween(0UL, baseRamdomAccessStream.Length))
+                if (!offset.IsBetween(0UL, (UInt64)baseRamdomAccessStream.Length))
                     throw new ArgumentOutOfRangeException(nameof(offset));
 
-                return new ReverseByteSequenceByByteStream(baseRamdomAccessStream, offset, baseRamdomAccessStream.Length - offset, progress, leaveOpen);
+                return baseRamdomAccessStream.InternalGetReverseByteSequence(offset, baseRamdomAccessStream.Length - offset, progress, leaveOpen);
             }
             catch (Exception)
             {
@@ -2130,13 +1311,13 @@ namespace Utility.IO
             }
         }
 
-        public static IEnumerable<Byte> GetReverseByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, UInt64 count, Boolean leaveOpen = false)
+        public static IEnumerable<Byte> GetReverseByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, UInt64 count, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
                     throw new NotSupportedException();
                 if (offset < 0)
                     throw new ArgumentOutOfRangeException(nameof(offset));
@@ -2145,7 +1326,7 @@ namespace Utility.IO
                 if (checked(offset + count) > baseRamdomAccessStream.Length)
                     throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
 
-                return new ReverseByteSequenceByByteStream(baseRamdomAccessStream, offset, count, null, leaveOpen);
+                return baseRamdomAccessStream.InternalGetReverseByteSequence(offset, count, null, leaveOpen);
             }
             catch (Exception)
             {
@@ -2155,13 +1336,13 @@ namespace Utility.IO
             }
         }
 
-        public static IEnumerable<Byte> GetReverseByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static IEnumerable<Byte> GetReverseByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> baseRamdomAccessStream)
+                if (baseStream is not IRandomInputByteStream<UInt64> baseRamdomAccessStream)
                     throw new NotSupportedException();
                 if (offset < 0)
                     throw new ArgumentOutOfRangeException(nameof(offset));
@@ -2170,7 +1351,7 @@ namespace Utility.IO
                 if (checked(offset + count) > baseRamdomAccessStream.Length)
                     throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
 
-                return new ReverseByteSequenceByByteStream(baseRamdomAccessStream, offset, count, progress, leaveOpen);
+                return baseRamdomAccessStream.InternalGetReverseByteSequence(offset, count, progress, leaveOpen);
             }
             catch (Exception)
             {
@@ -2230,7 +1411,7 @@ namespace Utility.IO
             }
         }
 
-        public static Boolean StreamBytesEqual(this IBasicInputByteStream stream1, IBasicInputByteStream stream2, Boolean leaveOpen = false)
+        public static Boolean StreamBytesEqual(this ISequentialInputByteStream stream1, ISequentialInputByteStream stream2, Boolean leaveOpen = false)
         {
             try
             {
@@ -2251,7 +1432,7 @@ namespace Utility.IO
             }
         }
 
-        public static Boolean StreamBytesEqual(this IBasicInputByteStream stream1, IBasicInputByteStream stream2, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static Boolean StreamBytesEqual(this ISequentialInputByteStream stream1, ISequentialInputByteStream stream2, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             try
             {
@@ -2288,7 +1469,7 @@ namespace Utility.IO
             sourceByteStream.InternalCopyTo(destinationByteStream, _COPY_TO_DEFAULT_BUFFER_SIZE, progress);
         }
 
-        public static void CopyTo(this IBasicInputByteStream source, IBasicOutputByteStream destination, IProgress<UInt64>? progress = null)
+        public static void CopyTo(this ISequentialInputByteStream source, ISequentialOutputByteStream destination, IProgress<UInt64>? progress = null)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
@@ -2310,7 +1491,7 @@ namespace Utility.IO
             sourceByteStream.InternalCopyTo(destinationByteStream, bufferSize, progress);
         }
 
-        public static void CopyTo(this IBasicInputByteStream source, IBasicOutputByteStream destination, Int32 bufferSize, IProgress<UInt64>? progress = null)
+        public static void CopyTo(this ISequentialInputByteStream source, ISequentialOutputByteStream destination, Int32 bufferSize, IProgress<UInt64>? progress = null)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
@@ -2423,7 +1604,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 Read(this IBasicInputByteStream stream, Byte[] buffer)
+        public static Int32 Read(this ISequentialInputByteStream stream, Byte[] buffer)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -2434,7 +1615,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 Read(this IBasicInputByteStream stream, Byte[] buffer, Int32 offset)
+        public static Int32 Read(this ISequentialInputByteStream stream, Byte[] buffer, Int32 offset)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -2447,7 +1628,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt32 Read(this IBasicInputByteStream stream, Byte[] buffer, UInt32 offset)
+        public static UInt32 Read(this ISequentialInputByteStream stream, Byte[] buffer, UInt32 offset)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -2460,7 +1641,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 Read(this IBasicInputByteStream stream, Byte[] buffer, Range range)
+        public static Int32 Read(this ISequentialInputByteStream stream, Byte[] buffer, Range range)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -2474,7 +1655,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 Read(this IBasicInputByteStream stream, Byte[] buffer, Int32 offset, Int32 count)
+        public static Int32 Read(this ISequentialInputByteStream stream, Byte[] buffer, Int32 offset, Int32 count)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -2491,7 +1672,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt32 Read(this IBasicInputByteStream stream, Byte[] buffer, UInt32 offset, UInt32 count)
+        public static UInt32 Read(this ISequentialInputByteStream stream, Byte[] buffer, UInt32 offset, UInt32 count)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -2504,7 +1685,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 Read(this IBasicInputByteStream stream, Memory<Byte> buffer)
+        public static Int32 Read(this ISequentialInputByteStream stream, Memory<Byte> buffer)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -2530,7 +1711,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Byte? ReadByteOrNull(this IBasicInputByteStream sourceStream)
+        public static Byte? ReadByteOrNull(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2547,7 +1728,7 @@ namespace Utility.IO
         #region ReadByte
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Byte ReadByte(this IBasicInputByteStream sourceStream)
+        public static Byte ReadByte(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2724,7 +1905,7 @@ namespace Utility.IO
             return processedCount;
         }
 
-        public static ReadOnlyMemory<Byte> ReadBytes(this IBasicInputByteStream sourceStream, Int32 count)
+        public static ReadOnlyMemory<Byte> ReadBytes(this ISequentialInputByteStream sourceStream, Int32 count)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2742,7 +1923,7 @@ namespace Utility.IO
             return buffer;
         }
 
-        public static ReadOnlyMemory<Byte> ReadBytes(this IBasicInputByteStream sourceStream, UInt32 count)
+        public static ReadOnlyMemory<Byte> ReadBytes(this ISequentialInputByteStream sourceStream, UInt32 count)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2758,7 +1939,7 @@ namespace Utility.IO
             return buffer;
         }
 
-        public static Int32 ReadBytes(this IBasicInputByteStream sourceStream, Byte[] buffer)
+        public static Int32 ReadBytes(this ISequentialInputByteStream sourceStream, Byte[] buffer)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2771,7 +1952,7 @@ namespace Utility.IO
                     (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count)));
         }
 
-        public static Int32 ReadBytes(this IBasicInputByteStream sourceStream, Byte[] buffer, Int32 offset)
+        public static Int32 ReadBytes(this ISequentialInputByteStream sourceStream, Byte[] buffer, Int32 offset)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2786,7 +1967,7 @@ namespace Utility.IO
                 (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count)));
         }
 
-        public static UInt32 ReadBytes(this IBasicInputByteStream sourceStream, Byte[] buffer, UInt32 offset)
+        public static UInt32 ReadBytes(this ISequentialInputByteStream sourceStream, Byte[] buffer, UInt32 offset)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2802,7 +1983,7 @@ namespace Utility.IO
                 (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count))).Maximum(0);
         }
 
-        public static Int32 ReadBytes(this IBasicInputByteStream sourceStream, Byte[] buffer, Range range)
+        public static Int32 ReadBytes(this ISequentialInputByteStream sourceStream, Byte[] buffer, Range range)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2818,7 +1999,7 @@ namespace Utility.IO
                 (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count)));
         }
 
-        public static Int32 ReadBytes(this IBasicInputByteStream sourceStream, Byte[] buffer, Int32 offset, Int32 count)
+        public static Int32 ReadBytes(this ISequentialInputByteStream sourceStream, Byte[] buffer, Int32 offset, Int32 count)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2838,7 +2019,7 @@ namespace Utility.IO
                     (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count)));
         }
 
-        public static UInt32 ReadBytes(this IBasicInputByteStream sourceStream, Byte[] buffer, UInt32 offset, UInt32 count)
+        public static UInt32 ReadBytes(this ISequentialInputByteStream sourceStream, Byte[] buffer, UInt32 offset, UInt32 count)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2854,7 +2035,7 @@ namespace Utility.IO
                     (_offset, _count) => sourceStream.Read(buffer.AsSpan(_offset, _count))).Maximum(0);
         }
 
-        public static Int32 ReadBytes(this IBasicInputByteStream sourceStream, Memory<Byte> buffer)
+        public static Int32 ReadBytes(this ISequentialInputByteStream sourceStream, Memory<Byte> buffer)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2862,7 +2043,7 @@ namespace Utility.IO
             return InternalReadBytes(buffer, _buffer => sourceStream.Read(_buffer.Span));
         }
 
-        public static Int32 ReadBytes(this IBasicInputByteStream sourceStream, Span<Byte> buffer)
+        public static Int32 ReadBytes(this ISequentialInputByteStream sourceStream, Span<Byte> buffer)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2926,7 +2107,7 @@ namespace Utility.IO
                     });
         }
 
-        public static IEnumerable<Byte> ReadByteSequence(this IBasicInputByteStream sourceStream, Int64 count)
+        public static IEnumerable<Byte> ReadByteSequence(this ISequentialInputByteStream sourceStream, Int64 count)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2948,7 +2129,7 @@ namespace Utility.IO
                     });
         }
 
-        public static IEnumerable<Byte> ReadByteSequence(this IBasicInputByteStream sourceStream, UInt64 count)
+        public static IEnumerable<Byte> ReadByteSequence(this ISequentialInputByteStream sourceStream, UInt64 count)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2980,7 +2161,7 @@ namespace Utility.IO
             return InternalReadAllBytes(sourceStream.Read);
         }
 
-        public static ReadOnlyMemory<Byte> ReadAllBytes(this IBasicInputByteStream sourceByteStream)
+        public static ReadOnlyMemory<Byte> ReadAllBytes(this ISequentialInputByteStream sourceByteStream)
         {
             if (sourceByteStream is null)
                 throw new ArgumentNullException(nameof(sourceByteStream));
@@ -3006,7 +2187,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int16 ReadInt16LE(this IBasicInputByteStream sourceStream)
+        public static Int16 ReadInt16LE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3036,7 +2217,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt16 ReadUInt16LE(this IBasicInputByteStream sourceStream)
+        public static UInt16 ReadUInt16LE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3066,7 +2247,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 ReadInt32LE(this IBasicInputByteStream sourceStream)
+        public static Int32 ReadInt32LE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3097,7 +2278,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt32 ReadUInt32LE(this IBasicInputByteStream sourceStream)
+        public static UInt32 ReadUInt32LE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3127,7 +2308,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int64 ReadInt64LE(this IBasicInputByteStream sourceStream)
+        public static Int64 ReadInt64LE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3157,7 +2338,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt64 ReadUInt64LE(this IBasicInputByteStream sourceStream)
+        public static UInt64 ReadUInt64LE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3187,7 +2368,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Single ReadSingleLE(this IBasicInputByteStream sourceStream)
+        public static Single ReadSingleLE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3217,7 +2398,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Double ReadDoubleLE(this IBasicInputByteStream sourceStream)
+        public static Double ReadDoubleLE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3247,7 +2428,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Decimal ReadDecimalLE(this IBasicInputByteStream sourceStream)
+        public static Decimal ReadDecimalLE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3277,7 +2458,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int16 ReadInt16BE(this IBasicInputByteStream sourceStream)
+        public static Int16 ReadInt16BE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3307,7 +2488,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt16 ReadUInt16BE(this IBasicInputByteStream sourceStream)
+        public static UInt16 ReadUInt16BE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3337,7 +2518,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 ReadInt32BE(this IBasicInputByteStream sourceStream)
+        public static Int32 ReadInt32BE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3367,7 +2548,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt32 ReadUInt32BE(this IBasicInputByteStream sourceStream)
+        public static UInt32 ReadUInt32BE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3397,7 +2578,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int64 ReadInt64BE(this IBasicInputByteStream sourceStream)
+        public static Int64 ReadInt64BE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3427,7 +2608,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt64 ReadUInt64BE(this IBasicInputByteStream sourceStream)
+        public static UInt64 ReadUInt64BE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3457,7 +2638,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Single ReadSingleBE(this IBasicInputByteStream sourceStream)
+        public static Single ReadSingleBE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3487,7 +2668,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Double ReadDoubleBE(this IBasicInputByteStream sourceStream)
+        public static Double ReadDoubleBE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3517,7 +2698,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Decimal ReadDecimalBE(this IBasicInputByteStream sourceStream)
+        public static Decimal ReadDecimalBE(this ISequentialInputByteStream sourceStream)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -3613,7 +2794,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 Write(this IBasicOutputByteStream stream, Byte[] buffer, Int32 offset)
+        public static Int32 Write(this ISequentialOutputByteStream stream, Byte[] buffer, Int32 offset)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -3626,7 +2807,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt32 Write(this IBasicOutputByteStream stream, Byte[] buffer, UInt32 offset)
+        public static UInt32 Write(this ISequentialOutputByteStream stream, Byte[] buffer, UInt32 offset)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -3639,7 +2820,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 Write(this IBasicOutputByteStream stream, Byte[] buffer, Int32 offset, Int32 count)
+        public static Int32 Write(this ISequentialOutputByteStream stream, Byte[] buffer, Int32 offset, Int32 count)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -3656,7 +2837,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static UInt32 Write(this IBasicOutputByteStream stream, Byte[] buffer, UInt32 offset, UInt32 count)
+        public static UInt32 Write(this ISequentialOutputByteStream stream, Byte[] buffer, UInt32 offset, UInt32 count)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -3669,7 +2850,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Int32 Write(this IBasicOutputByteStream stream, ReadOnlyMemory<Byte> buffer)
+        public static Int32 Write(this ISequentialOutputByteStream stream, ReadOnlyMemory<Byte> buffer)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -3689,7 +2870,7 @@ namespace Utility.IO
 #endif
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteByte(this IBasicOutputByteStream stream, Byte value)
+        public static void WriteByte(this ISequentialOutputByteStream stream, Byte value)
         {
             Span<Byte> buffer = stackalloc Byte[1];
             buffer[0] = value;
@@ -3824,7 +3005,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteBytes(this IBasicOutputByteStream destinationStream, Byte[] buffer)
+        public static void WriteBytes(this ISequentialOutputByteStream destinationStream, Byte[] buffer)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3835,7 +3016,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteBytes(this IBasicOutputByteStream destinationStream, Byte[] buffer, Int32 offset)
+        public static void WriteBytes(this ISequentialOutputByteStream destinationStream, Byte[] buffer, Int32 offset)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3848,7 +3029,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteBytes(this IBasicOutputByteStream destinationStream, Byte[] buffer, UInt32 offset)
+        public static void WriteBytes(this ISequentialOutputByteStream destinationStream, Byte[] buffer, UInt32 offset)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3865,7 +3046,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteBytes(this IBasicOutputByteStream destinationStream, Byte[] buffer, Range range)
+        public static void WriteBytes(this ISequentialOutputByteStream destinationStream, Byte[] buffer, Range range)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3877,7 +3058,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteBytes(this IBasicOutputByteStream destinationStream, Byte[] buffer, Int32 offset, Int32 count)
+        public static void WriteBytes(this ISequentialOutputByteStream destinationStream, Byte[] buffer, Int32 offset, Int32 count)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3894,7 +3075,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteBytes(this IBasicOutputByteStream destinationStream, Byte[] buffer, UInt32 offset, UInt32 count)
+        public static void WriteBytes(this ISequentialOutputByteStream destinationStream, Byte[] buffer, UInt32 offset, UInt32 count)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3913,7 +3094,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteBytes(this IBasicOutputByteStream destinationStream, ReadOnlyMemory<Byte> buffer)
+        public static void WriteBytes(this ISequentialOutputByteStream destinationStream, ReadOnlyMemory<Byte> buffer)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3929,7 +3110,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteBytes(this IBasicOutputByteStream destinationStream, ReadOnlySpan<Byte> buffer)
+        public static void WriteBytes(this ISequentialOutputByteStream destinationStream, ReadOnlySpan<Byte> buffer)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3944,7 +3125,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteBytes(this IBasicOutputByteStream destinationStream, IEnumerable<ReadOnlyMemory<Byte>> buffers)
+        public static void WriteBytes(this ISequentialOutputByteStream destinationStream, IEnumerable<ReadOnlyMemory<Byte>> buffers)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3988,7 +3169,7 @@ namespace Utility.IO
             }
         }
 
-        public static void WriteByteSequence(this IBasicOutputByteStream destinationStream, IEnumerable<Byte> sequence)
+        public static void WriteByteSequence(this ISequentialOutputByteStream destinationStream, IEnumerable<Byte> sequence)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4033,7 +3214,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteInt16LE(this IBasicOutputByteStream destinationStream, Int16 value)
+        public static void WriteInt16LE(this ISequentialOutputByteStream destinationStream, Int16 value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4059,7 +3240,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteUInt16LE(this IBasicOutputByteStream destinationStream, UInt16 value)
+        public static void WriteUInt16LE(this ISequentialOutputByteStream destinationStream, UInt16 value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4085,7 +3266,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteInt32LE(this IBasicOutputByteStream destinationStream, Int32 value)
+        public static void WriteInt32LE(this ISequentialOutputByteStream destinationStream, Int32 value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4111,7 +3292,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteUInt32LE(this IBasicOutputByteStream destinationStream, UInt32 value)
+        public static void WriteUInt32LE(this ISequentialOutputByteStream destinationStream, UInt32 value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4137,7 +3318,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteInt64LE(this IBasicOutputByteStream destinationStream, Int64 value)
+        public static void WriteInt64LE(this ISequentialOutputByteStream destinationStream, Int64 value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4163,7 +3344,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteUInt64LE(this IBasicOutputByteStream destinationStream, UInt64 value)
+        public static void WriteUInt64LE(this ISequentialOutputByteStream destinationStream, UInt64 value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4189,7 +3370,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteSingleLE(this IBasicOutputByteStream destinationStream, Single value)
+        public static void WriteSingleLE(this ISequentialOutputByteStream destinationStream, Single value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4215,7 +3396,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteDoubleLE(this IBasicOutputByteStream destinationStream, Double value)
+        public static void WriteDoubleLE(this ISequentialOutputByteStream destinationStream, Double value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4241,7 +3422,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteDecimalLE(this IBasicOutputByteStream destinationStream, Decimal value)
+        public static void WriteDecimalLE(this ISequentialOutputByteStream destinationStream, Decimal value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4267,7 +3448,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteInt16BE(this IBasicOutputByteStream destinationStream, Int16 value)
+        public static void WriteInt16BE(this ISequentialOutputByteStream destinationStream, Int16 value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4293,7 +3474,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteUInt16BE(this IBasicOutputByteStream destinationStream, UInt16 value)
+        public static void WriteUInt16BE(this ISequentialOutputByteStream destinationStream, UInt16 value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4319,7 +3500,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteInt32BE(this IBasicOutputByteStream destinationStream, Int32 value)
+        public static void WriteInt32BE(this ISequentialOutputByteStream destinationStream, Int32 value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4345,7 +3526,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteUInt32BE(this IBasicOutputByteStream destinationStream, UInt32 value)
+        public static void WriteUInt32BE(this ISequentialOutputByteStream destinationStream, UInt32 value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4371,7 +3552,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteInt64BE(this IBasicOutputByteStream destinationStream, Int64 value)
+        public static void WriteInt64BE(this ISequentialOutputByteStream destinationStream, Int64 value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4397,7 +3578,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteUInt64BE(this IBasicOutputByteStream destinationStream, UInt64 value)
+        public static void WriteUInt64BE(this ISequentialOutputByteStream destinationStream, UInt64 value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4423,7 +3604,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteSingleBE(this IBasicOutputByteStream destinationStream, Single value)
+        public static void WriteSingleBE(this ISequentialOutputByteStream destinationStream, Single value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4449,7 +3630,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteDoubleBE(this IBasicOutputByteStream destinationStream, Double value)
+        public static void WriteDoubleBE(this ISequentialOutputByteStream destinationStream, Double value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4475,7 +3656,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteDecimalBE(this IBasicOutputByteStream destinationStream, Decimal value)
+        public static void WriteDecimalBE(this ISequentialOutputByteStream destinationStream, Decimal value)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -4557,7 +3738,7 @@ namespace Utility.IO
             }
         }
 
-        public static (UInt32 Crc, UInt64 Length) CalculateCrc24(this IBasicInputByteStream inputStream, Boolean leaveOpen = false)
+        public static (UInt32 Crc, UInt64 Length) CalculateCrc24(this ISequentialInputByteStream inputStream, Boolean leaveOpen = false)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -4575,7 +3756,7 @@ namespace Utility.IO
             }
         }
 
-        public static (UInt32 Crc, UInt64 Length) CalculateCrc24(this IBasicInputByteStream inputStream, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static (UInt32 Crc, UInt64 Length) CalculateCrc24(this ISequentialInputByteStream inputStream, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -4593,7 +3774,7 @@ namespace Utility.IO
             }
         }
 
-        public static (UInt32 Crc, UInt64 Length) CalculateCrc24(this IBasicInputByteStream inputStream, Int32 bufferSize, Boolean leaveOpen = false)
+        public static (UInt32 Crc, UInt64 Length) CalculateCrc24(this ISequentialInputByteStream inputStream, Int32 bufferSize, Boolean leaveOpen = false)
         {
             try
             {
@@ -4609,7 +3790,7 @@ namespace Utility.IO
             }
         }
 
-        public static (UInt32 Crc, UInt64 Length) CalculateCrc24(this IBasicInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static (UInt32 Crc, UInt64 Length) CalculateCrc24(this ISequentialInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             try
             {
@@ -4697,7 +3878,7 @@ namespace Utility.IO
             }
         }
 
-        public static (UInt32 Crc, UInt64 Length) CalculateCrc32(this IBasicInputByteStream inputStream, Boolean leaveOpen = false)
+        public static (UInt32 Crc, UInt64 Length) CalculateCrc32(this ISequentialInputByteStream inputStream, Boolean leaveOpen = false)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -4715,7 +3896,7 @@ namespace Utility.IO
             }
         }
 
-        public static (UInt32 Crc, UInt64 Length) CalculateCrc32(this IBasicInputByteStream inputStream, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static (UInt32 Crc, UInt64 Length) CalculateCrc32(this ISequentialInputByteStream inputStream, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -4733,7 +3914,7 @@ namespace Utility.IO
             }
         }
 
-        public static (UInt32 Crc, UInt64 Length) CalculateCrc32(this IBasicInputByteStream inputStream, Int32 bufferSize, Boolean leaveOpen = false)
+        public static (UInt32 Crc, UInt64 Length) CalculateCrc32(this ISequentialInputByteStream inputStream, Int32 bufferSize, Boolean leaveOpen = false)
         {
             try
             {
@@ -4749,7 +3930,7 @@ namespace Utility.IO
             }
         }
 
-        public static (UInt32 Crc, UInt64 Length) CalculateCrc32(this IBasicInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static (UInt32 Crc, UInt64 Length) CalculateCrc32(this ISequentialInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             try
             {
@@ -4768,26 +3949,14 @@ namespace Utility.IO
         #endregion
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static IEnumerable<Byte> InternalGetByteSequence<POSITION_T, UNSIGNED_OFFSET_T>(IInputByteStream<POSITION_T> baseStream, POSITION_T? offset, UInt64? count, IProgress<UInt64>? progress, Boolean leaveOpen)
+        private static IEnumerable<Byte> InternalGetByteSequence<POSITION_T>(ISequentialInputByteStream baseStream, UInt64? count, IProgress<UInt64>? progress, Boolean leaveOpen)
             where POSITION_T : struct
-            where UNSIGNED_OFFSET_T : struct
         {
             const Int32 BUFFER_SIZE = 80 * 1024;
 
             var processedCounter = new ProgressCounterUInt64(progress);
             try
             {
-                if (baseStream is IRandomInputByteStream<POSITION_T, UNSIGNED_OFFSET_T> randomAccessStream)
-                {
-                    if (offset is not null)
-                        randomAccessStream.Seek(offset.Value);
-                }
-                else
-                {
-                    if (offset is not null)
-                        throw new ArgumentException($"{nameof(offset)} must be null if {nameof(baseStream)} is sequential.", nameof(offset));
-                }
-
                 processedCounter.Report();
                 var buffer = new Byte[BUFFER_SIZE];
                 while (true)
@@ -4801,8 +3970,10 @@ namespace Utility.IO
                     if (length <= 0)
                         break;
                     for (var index = 0; index < length; ++index)
+                    {
                         yield return buffer[index];
-                    processedCounter.AddValue((UInt32)length);
+                        processedCounter.Increment();
+                    }
                 }
             }
             finally
@@ -4814,7 +3985,96 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Boolean InternalStreamBytesEqual(this IBasicInputByteStream stream1, IBasicInputByteStream stream2, IProgress<UInt64>? progress)
+        private static IEnumerable<Byte> InternalGetByteSequence<POSITION_T>(ISequentialInputByteStream baseStream, POSITION_T offset, UInt64? count, IProgress<UInt64>? progress, Boolean leaveOpen)
+            where POSITION_T : struct
+        {
+            const Int32 BUFFER_SIZE = 80 * 1024;
+
+            var processedCounter = new ProgressCounterUInt64(progress);
+            try
+            {
+                if (baseStream is not IRandomInputByteStream<POSITION_T> randomAccessStream)
+                    throw new ArgumentException($"If stream {nameof(baseStream)} is sequential, parameter {nameof(offset)} must not be specified.", nameof(offset));
+
+                randomAccessStream.Seek(offset);
+                processedCounter.Report();
+                var buffer = new Byte[BUFFER_SIZE];
+                while (true)
+                {
+                    var readCount = buffer.Length;
+                    if (count is not null)
+                        readCount = (Int32)((UInt64)readCount).Minimum(count.Value - processedCounter.Value);
+                    if (readCount <= 0)
+                        break;
+                    var length = baseStream.Read(buffer, 0, readCount);
+                    if (length <= 0)
+                        break;
+                    for (var index = 0; index < length; ++index)
+                    {
+                        yield return buffer[index];
+                        processedCounter.Increment();
+                    }
+                }
+            }
+            finally
+            {
+                if (!leaveOpen)
+                    baseStream.Dispose();
+                processedCounter.Report();
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static IEnumerable<Byte> InternalGetReverseByteSequence<POSITION_T>(this IRandomInputByteStream<POSITION_T> baseStream, POSITION_T offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+            where POSITION_T : struct, IComparable<POSITION_T>, IAdditionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, POSITION_T, UInt64>
+        {
+            const Int32 BUFFER_SIZE = 80 * 1024;
+
+            var progressCounter = new ProgressCounterUInt64(progress);
+            try
+            {
+                if (baseStream is null)
+                    throw new ArgumentNullException(nameof(baseStream));
+
+                progressCounter.Report();
+                var buffer = new Byte[BUFFER_SIZE];
+                var pos = checked(offset + count);
+                while (pos.CompareTo(offset + BUFFER_SIZE) > 0)
+                {
+                    pos -= BUFFER_SIZE;
+                    baseStream.Seek(pos);
+                    var length = baseStream.ReadBytes(buffer);
+                    if (length != buffer.Length)
+                        throw new InternalLogicalErrorException();
+                    for (var index = BUFFER_SIZE - 1; index >= 0; --index)
+                    {
+                        yield return buffer[index];
+                        progressCounter.Increment();
+                    }
+                }
+
+                if (pos.CompareTo(offset) > 0)
+                {
+                    var remain = checked((Int32)(pos - offset));
+                    var length = baseStream.ReadBytes(buffer.AsMemory(0, remain));
+                    if (length != remain)
+                        throw new InternalLogicalErrorException();
+                    for (var index = remain - 1; index >= 0; --index)
+                    {
+                        yield return buffer[index];
+                        progressCounter.Increment();
+                    }
+                }
+            }
+            finally
+            {
+                if (!leaveOpen)
+                    baseStream.Dispose();
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Boolean InternalStreamBytesEqual(this ISequentialInputByteStream stream1, ISequentialInputByteStream stream2, IProgress<UInt64>? progress)
         {
             const Int32 bufferSize = 81920;
 
@@ -4863,7 +4123,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void InternalCopyTo(this IBasicInputByteStream source, IBasicOutputByteStream destination, Int32 bufferSize, IProgress<UInt64>? progress)
+        private static void InternalCopyTo(this ISequentialInputByteStream source, ISequentialOutputByteStream destination, Int32 bufferSize, IProgress<UInt64>? progress)
         {
             var processedCounter = new ProgressCounterUInt64(progress);
             processedCounter.Report();
@@ -4999,15 +4259,15 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static (UInt32 Crc, UInt64 Length) InternalCalculateCrc24(this IBasicInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress)
+        private static (UInt32 Crc, UInt64 Length) InternalCalculateCrc24(this ISequentialInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress)
             => InternalCalculateCrc(inputStream, bufferSize, progress, Crc24.CreateCalculationState());
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static (UInt32 Crc, UInt64 Length) InternalCalculateCrc32(this IBasicInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress)
+        private static (UInt32 Crc, UInt64 Length) InternalCalculateCrc32(this ISequentialInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress)
             => InternalCalculateCrc(inputStream, bufferSize, progress, Crc32.CreateCalculationState());
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static (UInt32 Crc, UInt64 Length) InternalCalculateCrc(IBasicInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, ICrcCalculationState<UInt32, UInt64> session)
+        private static (UInt32 Crc, UInt64 Length) InternalCalculateCrc(ISequentialInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, ICrcCalculationState<UInt32> session)
         {
             var processedCounter = new ProgressCounterUInt64(progress);
             processedCounter.Report();
@@ -5023,7 +4283,7 @@ namespace Utility.IO
                     processedCounter.AddValue((UInt32)length);
                 }
 
-                return session.GetResult();
+                return session.GetResultValue();
             }
             finally
             {

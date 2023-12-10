@@ -6,15 +6,14 @@ using Utility.IO;
 namespace ZipUtility
 {
     internal class SingleVolumeZipInputStream
-           : ZipInputStream
+        : ZipInputStream
     {
         private readonly UInt64 _totalDiskSize;
         private readonly FilePath _zipArchiveFile;
-        private readonly IRandomInputByteStream<UInt64, UInt64> _baseStream;
+        private readonly IRandomInputByteStream<UInt64> _baseStream;
         private Boolean _isDisposed;
 
-        private SingleVolumeZipInputStream(UInt64 totalDiskSize, FilePath zipArchiveFile, IRandomInputByteStream<UInt64, UInt64> baseStream)
-            : base(totalDiskSize)
+        private SingleVolumeZipInputStream(UInt64 totalDiskSize, FilePath zipArchiveFile, IRandomInputByteStream<UInt64> baseStream)
         {
             _totalDiskSize = totalDiskSize;
             _zipArchiveFile = zipArchiveFile;
@@ -30,7 +29,7 @@ namespace ZipUtility
             var stream = zipArchiveFile.OpenRead();
             try
             {
-                if (stream is not IRandomInputByteStream<UInt64, UInt64> randomAccessStream)
+                if (stream is not IRandomInputByteStream<UInt64> randomAccessStream)
                     throw new NotSupportedException();
 
                 var zipStream =
@@ -48,22 +47,26 @@ namespace ZipUtility
             }
         }
 
-        protected override ZipStreamPosition Position => new(0, _baseStream.Position, this);
+        protected override ZipStreamPosition EndOfThisStreamCore => new(0, _totalDiskSize, this);
+        protected override UInt64 LengthCore => _totalDiskSize;
+        protected override ZipStreamPosition PositionCore => new(0, _baseStream.Position, this);
 
-        protected override void Seek(UInt32 diskNumber, UInt64 offsetOnTheDisk)
+        protected override void SeekCore(UInt32 diskNumber, UInt64 offsetOnTheDisk)
         {
             if (diskNumber != 0)
                 throw new InternalLogicalErrorException();
-            if (offsetOnTheDisk > Length || offsetOnTheDisk > Int64.MaxValue)
+            if (offsetOnTheDisk > LengthCore || offsetOnTheDisk > Int64.MaxValue)
                 throw new ArgumentOutOfRangeException($"An attempt was made to access position outside the bounds of a single-volume ZIP file.: {nameof(offsetOnTheDisk)}=0x{offsetOnTheDisk:x16}", nameof(offsetOnTheDisk));
 
             _baseStream.Seek(offsetOnTheDisk);
         }
 
-        protected override Boolean ValidatePosition(UInt32 diskNumber, UInt64 offsetOnTheDisk)
+        protected override Boolean ValidatePositionCore(UInt32 diskNumber, UInt64 offsetOnTheDisk)
             => diskNumber == 0 && offsetOnTheDisk <= _totalDiskSize;
 
-        protected override ZipStreamPosition Add(UInt32 diskNumber, UInt64 offsetOnTheDisk, UInt64 offset)
+        protected override IRandomInputByteStream<UInt64>? GetCurrentStreamCore() => _baseStream;
+
+        protected override ZipStreamPosition AddCore(UInt32 diskNumber, UInt64 offsetOnTheDisk, UInt64 offset)
         {
             if (diskNumber != 0)
                 throw new InternalLogicalErrorException();
@@ -75,7 +78,7 @@ namespace ZipUtility
             return new ZipStreamPosition(0, newOffset, this);
         }
 
-        protected override ZipStreamPosition Subtract(UInt32 diskNumber, UInt64 offsetOnTheDisk, UInt64 offset)
+        protected override ZipStreamPosition SubtractCore(UInt32 diskNumber, UInt64 offsetOnTheDisk, UInt64 offset)
         {
             if (diskNumber != 0)
                 throw new InternalLogicalErrorException();
@@ -83,7 +86,7 @@ namespace ZipUtility
             return new ZipStreamPosition(0, checked(offsetOnTheDisk - offset), this);
         }
 
-        protected override UInt64 Subtract(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2)
+        protected override UInt64 SubtractCore(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2)
         {
             if (diskNumber1 != 0)
                 throw new InternalLogicalErrorException();
@@ -93,7 +96,33 @@ namespace ZipUtility
             return checked(offsetOnTheDisk1 - offsetOnTheDisk2);
         }
 
-        protected override IRandomInputByteStream<UInt64, UInt64>? GetCurrentStream() => _baseStream;
+        protected override Int32 CompareCore(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2)
+        {
+            if (diskNumber1 != 0)
+                throw new InternalLogicalErrorException();
+            if (diskNumber2 != 0)
+                throw new InternalLogicalErrorException();
+
+            return offsetOnTheDisk1.CompareTo(offsetOnTheDisk2);
+        }
+
+        protected override Boolean EqualCore(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2)
+        {
+            if (diskNumber1 != 0)
+                throw new InternalLogicalErrorException();
+            if (diskNumber2 != 0)
+                throw new InternalLogicalErrorException();
+
+            return offsetOnTheDisk1 == offsetOnTheDisk2;
+        }
+
+        protected override Int32 GetHashCodeCore(UInt32 diskNumber, UInt64 offsetOnTheDisk)
+        {
+            if (diskNumber != 0)
+                throw new InternalLogicalErrorException();
+
+            return offsetOnTheDisk.GetHashCode();
+        }
 
         protected override void Dispose(Boolean disposing)
         {
@@ -107,7 +136,7 @@ namespace ZipUtility
             base.Dispose(disposing);
         }
 
-        protected override async ValueTask DisposeAsyncCore()
+        protected override async Task DisposeAsyncCore()
         {
             if (!_isDisposed)
             {

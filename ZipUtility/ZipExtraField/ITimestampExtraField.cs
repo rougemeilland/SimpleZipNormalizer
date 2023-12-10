@@ -5,7 +5,7 @@ namespace ZipUtility.ZipExtraField
     /// <summary>
     /// 一般的な日時 (最終更新日時/最終アクセス日時/作成日時) を取得/設定するインターフェースです。
     /// </summary>
-    interface ITimestampExtraField
+    internal interface ITimestampExtraField
         : IExtraField
     {
         /// <summary>

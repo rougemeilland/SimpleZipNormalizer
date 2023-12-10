@@ -6,20 +6,18 @@ using System.Threading.Tasks;
 
 namespace Utility.IO
 {
-    public abstract class AsyncReverseByteSequenceByByteStreamEnumerable<POSITION_T, UNSIGNED_OFFSET_T>
+    public abstract class AsyncReverseByteSequenceByByteStreamEnumerable<POSITION_T>
         : IAsyncEnumerable<Byte>
-        where POSITION_T : IComparable<POSITION_T>, IAdditionOperators<POSITION_T, UNSIGNED_OFFSET_T, POSITION_T>, ISubtractionOperators<POSITION_T, UNSIGNED_OFFSET_T, POSITION_T>, ISubtractionOperators<POSITION_T, POSITION_T, UNSIGNED_OFFSET_T>
-        where UNSIGNED_OFFSET_T : IUnsignedNumber<UNSIGNED_OFFSET_T>
+        where POSITION_T : IComparable<POSITION_T>, IAdditionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, UInt64, POSITION_T>, ISubtractionOperators<POSITION_T, POSITION_T, UInt64>
     {
         private class Enumerator
             : IAsyncEnumerator<Byte>
         {
             private const Int32 _bufferSize = 64 * 1024;
 
-            private readonly AsyncReverseByteSequenceByByteStreamEnumerable<POSITION_T, UNSIGNED_OFFSET_T> _parent;
-            private readonly IRandomInputByteStream<POSITION_T, UNSIGNED_OFFSET_T> _inputStream;
+            private readonly IRandomInputByteStream<POSITION_T> _inputStream;
             private readonly POSITION_T _offset;
-            private readonly UNSIGNED_OFFSET_T _count;
+            private readonly UInt64 _count;
             private readonly Boolean _leaveOpen;
             private readonly CancellationToken _cancellationToken;
             private readonly Byte[] _buffer;
@@ -30,9 +28,8 @@ namespace Utility.IO
             private Int32 _bufferIndex;
             private POSITION_T _fileIndex;
 
-            public Enumerator(AsyncReverseByteSequenceByByteStreamEnumerable<POSITION_T, UNSIGNED_OFFSET_T> parent, IRandomInputByteStream<POSITION_T, UNSIGNED_OFFSET_T> randomAccessStream, POSITION_T offset, UNSIGNED_OFFSET_T count, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken)
+            public Enumerator(IRandomInputByteStream<POSITION_T> randomAccessStream, POSITION_T offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken)
             {
-                _parent = parent;
                 _inputStream = randomAccessStream;
                 _offset = offset;
                 _count = count;
@@ -73,10 +70,10 @@ namespace Utility.IO
                 if (_bufferIndex <= 0)
                 {
                     var newFileIndex =
-                        _fileIndex.CompareTo(checked(_offset + _parent.FromInt32ToOffset(_bufferSize))) < 0
+                        _fileIndex.CompareTo(checked(_offset + (UInt64)_bufferSize)) < 0
                         ? _offset
-                        : checked(_fileIndex - _parent.FromInt32ToOffset(_bufferSize));
-                    _bufferCount = _parent.FromOffsetToInt32(checked(_fileIndex - newFileIndex));
+                        : checked(_fileIndex - (UInt64)_bufferSize);
+                    _bufferCount = checked((Int32)(_fileIndex - newFileIndex));
                     if (_bufferCount <= 0)
                     {
                         _processedCounter.Report();
@@ -117,13 +114,13 @@ namespace Utility.IO
             }
         }
 
-        private readonly IRandomInputByteStream<POSITION_T, UNSIGNED_OFFSET_T> _baseStream;
+        private readonly IRandomInputByteStream<POSITION_T> _baseStream;
         private readonly POSITION_T _offset;
-        private readonly UNSIGNED_OFFSET_T _count;
+        private readonly UInt64 _count;
         private readonly Boolean _leaveOpen;
         private readonly IProgress<UInt64>? _progress;
 
-        public AsyncReverseByteSequenceByByteStreamEnumerable(IRandomInputByteStream<POSITION_T, UNSIGNED_OFFSET_T> baseStream, POSITION_T offset, UNSIGNED_OFFSET_T count, IProgress<UInt64>? progress, Boolean leaveOpen)
+        public AsyncReverseByteSequenceByByteStreamEnumerable(IRandomInputByteStream<POSITION_T> baseStream, POSITION_T offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen)
         {
             try
             {
@@ -148,9 +145,6 @@ namespace Utility.IO
         }
 
         public IAsyncEnumerator<Byte> GetAsyncEnumerator(CancellationToken cancellationToken = default)
-            => new Enumerator(this, _baseStream, _offset, _count, _progress, _leaveOpen, cancellationToken);
-
-        protected abstract UNSIGNED_OFFSET_T FromInt32ToOffset(Int32 value);
-        protected abstract Int32 FromOffsetToInt32(UNSIGNED_OFFSET_T value);
+            => new Enumerator(_baseStream, _offset, _count, _progress, _leaveOpen, cancellationToken);
     }
 }

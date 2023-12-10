@@ -159,7 +159,7 @@ namespace ZipUtility
         public Boolean IsSupportedGetEncodingStream { get; }
         public Boolean IsSupportedEncode { get; }
 
-        public IInputByteStream<UInt64> GetDecodingStream(IBasicInputByteStream baseStream, UInt64 unpackedSize, UInt64 packedSize, IProgress<(UInt64 unpackedCount, UInt64 packedCount)>? progress = null)
+        public ISequentialInputByteStream GetDecodingStream(ISequentialInputByteStream baseStream, UInt64 unpackedSize, UInt64 packedSize, IProgress<(UInt64 unpackedCount, UInt64 packedCount)>? progress = null)
         {
             if (baseStream is null)
                 throw new ArgumentNullException(nameof(baseStream));
@@ -167,12 +167,12 @@ namespace ZipUtility
             return InternalGetDecodingStream(baseStream, unpackedSize, packedSize, progress);
         }
 
-        public IOutputByteStream<UInt64> GetEncodingStream(IBasicOutputByteStream baseStream, UInt64? size, IProgress<(UInt64 unpackedCount, UInt64 packedCount)>? progress = null)
+        public ISequentialOutputByteStream GetEncodingStream(ISequentialOutputByteStream baseStream, IProgress<(UInt64 unpackedCount, UInt64 packedCount)>? progress = null)
         {
             if (baseStream is null)
                 throw new ArgumentNullException(nameof(baseStream));
 
-            return InternalGetEncodingStream(baseStream, size, progress);
+            return InternalGetEncodingStream(baseStream, progress);
         }
 
         internal static ZipEntryCompressionMethod GetCompressionMethod(ZipEntryCompressionMethodId compressionMethodId, ZipEntryGeneralPurposeBitFlag flag)
@@ -203,19 +203,21 @@ namespace ZipUtility
 
                 var progressCounter = new ProgressCounterUint64Uint64(progress);
                 progressCounter.Report();
-                var crc =
+                var (actualCrc, actualSize) =
                     hierarchicalDecoder
                     .GetDecodingStream(
-                        zipInputStream.AsPartial(offset, packedSize)
-                            .WithProgress(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2, 0, packedSize))
+                        zipInputStream.WithPartial(offset, packedSize, true)
+                            .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2))
                             .WithCache(),
                         _decoderOption,
                         size,
                         packedSize,
-                        SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue1, 0, size))
-                    .CalculateCrc32().Crc;
+                        SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue1))
+                    .CalculateCrc32();
+                if (actualSize != size)
+                    throw new BadZipFileFormatException($"The unpacked size of the entry data differs between the value in the header and the actual value.: size=0x{size:x16}, actualSize=0x{actualSize:x16}");
                 progressCounter.Report();
-                return crc;
+                return actualCrc;
             }
             else if (_decoderPlugin is ICompressionDecoder decoder)
             {
@@ -223,20 +225,22 @@ namespace ZipUtility
                     throw new InternalLogicalErrorException();
 
                 var progressCounter = new ProgressCounterUint64Uint64(progress);
-                var crcHolder = new ValueHolder<UInt32>();
+                var crcHolder = new ValueHolder<(UInt32 Crc, UInt64 Length)>();
                 using var outputStream = new NullOutputStream();
                 decoder.Decode(
-                    zipInputStream.AsPartial(offset, packedSize)
-                        .WithProgress(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2, 0, packedSize))
+                    zipInputStream.WithPartial(offset, packedSize, true)
+                        .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2))
                         .WithCache(),
                     outputStream
                         .WithCrc32Calculation(crcHolder),
                     _decoderOption,
                     size,
                     packedSize,
-                    SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue1, 0, size));
+                    SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue1));
+                if (crcHolder.Value.Length != size)
+                    throw new BadZipFileFormatException($"The unpacked size of the entry data differs between the value in the header and the actual value.: size=0x{size:x16}, actualSize=0x{crcHolder.Value.Length:x16}");
                 progressCounter.Report();
-                return crcHolder.Value;
+                return crcHolder.Value.Crc;
             }
             else
             {
@@ -261,7 +265,6 @@ namespace ZipUtility
                     enoderPlugin is null ? null : optionGetter(enoderPlugin));
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1859:可能な場合は具象型を使用してパフォーマンスを向上させる", Justification = "<保留中>")]
         private static IDictionary<(CompressionMethodId CompressionMethodId, CoderType CoderType), ICompressionCoder> EnumeratePlugin()
         {
             var interfaceType = typeof(ICompressionCoder);
@@ -357,8 +360,8 @@ namespace ZipUtility
                 _ => ZipEntryCompressionMethodId.Unknown,
             };
 
-        private IInputByteStream<UInt64> InternalGetDecodingStream(
-            IBasicInputByteStream baseStream,
+        private ISequentialInputByteStream InternalGetDecodingStream(
+            ISequentialInputByteStream baseStream,
             UInt64 unpackedSize,
             UInt64 packedSize,
             IProgress<(UInt64 unpackedCount, UInt64 packedCount)>? progress)
@@ -375,7 +378,7 @@ namespace ZipUtility
                     return
                         hierarchicalDecoder.GetDecodingStream(
                             baseStream
-                                .WithProgress(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2, 0, packedSize))
+                                .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2, 0, packedSize))
                                 .WithCache(),
                             _decoderOption,
                             unpackedSize,
@@ -400,7 +403,7 @@ namespace ZipUtility
                             using var queueWriter = queue.GetWriter();
                             decoder.Decode(
                                 baseStream
-                                    .WithProgress(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2, 0, packedSize))
+                                    .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2, 0, packedSize))
                                     .WithCache(),
                                 queueWriter
                                     .WithCache(),
@@ -423,9 +426,8 @@ namespace ZipUtility
             }
         }
 
-        private IOutputByteStream<UInt64> InternalGetEncodingStream(
-            IBasicOutputByteStream baseStream,
-            UInt64? unpackedSize,
+        private ISequentialOutputByteStream InternalGetEncodingStream(
+            ISequentialOutputByteStream baseStream,
             IProgress<(UInt64 unpackedCount, UInt64 packedCount)>? progress)
         {
             switch (_encoderPlugin)
@@ -440,11 +442,10 @@ namespace ZipUtility
                     return
                         hierarchicalEncoder.GetEncodingStream(
                             baseStream
-                                .WithProgress(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2))
+                                .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2))
                                 .WithCache()
                                 .WithEndAction(_ => progressCounter.Report()),
                             _encoderOption,
-                            unpackedSize,
                             SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue1))
                         .WithCache();
                 }
@@ -465,11 +466,10 @@ namespace ZipUtility
                             encoder.Encode(
                                 queueReader,
                                 baseStream
-                                    .WithProgress(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2))
+                                    .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2))
                                     .WithCache()
                                     .WithEndAction(_ => progressCounter.Report()),
                                 encoderOption,
-                                unpackedSize,
                                 SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue1));
                         }
                         catch (Exception)

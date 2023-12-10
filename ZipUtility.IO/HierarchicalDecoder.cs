@@ -5,20 +5,22 @@ using System.Threading;
 using System.Threading.Tasks;
 using Utility;
 using Utility.IO;
+using Utility.IO.StreamFilters;
 
 namespace ZipUtility.IO
 {
     public abstract class HierarchicalDecoder
-        : IInputByteStream<UInt64>
+        : SequentialInputByteStreamFilter
     {
-        private readonly IBasicInputByteStream _baseStream;
+        private readonly ISequentialInputByteStream _baseStream;
         private readonly UInt64 _size;
         private readonly ProgressCounterUInt64 _unpackedSizeCounter;
 
         private Boolean _isDisposed;
         private Boolean _isEndOfStream;
 
-        public HierarchicalDecoder(IBasicInputByteStream baseStream, UInt64 size, IProgress<UInt64>? unpackedCountProgress)
+        public HierarchicalDecoder(ISequentialInputByteStream baseStream, UInt64 size, IProgress<UInt64>? unpackedCountProgress, Boolean leaveOpen)
+            : base(baseStream, leaveOpen)
         {
             if (baseStream is null)
                 throw new ArgumentNullException(nameof(baseStream));
@@ -29,94 +31,68 @@ namespace ZipUtility.IO
             _unpackedSizeCounter = new ProgressCounterUInt64(unpackedCountProgress);
         }
 
-        public UInt64 Position
+        protected override Int32 ReadCore(Span<Byte> buffer)
         {
-            get
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                return _unpackedSizeCounter.Value;
-            }
-        }
-
-        public Int32 Read(Span<Byte> buffer)
-        {
-            if (_isDisposed)
-                throw new ObjectDisposedException(GetType().FullName);
-
-            if (_unpackedSizeCounter.Value <= 0)
-                _unpackedSizeCounter.Report();
+            _unpackedSizeCounter.ReportIfInitial();
             if (_isEndOfStream || buffer.Length <= 0)
                 return 0;
             var length = ReadFromSourceStream(_baseStream, buffer);
-            UpdatePosition(length);
+            ProgressCounter(length);
             return length;
         }
-        public async Task<Int32> ReadAsync(Memory<Byte> buffer, CancellationToken cancellationToken = default)
-        {
-            if (_isDisposed)
-                throw new ObjectDisposedException(GetType().FullName);
 
-            if (_unpackedSizeCounter.Value <= 0)
-                _unpackedSizeCounter.Report();
+        protected override async Task<Int32> ReadAsyncCore(Memory<Byte> buffer, CancellationToken cancellationToken)
+        {
+            _unpackedSizeCounter.ReportIfInitial();
             if (_isEndOfStream || buffer.Length <= 0)
                 return 0;
             var length = await ReadFromSourceStreamAsync(_baseStream, buffer, cancellationToken).ConfigureAwait(false);
-            UpdatePosition(length);
+            ProgressCounter(length);
             return length;
         }
 
-        public void Dispose()
-        {
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await DisposeAsyncCore().ConfigureAwait(false);
-            Dispose(disposing: false);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual Int32 ReadFromSourceStream(IBasicInputByteStream sourceStream, Span<Byte> buffer)
+        protected virtual Int32 ReadFromSourceStream(ISequentialInputByteStream sourceStream, Span<Byte> buffer)
             => sourceStream.Read(buffer);
 
-        protected virtual Task<Int32> ReadFromSourceStreamAsync(IBasicInputByteStream sourceStream, Memory<Byte> buffer, CancellationToken cancellationToken = default)
+        protected virtual Task<Int32> ReadFromSourceStreamAsync(ISequentialInputByteStream sourceStream, Memory<Byte> buffer, CancellationToken cancellationToken)
             => sourceStream.ReadAsync(buffer, cancellationToken);
 
         protected virtual void OnEndOfStream()
         {
         }
 
-        protected virtual void Dispose(Boolean disposing)
+        protected override void Dispose(Boolean disposing)
         {
             if (!_isDisposed)
             {
                 if (disposing)
-                    _baseStream.Dispose();
+                {
+                }
+
                 _unpackedSizeCounter.Report();
                 _isDisposed = true;
             }
+
+            base.Dispose(disposing);
         }
 
-        protected virtual async ValueTask DisposeAsyncCore()
+        protected override Task DisposeAsyncCore()
         {
             if (!_isDisposed)
             {
-                await _baseStream.DisposeAsync().ConfigureAwait(false);
                 _unpackedSizeCounter.Report();
                 _isDisposed = true;
             }
+
+            return Task.CompletedTask;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void UpdatePosition(Int32 length)
+        private void ProgressCounter(Int32 length)
         {
             if (length > 0)
             {
-                _unpackedSizeCounter.AddValue((UInt32)length);
+                _unpackedSizeCounter.AddValue(checked((UInt32)length));
             }
             else
             {

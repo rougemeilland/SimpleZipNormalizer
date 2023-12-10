@@ -978,7 +978,7 @@ namespace ZipUtility
         /// <exception cref="InvalidOperationException">
         /// 既にデータは出力済みです。
         /// </exception>
-        public IBasicOutputByteStream GetContentStream(IProgress<UInt64>? unpackedCountProgress = null)
+        public ISequentialOutputByteStream GetContentStream(IProgress<UInt64>? unpackedCountProgress = null)
         {
             _zipStream.LockStream();
 
@@ -1082,7 +1082,7 @@ namespace ZipUtility
             }
         }
 
-        private IBasicOutputByteStream GetContentStreamWithoutDataDescriptor(IProgress<UInt64>? unpackedCountProgress)
+        private ISequentialOutputByteStream GetContentStreamWithoutDataDescriptor(IProgress<UInt64>? unpackedCountProgress)
         {
             var temporaryFile = (FilePath?)null;
             var packedTemporaryFile = (FilePath?)null;
@@ -1116,15 +1116,13 @@ namespace ZipUtility
                     ? null
                     : compressionMethod.GetEncodingStream(
                         packedTemporaryFile.Create(),
-                        null,
                         SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
                             unpackedCountProgress,
                             value => value.unpackedCount / 2));
 
                 var tempraryFileStream =
                     (packedOutputStream is null ? outputStrem : outputStrem.Branch(packedOutputStream))
-                    .WithCrc32Calculation(
-                        resultValue => EndOfCopyingToTemporaryFile(resultValue.Crc, resultValue.Length));
+                    .WithCrc32Calculation(EndOfCopyingToTemporaryFile);
                 success = true;
                 return tempraryFileStream;
             }
@@ -1262,7 +1260,7 @@ namespace ZipUtility
             }
         }
 
-        private IBasicOutputByteStream GetContentStreamWithDataDescriptor(IProgress<UInt64>? unpackedCountProgress)
+        private ISequentialOutputByteStream GetContentStreamWithDataDescriptor(IProgress<UInt64>? unpackedCountProgress)
         {
             var packedSizeHolder = new ValueHolder<UInt64>();
             try
@@ -1316,11 +1314,10 @@ namespace ZipUtility
                     compressionMethod.GetEncodingStream(
                         _zipStream.Stream
                             .WithEndAction(packedSize => packedSizeHolder.Value = packedSize, true),
-                        null,
                         SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
                             unpackedCountProgress,
                             value => value.unpackedCount / 2))
-                    .WithCrc32Calculation(resultValue => EndOfWrintingContents(resultValue.Crc, resultValue.Length));
+                    .WithCrc32Calculation(EndOfWrintingContents);
                 return contentStream;
 
             }

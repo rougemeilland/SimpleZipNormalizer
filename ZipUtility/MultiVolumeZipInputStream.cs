@@ -12,20 +12,21 @@ namespace ZipUtility
     internal class MultiVolumeZipInputStream
            : ZipInputStream
     {
-        private readonly ReadOnlyMemory<(FilePath volumeFile, UInt64 volumeSize, IRandomInputByteStream<UInt64, UInt64> stream)> _volumeDisks;
+        private readonly UInt64 _totalDiskSize;
+        private readonly ReadOnlyMemory<(FilePath volumeFile, UInt64 volumeSize, IRandomInputByteStream<UInt64> stream)> _volumeDisks;
         private readonly ReadOnlyMemory<UInt64> _totalLengthToThatInternalDisk;
         private readonly UInt32 _lastDiskNumber;
-        private readonly (FilePath volumeFile, UInt64 volumeSize, IRandomInputByteStream<UInt64, UInt64> stream) _lastVolumeDisk;
+        private readonly (FilePath volumeFile, UInt64 volumeSize, IRandomInputByteStream<UInt64> stream) _lastVolumeDisk;
         private Boolean _isDisposed;
         private Int32 _currentVolumeDiskNumber;
         private Boolean _isLocked;
 
-        private MultiVolumeZipInputStream(UInt64 totalDiskSize, ReadOnlyMemory<(FilePath volumeFile, UInt64 volumeSize, IRandomInputByteStream<UInt64, UInt64> stream)> volumeDisks, ReadOnlyMemory<UInt64> totalLengthToThatInternalDisk)
-            : base(totalDiskSize)
+        private MultiVolumeZipInputStream(UInt64 totalDiskSize, ReadOnlyMemory<(FilePath volumeFile, UInt64 volumeSize, IRandomInputByteStream<UInt64> stream)> volumeDisks, ReadOnlyMemory<UInt64> totalLengthToThatInternalDisk)
         {
             if (volumeDisks.Length < 2)
                 throw new InternalLogicalErrorException();
 
+            _totalDiskSize = totalDiskSize;
             _volumeDisks = volumeDisks;
             _totalLengthToThatInternalDisk = totalLengthToThatInternalDisk;
             var lastDiskNumberAsInt32 = volumeDisks.Length - 1;
@@ -34,6 +35,7 @@ namespace ZipUtility
             _isDisposed = false;
             _currentVolumeDiskNumber = 0;
             _isLocked = false;
+            EndOfThisStreamCore = new ZipStreamPosition(_lastDiskNumber, _lastVolumeDisk.volumeSize, this);
         }
 
         public override String ToString() => $"MultiVolume:Count={_volumeDisks.Length}";
@@ -43,8 +45,8 @@ namespace ZipUtility
             if (zipArchiveFiles.Length < 2)
                 throw new ArgumentException("The number of volumes in the multi-volume ZIP file is less than 2.", nameof(zipArchiveFiles));
 
-            var volumeDiskList = new List<(FilePath volumeFile, UInt64 volumeSize, IRandomInputByteStream<UInt64, UInt64> stream)>();
-            var currentStream = (IInputByteStream<UInt64>?)null;
+            var volumeDiskList = new List<(FilePath volumeFile, UInt64 volumeSize, IRandomInputByteStream<UInt64> stream)>();
+            var currentStream = (ISequentialInputByteStream?)null;
             var success = false;
             try
             {
@@ -52,7 +54,7 @@ namespace ZipUtility
                 {
                     var currentVolmeDisk = zipArchiveFiles.Span[index];
                     currentStream = currentVolmeDisk.OpenRead();
-                    if (currentStream is not IRandomInputByteStream<UInt64, UInt64> randomAccessStream)
+                    if (currentStream is not IRandomInputByteStream<UInt64> randomAccessStream)
                         throw new NotSupportedException();
                     var currentVolumeSize = randomAccessStream.Length;
                     if (currentVolumeSize <= 0)
@@ -92,18 +94,22 @@ namespace ZipUtility
             }
         }
 
-        protected override ZipStreamPosition Position
+        protected override ZipStreamPosition EndOfThisStreamCore { get; }
+        protected override UInt64 LengthCore => _totalDiskSize;
+
+        protected override ZipStreamPosition PositionCore
         {
             get
             {
-                var currentStream = GetCurrentStream();
-                if (currentStream is null)
-                    return new ZipStreamPosition(_lastDiskNumber, _lastVolumeDisk.volumeSize, this);
-                return new ZipStreamPosition(checked((UInt32)_currentVolumeDiskNumber), currentStream.Position, this);
+                var currentStream = GetCurrentStreamCore();
+                return
+                    currentStream is not null
+                    ? new ZipStreamPosition(checked((UInt32)_currentVolumeDiskNumber), currentStream.Position, this)
+                    : new ZipStreamPosition(_lastDiskNumber, _lastVolumeDisk.volumeSize, this);
             }
         }
 
-        protected override void Seek(UInt32 diskNumber, UInt64 offsetOnTheDisk)
+        protected override void SeekCore(UInt32 diskNumber, UInt64 offsetOnTheDisk)
         {
             // ZIP アーカイブによっては、diskNumber と offsetOnTheDisk のペアがボリュームファイルの終端を指していることがあることに注意してください。
             // (例: PKZIP によって作成された ZIP アーカイブなど。)
@@ -122,9 +128,9 @@ namespace ZipUtility
             stream.Seek(offsetOnTheDisk);
         }
 
-        protected override Boolean IsMultiVolumeZipStream => true;
+        protected override Boolean IsMultiVolumeZipStreamCore => true;
 
-        protected override Boolean ValidatePosition(UInt32 diskNumber, UInt64 offsetOnTheDisk)
+        protected override Boolean ValidatePositionCore(UInt32 diskNumber, UInt64 offsetOnTheDisk)
         {
             // ZIP アーカイブによっては、diskNumber と offsetOnTheDisk のペアがボリュームファイルの終端を指していることがあることに注意してください。
             // (例: PKZIP によって作成された ZIP アーカイブなど。)
@@ -135,10 +141,10 @@ namespace ZipUtility
             return offsetOnTheDisk <= _volumeDisks.Span[checked((Int32)diskNumber)].volumeSize;
         }
 
-        protected override ZipStreamPosition LastDiskStartPosition => new(_lastDiskNumber, 0, this);
-        protected override UInt64 LastDiskSize => _lastVolumeDisk.volumeSize;
+        protected override ZipStreamPosition LastDiskStartPositionCore => new(_lastDiskNumber, 0, this);
+        protected override UInt64 LastDiskSizeCore => _lastVolumeDisk.volumeSize;
 
-        protected override Boolean CheckIfCanAtmicRead(UInt64 minimumAtomicDataSize)
+        protected override Boolean CheckIfCanAtmicReadCore(UInt64 minimumAtomicDataSize)
         {
             while (true)
             {
@@ -151,7 +157,7 @@ namespace ZipUtility
             }
         }
 
-        protected override void LockVolumeDisk()
+        protected override void LockVolumeDiskCore()
         {
             if (_isLocked)
                 throw new InternalLogicalErrorException();
@@ -159,7 +165,7 @@ namespace ZipUtility
             _isLocked = true;
         }
 
-        protected override void UnlockVolumeDisk()
+        protected override void UnlockVolumeDiskCore()
         {
             if (!_isLocked)
                 throw new InternalLogicalErrorException();
@@ -167,7 +173,19 @@ namespace ZipUtility
             _isLocked = false;
         }
 
-        protected override ZipStreamPosition Add(UInt32 diskNumber, UInt64 offsetOnTheDisk, UInt64 offset)
+        protected override IRandomInputByteStream<UInt64>? GetCurrentStreamCore()
+        {
+            while (true)
+            {
+                var (_, volumeSize, stream) = _volumeDisks.Span[_currentVolumeDiskNumber];
+                if (stream.Position < volumeSize)
+                    return stream;
+                if (!MoveToNextDisk())
+                    return null;
+            }
+        }
+
+        protected override ZipStreamPosition AddCore(UInt32 diskNumber, UInt64 offsetOnTheDisk, UInt64 offset)
         {
             var currentDiskNumber = diskNumber;
             var currentOffset = checked(offsetOnTheDisk + offset);
@@ -186,7 +204,7 @@ namespace ZipUtility
             throw new OverflowException();
         }
 
-        protected override ZipStreamPosition Subtract(UInt32 diskNumber, UInt64 offsetOnTheDisk, UInt64 offset)
+        protected override ZipStreamPosition SubtractCore(UInt32 diskNumber, UInt64 offsetOnTheDisk, UInt64 offset)
         {
             if (diskNumber > _lastDiskNumber || diskNumber == _lastDiskNumber && offsetOnTheDisk > _lastVolumeDisk.volumeSize)
                 throw new InternalLogicalErrorException();
@@ -208,7 +226,7 @@ namespace ZipUtility
             }
         }
 
-        protected override UInt64 Subtract(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2)
+        protected override UInt64 SubtractCore(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2)
         {
             if (diskNumber1 > _lastDiskNumber
                 || diskNumber1 == _lastDiskNumber && offsetOnTheDisk1 > _lastVolumeDisk.volumeSize
@@ -224,16 +242,40 @@ namespace ZipUtility
                     - (_totalLengthToThatInternalDisk.Span[(Int32)diskNumber2] + offsetOnTheDisk2));
         }
 
-        protected override IRandomInputByteStream<UInt64, UInt64>? GetCurrentStream()
+        protected override Int32 CompareCore(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2)
         {
-            while (true)
-            {
-                var (_, volumeSize, stream) = _volumeDisks.Span[_currentVolumeDiskNumber];
-                if (stream.Position < volumeSize)
-                    return stream;
-                if (!MoveToNextDisk())
-                    return null;
-            }
+            if (diskNumber1 >= _volumeDisks.Length)
+                throw new InternalLogicalErrorException();
+            if (diskNumber2 >= _volumeDisks.Length)
+                throw new InternalLogicalErrorException();
+
+            NormalizeDiskPosition(ref diskNumber1, ref offsetOnTheDisk1);
+            NormalizeDiskPosition(ref diskNumber2, ref offsetOnTheDisk2);
+
+            Int32 c;
+            if ((c = diskNumber1.CompareTo(diskNumber2)) != 0)
+                return c;
+            return offsetOnTheDisk1.CompareTo(offsetOnTheDisk2);
+        }
+
+        protected override Boolean EqualCore(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2)
+        {
+            if (diskNumber1 >= _volumeDisks.Length)
+                throw new InternalLogicalErrorException();
+            if (diskNumber2 >= _volumeDisks.Length)
+                throw new InternalLogicalErrorException();
+
+            NormalizeDiskPosition(ref diskNumber1, ref offsetOnTheDisk1);
+            NormalizeDiskPosition(ref diskNumber2, ref offsetOnTheDisk2);
+
+            return diskNumber1 == diskNumber2 && offsetOnTheDisk1 == offsetOnTheDisk2;
+        }
+
+        protected override Int32 GetHashCodeCore(UInt32 diskNumber, UInt64 offsetOnTheDisk)
+        {
+            NormalizeDiskPosition(ref diskNumber, ref offsetOnTheDisk);
+
+            return HashCode.Combine(diskNumber, offsetOnTheDisk);
         }
 
         protected override void Dispose(Boolean disposing)
@@ -252,7 +294,7 @@ namespace ZipUtility
             base.Dispose(disposing);
         }
 
-        protected override async ValueTask DisposeAsyncCore()
+        protected override async Task DisposeAsyncCore()
         {
             if (!_isDisposed)
             {
@@ -285,6 +327,22 @@ namespace ZipUtility
         {
             if (_isLocked)
                 throw new InvalidOperationException();
+        }
+
+        private void NormalizeDiskPosition(ref UInt32 diskNumber, ref UInt64 offsetOnTheDisk)
+        {
+            var volumeSize = _volumeDisks.Span[checked((Int32)diskNumber)].volumeSize;
+            if (offsetOnTheDisk > volumeSize)
+                throw new InternalLogicalErrorException();
+            if (offsetOnTheDisk == volumeSize)
+            {
+                checked
+                {
+                    ++diskNumber;
+                }
+
+                offsetOnTheDisk = 0;
+            }
         }
     }
 }

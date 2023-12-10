@@ -8,17 +8,15 @@ namespace ZipUtility.IO
     public interface IEncoder
     {
         void Encode(
-            IBasicInputByteStream sourceStream,
-            IBasicOutputByteStream destinationStream,
+            ISequentialInputByteStream sourceStream,
+            ISequentialOutputByteStream destinationStream,
             ICoderOption option,
-            UInt64? sourceSize,
             IProgress<UInt64>? unpackedCountProgress = null);
 
         Task<Exception?> EncodeAsync(
-            IBasicInputByteStream sourceStream,
-            IBasicOutputByteStream destinationStream,
+            ISequentialInputByteStream sourceStream,
+            ISequentialOutputByteStream destinationStream,
             ICoderOption option,
-            UInt64? sourceSize,
             IProgress<UInt64>? unpackedCountProgress = null,
             CancellationToken cancellationToken = default);
     }

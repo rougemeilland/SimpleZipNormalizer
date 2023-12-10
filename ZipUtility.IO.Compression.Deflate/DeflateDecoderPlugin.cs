@@ -9,12 +9,12 @@ namespace ZipUtility.IO.Compression.Deflate
         private class Decoder
             : HierarchicalDecoder
         {
-            public Decoder(IBasicInputByteStream baseStream, UInt64 unpackedStreamSize, IProgress<UInt64>? unpackedCountProgress)
-                : base(GetBaseStream(baseStream), unpackedStreamSize, unpackedCountProgress)
+            public Decoder(ISequentialInputByteStream baseStream, UInt64 unpackedStreamSize, IProgress<UInt64>? unpackedCountProgress, Boolean leaveOpen)
+                : base(GetBaseStream(baseStream), unpackedStreamSize, unpackedCountProgress, leaveOpen)
             {
             }
 
-            protected override Int32 ReadFromSourceStream(IBasicInputByteStream sourceStream, Span<Byte> buffer)
+            protected override Int32 ReadFromSourceStream(ISequentialInputByteStream sourceStream, Span<Byte> buffer)
             {
                 try
                 {
@@ -26,7 +26,7 @@ namespace ZipUtility.IO.Compression.Deflate
                 }
             }
 
-            protected override async Task<Int32> ReadFromSourceStreamAsync(IBasicInputByteStream sourceStream, Memory<Byte> buffer, CancellationToken cancellationToken = default)
+            protected override async Task<Int32> ReadFromSourceStreamAsync(ISequentialInputByteStream sourceStream, Memory<Byte> buffer, CancellationToken cancellationToken = default)
             {
                 try
                 {
@@ -38,23 +38,24 @@ namespace ZipUtility.IO.Compression.Deflate
                 }
             }
 
-            private static IBasicInputByteStream GetBaseStream(IBasicInputByteStream baseStream)
+            private static ISequentialInputByteStream GetBaseStream(ISequentialInputByteStream baseStream)
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
                 return
-                    new DeflateStream(baseStream.AsStream(), CompressionMode.Decompress)
+                    new DeflateStream(baseStream.AsDotNetStream(), CompressionMode.Decompress)
                     .AsInputByteStream();
             }
         }
 
-        IInputByteStream<UInt64> IHierarchicalDecoder.GetDecodingStream(
-            IBasicInputByteStream baseStream,
+        ISequentialInputByteStream IHierarchicalDecoder.GetDecodingStream(
+            ISequentialInputByteStream baseStream,
             ICoderOption option,
             UInt64 unpackedStreamSize,
             UInt64 packedStreamSize,
-            IProgress<UInt64>? unpackedCountProgress)
+            IProgress<UInt64>? unpackedCountProgress,
+            Boolean leaveOpen)
         {
             if (baseStream is null)
                 throw new ArgumentNullException(nameof(baseStream));
@@ -63,7 +64,7 @@ namespace ZipUtility.IO.Compression.Deflate
             if (option is not DeflateCompressionOption)
                 throw new ArgumentException($"Illegal {nameof(option)} data", nameof(option));
 
-            return new Decoder(baseStream, unpackedStreamSize, unpackedCountProgress);
+            return new Decoder(baseStream, unpackedStreamSize, unpackedCountProgress, leaveOpen);
         }
     }
 }

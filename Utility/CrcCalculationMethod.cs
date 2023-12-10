@@ -14,7 +14,7 @@ namespace Utility
         #region private class
 
         private class CrcCalculationSession
-            : ICrcCalculationState<CRC_VALUE_T, UInt64>
+            : ICrcCalculationState<CRC_VALUE_T>
         {
             private readonly CrcCalculationMethod<CRC_VALUE_T> _calculator;
             private CRC_VALUE_T _state;
@@ -30,7 +30,10 @@ namespace Utility
             public void Put(Byte data)
             {
                 _state = _calculator.Update(_state, data);
-                ++_length;
+                checked
+                {
+                    ++_length;
+                }
             }
 
             public void Put(Byte[] data, Int32 offset, Int32 count)
@@ -46,14 +49,20 @@ namespace Utility
 
                 for (var index = 0; index < count; ++index)
                     _state = _calculator.Update(_state, data[offset + index]);
-                _length += (UInt32)count;
+                checked
+                {
+                    _length += (UInt64)count;
+                }
             }
 
             public void Put(ReadOnlySpan<Byte> data)
             {
                 for (var index = 0; index < data.Length; ++index)
                     _state = _calculator.Update(_state, data[index]);
-                _length += (UInt32)data.Length;
+                checked
+                {
+                    _length += (UInt64)data.Length;
+                }
             }
 
             public void Put(IEnumerable<Byte> data)
@@ -61,7 +70,10 @@ namespace Utility
                 foreach (var byteData in data)
                 {
                     _state = _calculator.Update(_state, byteData);
-                    ++_length;
+                    checked
+                    {
+                        ++_length;
+                    }
                 }
             }
 
@@ -71,13 +83,13 @@ namespace Utility
                 _length = 0;
             }
 
-            public (CRC_VALUE_T Crc, UInt64 Length) GetResult()
+            public (CRC_VALUE_T, UInt64) GetResultValue()
                 => (_calculator.Finalize(_state), _length);
         }
 
         #endregion
 
-        public ICrcCalculationState<CRC_VALUE_T, UInt64> CreateSession() => new CrcCalculationSession(this);
+        public ICrcCalculationState<CRC_VALUE_T> CreateSession() => new CrcCalculationSession(this);
 
         public (CRC_VALUE_T Crc, UInt64 Length) Calculate(IEnumerable<Byte> byteSequence, IProgress<UInt64>? progress = null)
         {
@@ -137,7 +149,7 @@ namespace Utility
                 yield return data;
             }
 
-            result.Value = session.GetResult();
+            result.Value = session.GetResultValue();
             progressCounter.Report();
         }
 
@@ -163,7 +175,7 @@ namespace Utility
                     yield return data;
                 }
 
-                result.Value = session.GetResult();
+                result.Value = session.GetResultValue();
                 progressCounter.Report();
             }
         }

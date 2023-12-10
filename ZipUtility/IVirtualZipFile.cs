@@ -59,5 +59,57 @@ namespace ZipUtility
         /// 特に、物理ファイルの数が多い場合や、物理ファイルが別々のリムーバブルメディアに格納されている場合は、それが顕著になります。
         /// </remarks>
         UInt64 Subtract(ZipStreamPosition position1, ZipStreamPosition position2);
+
+        /// <summary>
+        /// 仮想的なファイル上の二つの位置を等値比較します。
+        /// </summary>
+        /// <param name="position1">
+        /// 仮想的なファイル上の位置を示す <see cref="ZipStreamPosition"/> 値です。
+        /// </param>
+        /// <param name="position2">
+        /// 仮想的なファイル上の位置を示す <see cref="ZipStreamPosition"/> 値です。
+        /// </param>
+        /// <returns>
+        /// <paramref name="position1"/> と <paramref name="position2"/> が等しい場合は true、そうではない場合は false を返します。
+        /// </returns>
+        Boolean Equal(ZipStreamPosition position1, ZipStreamPosition position2);
+
+        /// <summary>
+        /// 仮想的なファイル上の位置を示す値のハッシュコードを取得します。
+        /// </summary>
+        /// <param name="position"></param>
+        /// 仮想的なファイル上の位置を示す <see cref="ZipStreamPosition"/> 値です。
+        /// <returns>
+        /// <paramref name="position"/> のハッシュコードを返します。
+        /// </returns>
+        Int32 GetHashCode(ZipStreamPosition position);
+
+        /// <summary>
+        /// 仮想的なファイル上の二つの位置を大小比較します。
+        /// </summary>
+        /// <param name="position1">
+        /// 仮想的なファイル上の位置を示す <see cref="ZipStreamPosition"/> 値です。
+        /// </param>
+        /// <param name="position2">
+        /// 仮想的なファイル上の位置を示す <see cref="ZipStreamPosition"/> 値です。
+        /// </param>
+        /// <returns>
+        /// 以下の値を返します。
+        /// <list type="bullet">
+        /// <item>
+        /// <term><paramref name="position1"/> が <paramref name="position2"/> より大きい場合 </term>
+        /// <description>正の <see cref="Int32"/> 値</description>
+        /// </item>
+        /// <item>
+        /// <term><paramref name="position1"/> が <paramref name="position2"/> と等しい場合 </term>
+        /// <description>0</description>
+        /// </item>
+        /// <item>
+        /// <term><paramref name="position1"/> が <paramref name="position2"/> より小さい場合 </term>
+        /// <description>負の <see cref="Int32"/> 値</description>
+        /// </item>
+        /// </list>
+        /// </returns>
+        Int32 Compare(ZipStreamPosition position1, ZipStreamPosition position2);
     }
 }

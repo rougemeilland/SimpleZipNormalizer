@@ -3,7 +3,7 @@ using Utility;
 
 namespace ZipUtility.ZipFileHeader
 {
-    class ZipEntryHeader
+    internal class ZipEntryHeader
     {
         public ZipEntryHeader(ZipEntryCentralDirectoryHeader centralDirectoryHeader, ZipEntryLocalHeader localFileHeader)
         {

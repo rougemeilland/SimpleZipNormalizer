@@ -9,31 +9,31 @@ namespace ZipUtility.IO.Compression.Deflate
         private class Encoder
             : HierarchicalEncoder
         {
-            public Encoder(IBasicOutputByteStream baseStream, CompressionLevel level, UInt64? unpackedStreamSize, IProgress<UInt64>? unpackedCountProgress)
-                : base(GetBaseStream(baseStream, level), unpackedStreamSize, unpackedCountProgress)
+            public Encoder(ISequentialOutputByteStream baseStream, CompressionLevel level, IProgress<UInt64>? unpackedCountProgress, Boolean leaveOpen)
+                : base(GetBaseStream(baseStream, level), unpackedCountProgress, leaveOpen)
             {
             }
 
-            private static IBasicOutputByteStream GetBaseStream(IBasicOutputByteStream baseStream, CompressionLevel level)
+            private static ISequentialOutputByteStream GetBaseStream(ISequentialOutputByteStream baseStream, CompressionLevel level)
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                return new DeflateStream(baseStream.AsStream(), level).AsOutputByteStream();
+                return new DeflateStream(baseStream.AsDotNetStream(), level).AsOutputByteStream();
             }
 
-            protected override void FlushDestinationStream(IBasicOutputByteStream destinationStream, Boolean isEndOfData)
+            protected override void FlushDestinationStream(ISequentialOutputByteStream destinationStream, Boolean isEndOfData)
             {
                 if (isEndOfData)
                     destinationStream.Dispose();
             }
         }
 
-        IOutputByteStream<UInt64> IHierarchicalEncoder.GetEncodingStream(
-            IBasicOutputByteStream baseStream,
+        ISequentialOutputByteStream IHierarchicalEncoder.GetEncodingStream(
+            ISequentialOutputByteStream baseStream,
             ICoderOption option,
-            UInt64? unpackedStreamSize,
-            IProgress<UInt64>? unpackedCountProgress)
+            IProgress<UInt64>? unpackedCountProgress,
+            Boolean leaveOpen)
         {
             if (baseStream is null)
                 throw new ArgumentNullException(nameof(baseStream));
@@ -50,7 +50,7 @@ namespace ZipUtility.IO.Compression.Deflate
                 DeflateCompressionLevel.Level7 or DeflateCompressionLevel.Level8 or DeflateCompressionLevel.Level9 => CompressionLevel.SmallestSize,
                 _ => CompressionLevel.Optimal,
             };
-            return new Encoder(baseStream, level, unpackedStreamSize, unpackedCountProgress);
+            return new Encoder(baseStream, level, unpackedCountProgress, leaveOpen);
         }
     }
 }

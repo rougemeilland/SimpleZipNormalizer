@@ -7,81 +7,27 @@ using Utility.Threading;
 
 namespace ZipUtility
 {
-    class AsyncByteIOQueue
+    internal class AsyncByteIOQueue
     {
         private class Reader
-            : IInputByteStream<UInt64>
+            : SequentialInputByteStream
         {
             private readonly AsyncByteIOQueue _parent;
             private Boolean _isDisposed;
-            private UInt64 _position;
 
             public Reader(AsyncByteIOQueue parent)
             {
                 _parent = parent;
                 _isDisposed = false;
-                _position = 0;
             }
 
-            public UInt64 Position
-            {
-                get
-                {
-                    if (_isDisposed)
-                        throw new ObjectDisposedException(GetType().FullName);
+            protected override Int32 ReadCore(Span<Byte> buffer)
+                => _parent._queue.Read(buffer);
 
-                    return _position;
-                }
-            }
+            protected override Task<Int32> ReadAsyncCore(Memory<Byte> buffer, CancellationToken cancellationToken)
+                => _parent._queue.ReadAsync(buffer, cancellationToken);
 
-            public Int32 Read(Span<Byte> buffer)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = _parent._queue.Read(buffer);
-                if (length > 0)
-                {
-                    checked
-                    {
-                        _position += (UInt32)length;
-                    }
-                }
-
-                return length;
-            }
-
-            public async Task<Int32> ReadAsync(Memory<Byte> buffer, CancellationToken cancellationToken = default)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                var length = await _parent._queue.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-                if (length > 0)
-                {
-                    checked
-                    {
-                        _position += (UInt32)length;
-                    }
-                }
-
-                return length;
-            }
-
-            public void Dispose()
-            {
-                Dispose(disposing: true);
-                GC.SuppressFinalize(this);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                await DisposeAsyncCore().ConfigureAwait(false);
-                Dispose(disposing: false);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(Boolean disposing)
+            protected override void Dispose(Boolean disposing)
             {
                 if (!_isDisposed)
                 {
@@ -89,9 +35,11 @@ namespace ZipUtility
                         _parent.DisposeByReader();
                     _isDisposed = true;
                 }
+
+                base.Dispose(disposing);
             }
 
-            protected virtual ValueTask DisposeAsyncCore()
+            protected override Task DisposeAsyncCore()
             {
                 if (!_isDisposed)
                 {
@@ -99,52 +47,27 @@ namespace ZipUtility
                     _isDisposed = true;
                 }
 
-                return ValueTask.CompletedTask;
+                return base.DisposeAsyncCore();
             }
         }
 
         private class Writer
-            : IOutputByteStream<UInt64>
+            : SequentialOutputByteStream
         {
             private readonly AsyncByteIOQueue _parent;
             private Boolean _isDisposed;
-            private UInt64 _position;
 
             public Writer(AsyncByteIOQueue parent)
             {
                 _parent = parent;
                 _isDisposed = false;
-                _position = 0;
             }
 
-            public UInt64 Position
+            protected override Int32 WriteCore(ReadOnlySpan<Byte> buffer)
             {
-                get
-                {
-                    if (_isDisposed)
-                        throw new ObjectDisposedException(GetType().FullName);
-
-                    return _position;
-                }
-            }
-
-            public Int32 Write(ReadOnlySpan<Byte> buffer)
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
                 try
                 {
-                    var length = _parent._queue.Write(buffer);
-                    if (length > 0)
-                    {
-                        checked
-                        {
-                            _position += (UInt32)length;
-                        }
-                    }
-
-                    return length;
+                    return _parent._queue.Write(buffer);
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -152,23 +75,11 @@ namespace ZipUtility
                 }
             }
 
-            public async Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
+            protected override Task<Int32> WriteAsyncCore(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken)
             {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
                 try
                 {
-                    var length = await _parent._queue.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
-                    if (length > 0)
-                    {
-                        checked
-                        {
-                            _position += (UInt32)length;
-                        }
-                    }
-
-                    return length;
+                    return _parent._queue.WriteAsync(buffer, cancellationToken);
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -176,11 +87,8 @@ namespace ZipUtility
                 }
             }
 
-            public void Flush()
+            protected override void FlushCore()
             {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
                 try
                 {
                     _parent._queue.Flush();
@@ -191,11 +99,8 @@ namespace ZipUtility
                 }
             }
 
-            public async Task FlushAsync(CancellationToken cancellationToken = default)
+            protected override async Task FlushAsyncCore(CancellationToken cancellationToken = default)
             {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
                 try
                 {
                     await _parent._queue.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -206,20 +111,7 @@ namespace ZipUtility
                 }
             }
 
-            public void Dispose()
-            {
-                Dispose(disposing: true);
-                GC.SuppressFinalize(this);
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                await DisposeAsyncCore().ConfigureAwait(false);
-                Dispose(disposing: false);
-                GC.SuppressFinalize(this);
-            }
-
-            protected virtual void Dispose(Boolean disposing)
+            protected override void Dispose(Boolean disposing)
             {
                 if (!_isDisposed)
                 {
@@ -227,9 +119,11 @@ namespace ZipUtility
                         _parent.DisposeByWriter();
                     _isDisposed = true;
                 }
+
+                base.Dispose(disposing);
             }
 
-            protected virtual ValueTask DisposeAsyncCore()
+            protected override Task DisposeAsyncCore()
             {
                 if (!_isDisposed)
                 {
@@ -237,7 +131,7 @@ namespace ZipUtility
                     _isDisposed = true;
                 }
 
-                return ValueTask.CompletedTask;
+                return base.DisposeAsyncCore();
             }
         }
 
@@ -262,7 +156,7 @@ namespace ZipUtility
             _writerState = StreamState.Initial;
         }
 
-        public IInputByteStream<UInt64> GetReader()
+        public ISequentialInputByteStream GetReader()
         {
             try
             {
@@ -283,7 +177,7 @@ namespace ZipUtility
             }
         }
 
-        public IOutputByteStream<UInt64> GetWriter()
+        public ISequentialOutputByteStream GetWriter()
         {
             try
             {

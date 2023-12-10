@@ -4,10 +4,18 @@ using Utility.IO;
 namespace ZipUtility
 {
     internal interface IZipOutputStream
-        : IOutputByteStream<ZipStreamPosition>
+        : ISequentialOutputByteStream
     {
         /// <summary>
-        /// この仮想ファイルが複数の物理ファイルから構成されるマルチボリュームZIPファイルであるかどうかの値です。
+        /// 現在書き込みを行っている仮想ストリーム上の位置を取得します、
+        /// </summary>
+        /// <value>
+        /// 現在書き込みを行っている仮想ストリーム上の位置を示す <see cref="ZipStreamPosition"/> 値です。
+        /// </value>
+        ZipStreamPosition Position { get; }
+
+        /// <summary>
+        /// この仮想ファイルがマルチボリュームZIPファイルであるかどうかの値を取得します。
         /// </summary>
         /// <value>
         /// この仮想ファイルがマルチボリュームZIPファイルかどうかを示す <see cref="Boolean"/> 値です。
@@ -117,6 +125,5 @@ namespace ZipUtility
         /// </list>
         /// </remarks>
         void UnlockVolumeDisk();
-
     }
 }

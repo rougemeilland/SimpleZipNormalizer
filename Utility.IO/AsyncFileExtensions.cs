@@ -462,6 +462,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2016:'CancellationToken' パラメーターをメソッドに転送する", Justification = "<保留中>")]
         private static async Task InternalWriteAllLinesAsync(String fileFullPath, IAsyncEnumerable<String> lines, Encoding encoding, CancellationToken cancellationToken)
         {
             var writer = new StreamWriter(fileFullPath, false, encoding);

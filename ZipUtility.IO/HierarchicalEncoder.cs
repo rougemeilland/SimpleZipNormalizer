@@ -1,90 +1,58 @@
 ﻿using System;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Utility;
 using Utility.IO;
+using Utility.IO.StreamFilters;
 
 namespace ZipUtility.IO
 {
     public abstract class HierarchicalEncoder
-        : IOutputByteStream<UInt64>
+        : SequentialOutputByteStreamFilter
     {
-        private readonly IBasicOutputByteStream _baseStream;
-        private readonly UInt64? _size;
+        private readonly ISequentialOutputByteStream _baseStream;
         private readonly ProgressCounterUInt64 _unpackedSizeCounter;
 
         private Boolean _isDisposed;
         private Boolean _isEndOfWriting;
 
-        public HierarchicalEncoder(IBasicOutputByteStream baseStream, UInt64? size, IProgress<UInt64>? unpackedCountProgress)
+        public HierarchicalEncoder(ISequentialOutputByteStream baseStream, IProgress<UInt64>? unpackedCountProgress, Boolean leaveOpen)
+            : base(baseStream, leaveOpen)
         {
             if (baseStream is null)
                 throw new ArgumentNullException(nameof(baseStream));
 
             _isDisposed = false;
             _baseStream = baseStream;
-            _size = size;
             _unpackedSizeCounter = new ProgressCounterUInt64(unpackedCountProgress);
             _isEndOfWriting = false;
         }
 
-        public UInt64 Position
+        protected override Int32 WriteCore(ReadOnlySpan<Byte> buffer)
         {
-            get
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                return _unpackedSizeCounter.Value;
-            }
-        }
-
-        public Int32 Write(ReadOnlySpan<Byte> buffer)
-        {
-            if (_isDisposed)
-                throw new ObjectDisposedException(GetType().FullName);
-
-            if (_unpackedSizeCounter.Value <= 0)
-                _unpackedSizeCounter.Report();
+            _unpackedSizeCounter.ReportIfInitial();
             if (buffer.Length <= 0)
                 return 0;
             var written = WriteToDestinationStream(_baseStream, buffer);
-            UpdatePosition(written);
-            if (_size is not null && _unpackedSizeCounter.Value >= _size.Value)
-            {
-                FlushDestinationStream(_baseStream, true);
-                _isEndOfWriting = true;
-            }
-
+            if (written > 0)
+                _unpackedSizeCounter.AddValue(checked((UInt32)written));
             return written;
         }
 
-        public async Task<Int32> WriteAsync(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
+        protected override async Task<Int32> WriteAsyncCore(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken)
         {
-            if (_isDisposed)
-                throw new ObjectDisposedException(GetType().FullName);
-
-            if (_unpackedSizeCounter.Value <= 0)
-                _unpackedSizeCounter.Report();
+            _unpackedSizeCounter.ReportIfInitial();
             if (buffer.Length <= 0)
                 return 0;
             var written = await WriteToDestinationStreamAsync(_baseStream, buffer, cancellationToken).ConfigureAwait(false);
-            UpdatePosition(written);
-            if (_size is not null && _unpackedSizeCounter.Value >= _size.Value)
-            {
-                await FlushDestinationStreamAsync(_baseStream, true, cancellationToken).ConfigureAwait(false);
-                _isEndOfWriting = true;
-            }
-
+            if (written > 0)
+                _unpackedSizeCounter.AddValue(checked((UInt32)written));
             return written;
         }
 
-        public void Flush()
+        protected override void FlushCore()
         {
-            if (_isDisposed)
-                throw new ObjectDisposedException(GetType().FullName);
             try
             {
                 FlushDestinationStream(_baseStream, false);
@@ -103,10 +71,8 @@ namespace ZipUtility.IO
             }
         }
 
-        public async Task FlushAsync(CancellationToken cancellationToken = default)
+        protected override async Task FlushAsyncCore(CancellationToken cancellationToken = default)
         {
-            if (_isDisposed)
-                throw new ObjectDisposedException(GetType().FullName);
             try
             {
                 await FlushDestinationStreamAsync(_baseStream, false, cancellationToken).ConfigureAwait(false);
@@ -125,20 +91,7 @@ namespace ZipUtility.IO
             }
         }
 
-        public void Dispose()
-        {
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await DisposeAsyncCore().ConfigureAwait(false);
-            Dispose(disposing: false);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(Boolean disposing)
+        protected override void Dispose(Boolean disposing)
         {
             if (!_isDisposed)
             {
@@ -156,12 +109,15 @@ namespace ZipUtility.IO
                     _baseStream.Dispose();
                 }
 
+                _unpackedSizeCounter.Report();
                 _isDisposed = true;
 
             }
+
+            base.Dispose(disposing);
         }
 
-        protected virtual async ValueTask DisposeAsyncCore()
+        protected override async Task DisposeAsyncCore()
         {
             if (!_isDisposed)
             {
@@ -175,32 +131,28 @@ namespace ZipUtility.IO
                 }
 
                 await _baseStream.DisposeAsync().ConfigureAwait(false);
+                _unpackedSizeCounter.Report();
                 _isDisposed = true;
             }
+
+            await base.DisposeAsyncCore().ConfigureAwait(false);
         }
 
-        protected virtual Int32 WriteToDestinationStream(IBasicOutputByteStream destinationStream, ReadOnlySpan<Byte> buffer)
+        protected virtual Int32 WriteToDestinationStream(ISequentialOutputByteStream destinationStream, ReadOnlySpan<Byte> buffer)
             => destinationStream.Write(buffer);
 
-        protected virtual Task<Int32> WriteToDestinationStreamAsync(IBasicOutputByteStream destinationStream, ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken)
+        protected virtual Task<Int32> WriteToDestinationStreamAsync(ISequentialOutputByteStream destinationStream, ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken)
             => destinationStream.WriteAsync(buffer, cancellationToken);
 
-        protected virtual void FlushDestinationStream(IBasicOutputByteStream destinationStream, Boolean isEndOfData)
+        protected virtual void FlushDestinationStream(ISequentialOutputByteStream destinationStream, Boolean isEndOfData)
         {
             if (!_isEndOfWriting)
                 destinationStream.Flush();
         }
 
-        protected virtual Task FlushDestinationStreamAsync(IBasicOutputByteStream destinationStream, Boolean isEndOfData, CancellationToken cancellationToken)
+        protected virtual Task FlushDestinationStreamAsync(ISequentialOutputByteStream destinationStream, Boolean isEndOfData, CancellationToken cancellationToken)
             => !_isEndOfWriting
                 ? destinationStream.FlushAsync(cancellationToken)
                 : Task.CompletedTask;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void UpdatePosition(Int32 written)
-        {
-            if (written > 0)
-                _unpackedSizeCounter.AddValue((UInt32)written);
-        }
     }
 }

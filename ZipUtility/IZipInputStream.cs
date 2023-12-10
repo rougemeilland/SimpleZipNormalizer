@@ -1,10 +1,11 @@
 ﻿using System;
+using Utility;
 using Utility.IO;
 
 namespace ZipUtility
 {
     internal interface IZipInputStream
-        : IRandomInputByteStream<ZipStreamPosition, UInt64>
+        : IRandomInputByteStream<ZipStreamPosition>
     {
         /// <summary>
         /// この仮想ファイルがマルチボリュームZIPファイルであるかどうかの値を取得します。
@@ -33,14 +34,6 @@ namespace ZipUtility
         /// </para>
         /// </returns>
         ZipStreamPosition? GetPosition(UInt32 diskNumber, UInt64 offsetOnTheDisk);
-
-        /// <summary>
-        /// 最初のボリュームディスクの先頭を示す位置を取得します。
-        /// </summary>
-        /// <value>
-        /// 最初のボリュームディスクの先頭を指す <see cref="ZipStreamPosition"/> 値です。
-        /// </value>
-        ZipStreamPosition FirstDiskStartPosition { get; }
 
         /// <summary>
         /// 最後のボリュームディスクの先頭を指す位置を取得します。
@@ -97,7 +90,7 @@ namespace ZipUtility
         /// </para>
         /// <list type="bullet">
         /// <item>ボリュームディスクの終端を超えて読み込みを行おうとした場合</item>
-        /// <item><see cref="IRandomInputByteStream{POSITION_T, UNSIGNED_OFFSET_T}.Seek(POSITION_T)"/> によって別のボリュームディスクへのアクセスを試みた場合。</item>
+        /// <item><see cref="IRandomInputByteStream{POSITION_T}.Seek(POSITION_T)"/> によって別のボリュームディスクへのアクセスを試みた場合。</item>
         /// </list>
         /// </item>
         /// <item>
@@ -134,7 +127,7 @@ namespace ZipUtility
         /// </para>
         /// <list type="bullet">
         /// <item>ボリュームディスクの終端を超えて読み込みを行おうとした場合</item>
-        /// <item><see cref="IRandomInputByteStream{POSITION_T, UNSIGNED_OFFSET_T}.Seek(POSITION_T)"/> によって別のボリュームディスクへのアクセスを試みた場合。</item>
+        /// <item><see cref="IRandomInputByteStream{POSITION_T}.Seek(POSITION_T)"/> によって別のボリュームディスクへのアクセスを試みた場合。</item>
         /// </list>
         /// </item>
         /// <item>

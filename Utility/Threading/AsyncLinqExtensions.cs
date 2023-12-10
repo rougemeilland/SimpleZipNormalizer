@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -9,98 +8,24 @@ namespace Utility.Threading
 {
     public static class AsyncLinqExtensions
     {
-        #region private class
-
-        private class AsSyncEnumerable<ELEMENT_T>
-            : IEnumerable<ELEMENT_T>
-        {
-            private class Enumerator
-                : IEnumerator<ELEMENT_T>
-            {
-                private readonly CancellationToken _cancellationToken;
-                private readonly IAsyncEnumerator<ELEMENT_T> _sourceEnumerator;
-
-                private Boolean _isDisposed;
-
-                public Enumerator(IAsyncEnumerable<ELEMENT_T> source, CancellationToken cancellationToken)
-                {
-                    _isDisposed = false;
-                    _cancellationToken = cancellationToken;
-                    _sourceEnumerator = source.GetAsyncEnumerator(cancellationToken);
-                }
-
-                public ELEMENT_T Current
-                {
-                    get
-                    {
-                        if (_isDisposed)
-                            throw new ObjectDisposedException(GetType().FullName);
-                        _cancellationToken.ThrowIfCancellationRequested();
-
-                        return _sourceEnumerator.Current;
-                    }
-                }
-
-                Object? IEnumerator.Current => Current;
-
-                public Boolean MoveNext()
-                {
-                    if (_isDisposed)
-                        throw new ObjectDisposedException(GetType().FullName);
-
-                    return _sourceEnumerator.MoveNextAsync().AsTask().Result;
-                }
-
-                public void Dispose()
-                {
-                    Dispose(disposing: true);
-                    GC.SuppressFinalize(this);
-                }
-
-                public void Reset()
-                    => throw new NotImplementedException();
-
-                protected virtual void Dispose(Boolean disposing)
-                {
-                    if (!_isDisposed)
-                    {
-                        if (disposing)
-                        {
-                            try
-                            {
-                                _sourceEnumerator.DisposeAsync().AsTask().Wait();
-                            }
-                            catch (Exception)
-                            {
-                            }
-                        }
-
-                        _isDisposed = true;
-                    }
-                }
-            }
-
-            private readonly IAsyncEnumerable<ELEMENT_T> _source;
-            private readonly CancellationToken _cancellationToken;
-
-            public AsSyncEnumerable(IAsyncEnumerable<ELEMENT_T> source, CancellationToken cancellationToken)
-            {
-                _source = source;
-                _cancellationToken = cancellationToken;
-            }
-
-            public IEnumerator<ELEMENT_T> GetEnumerator() => new Enumerator(_source, _cancellationToken);
-            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-        }
-
-        #endregion
-
         public static IEnumerable<ELEMENT_T> AsSync<ELEMENT_T>(this IAsyncEnumerable<ELEMENT_T> source, CancellationToken cancellationToken = default)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
 
-            return new AsSyncEnumerable<ELEMENT_T>(source, cancellationToken);
+            var enumerator = source.GetAsyncEnumerator(cancellationToken);
+            try
+            {
+                while (enumerator.MoveNextAsync().AsTask().Result)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    yield return enumerator.Current;
+                }
+            }
+            finally
+            {
+                enumerator.DisposeAsync().AsTask().Wait(cancellationToken);
+            }
         }
 
         #region Aggregate

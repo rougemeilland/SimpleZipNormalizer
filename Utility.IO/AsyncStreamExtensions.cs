@@ -13,15 +13,12 @@ namespace Utility.IO
         #region private class
 
         private class AsyncReverseByteSequenceByByteStream
-            : AsyncReverseByteSequenceByByteStreamEnumerable<UInt64, UInt64>
+            : AsyncReverseByteSequenceByByteStreamEnumerable<UInt64>
         {
-            public AsyncReverseByteSequenceByByteStream(IRandomInputByteStream<UInt64, UInt64> inputStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen)
+            public AsyncReverseByteSequenceByByteStream(IRandomInputByteStream<UInt64> inputStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen)
                 : base(inputStream, offset, count, progress, leaveOpen)
             {
             }
-
-            protected override UInt64 FromInt32ToOffset(Int32 offset) => checked((UInt64)offset);
-            protected override Int32 FromOffsetToInt32(UInt64 offset) => checked((Int32)offset);
         }
 
         #endregion
@@ -133,14 +130,14 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this IInputByteStream<UInt64> baseStream, CancellationToken cancellationToken = default)
+        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this ISequentialInputByteStream baseStream, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                return InternalGetByteSequence<UInt64, UInt64>(baseStream, null, null, null, false, cancellationToken);
+                return InternalGetByteSequence<UInt64>(baseStream, null, null, null, false, cancellationToken);
             }
             catch (Exception)
             {
@@ -149,14 +146,14 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this IInputByteStream<UInt64> baseStream, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this ISequentialInputByteStream baseStream, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                return InternalGetByteSequence<UInt64, UInt64>(baseStream, null, null, null, leaveOpen, cancellationToken);
+                return InternalGetByteSequence<UInt64>(baseStream, null, null, null, leaveOpen, cancellationToken);
             }
             catch (Exception)
             {
@@ -166,14 +163,14 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this IInputByteStream<UInt64> baseStream, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
+        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this ISequentialInputByteStream baseStream, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                return InternalGetByteSequence<UInt64, UInt64>(baseStream, null, null, progress, false, cancellationToken);
+                return InternalGetByteSequence<UInt64>(baseStream, null, null, progress, false, cancellationToken);
             }
             catch (Exception)
             {
@@ -182,14 +179,14 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this IInputByteStream<UInt64> baseStream, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this ISequentialInputByteStream baseStream, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
 
-                return InternalGetByteSequence<UInt64, UInt64>(baseStream, null, null, progress, leaveOpen, cancellationToken);
+                return InternalGetByteSequence<UInt64>(baseStream, null, null, progress, leaveOpen, cancellationToken);
             }
             catch (Exception)
             {
@@ -199,18 +196,18 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, CancellationToken cancellationToken = default)
+        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteStream)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteStream)
                     throw new NotSupportedException();
                 if (offset > byteStream.Length)
                     throw new ArgumentOutOfRangeException(nameof(offset));
 
-                return InternalGetByteSequence<UInt64, UInt64>(byteStream, offset, byteStream.Length - offset, null, false, cancellationToken);
+                return InternalGetByteSequence<UInt64>(byteStream, offset, byteStream.Length - offset, null, false, cancellationToken);
             }
             catch (Exception)
             {
@@ -219,18 +216,18 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteStream)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteStream)
                     throw new NotSupportedException();
                 if (offset > byteStream.Length)
                     throw new ArgumentOutOfRangeException(nameof(offset));
 
-                return InternalGetByteSequence<UInt64, UInt64>(byteStream, offset, byteStream.Length - offset, null, leaveOpen, cancellationToken);
+                return InternalGetByteSequence<UInt64>(byteStream, offset, byteStream.Length - offset, null, leaveOpen, cancellationToken);
             }
             catch (Exception)
             {
@@ -240,18 +237,18 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
+        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteStream)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteStream)
                     throw new NotSupportedException();
                 if (offset > byteStream.Length)
                     throw new ArgumentOutOfRangeException(nameof(offset));
 
-                return InternalGetByteSequence<UInt64, UInt64>(byteStream, offset, byteStream.Length - offset, progress, false, cancellationToken);
+                return InternalGetByteSequence<UInt64>(byteStream, offset, byteStream.Length - offset, progress, false, cancellationToken);
             }
             catch (Exception)
             {
@@ -260,18 +257,18 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteStream)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteStream)
                     throw new NotSupportedException();
                 if (offset > byteStream.Length)
                     throw new ArgumentOutOfRangeException(nameof(offset));
 
-                return InternalGetByteSequence<UInt64, UInt64>(byteStream, offset, byteStream.Length - offset, progress, leaveOpen, cancellationToken);
+                return InternalGetByteSequence<UInt64>(byteStream, offset, byteStream.Length - offset, progress, leaveOpen, cancellationToken);
             }
             catch (Exception)
             {
@@ -281,18 +278,18 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, UInt64 count, CancellationToken cancellationToken = default)
+        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, UInt64 count, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteSteram)
                     throw new NotSupportedException();
                 if (checked(offset + count) > byteSteram.Length)
                     throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
 
-                return InternalGetByteSequence<UInt64, UInt64>(byteSteram, offset, count, null, false, cancellationToken);
+                return InternalGetByteSequence<UInt64>(byteSteram, offset, count, null, false, cancellationToken);
             }
             catch (Exception)
             {
@@ -301,18 +298,18 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, UInt64 count, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, UInt64 count, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteSteram)
                     throw new NotSupportedException();
                 if (checked(offset + count) > byteSteram.Length)
                     throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
 
-                return InternalGetByteSequence<UInt64, UInt64>(byteSteram, offset, count, null, leaveOpen, cancellationToken);
+                return InternalGetByteSequence<UInt64>(byteSteram, offset, count, null, leaveOpen, cancellationToken);
             }
             catch (Exception)
             {
@@ -322,18 +319,18 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
+        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteSteram)
                     throw new NotSupportedException();
                 if (checked(offset + count) > byteSteram.Length)
                     throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
 
-                return InternalGetByteSequence<UInt64, UInt64>(byteSteram, offset, count, progress, false, cancellationToken);
+                return InternalGetByteSequence<UInt64>(byteSteram, offset, count, progress, false, cancellationToken);
             }
             catch (Exception)
             {
@@ -342,18 +339,18 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static IAsyncEnumerable<Byte> GetAsyncByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteSteram)
                     throw new NotSupportedException();
                 if (checked(offset + count) > byteSteram.Length)
                     throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(baseStream)}.");
 
-                return InternalGetByteSequence<UInt64, UInt64>(byteSteram, offset, count, progress, leaveOpen, cancellationToken);
+                return InternalGetByteSequence<UInt64>(byteSteram, offset, count, progress, leaveOpen, cancellationToken);
             }
             catch (Exception)
             {
@@ -473,13 +470,13 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncReverseByteSequence(this IInputByteStream<UInt64> baseStream, Boolean leaveOpen = false)
+        public static IAsyncEnumerable<Byte> GetAsyncReverseByteSequence(this ISequentialInputByteStream baseStream, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteSteram)
                     throw new NotSupportedException();
 
                 return (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, 0, byteSteram.Length, null, leaveOpen);
@@ -492,13 +489,13 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncReverseByteSequence(this IInputByteStream<UInt64> baseStream, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static IAsyncEnumerable<Byte> GetAsyncReverseByteSequence(this ISequentialInputByteStream baseStream, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteSteram)
                     throw new NotSupportedException();
 
                 return (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, 0, byteSteram.Length, progress, leaveOpen);
@@ -511,13 +508,13 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncReverseByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, Boolean leaveOpen = false)
+        public static IAsyncEnumerable<Byte> GetAsyncReverseByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteSteram)
                     throw new NotSupportedException();
 
                 return (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, offset, byteSteram.Length - offset, null, leaveOpen);
@@ -530,13 +527,13 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncReverseByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static IAsyncEnumerable<Byte> GetAsyncReverseByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteSteram)
                     throw new NotSupportedException();
 
                 return (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, offset, byteSteram.Length - offset, progress, leaveOpen);
@@ -549,13 +546,13 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncReverseByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, UInt64 count, Boolean leaveOpen = false)
+        public static IAsyncEnumerable<Byte> GetAsyncReverseByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, UInt64 count, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteSteram)
                     throw new NotSupportedException();
 
                 return (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, offset, count, null, leaveOpen);
@@ -568,13 +565,13 @@ namespace Utility.IO
             }
         }
 
-        public static IAsyncEnumerable<Byte> GetAsyncReverseByteSequence(this IInputByteStream<UInt64> baseStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen = false)
+        public static IAsyncEnumerable<Byte> GetAsyncReverseByteSequence(this ISequentialInputByteStream baseStream, UInt64 offset, UInt64 count, IProgress<UInt64>? progress, Boolean leaveOpen = false)
         {
             try
             {
                 if (baseStream is null)
                     throw new ArgumentNullException(nameof(baseStream));
-                if (baseStream is not IRandomInputByteStream<UInt64, UInt64> byteSteram)
+                if (baseStream is not IRandomInputByteStream<UInt64> byteSteram)
                     throw new NotSupportedException();
 
                 return (IAsyncEnumerable<Byte>)new AsyncReverseByteSequenceByByteStream(byteSteram, offset, count, progress, leaveOpen);
@@ -677,7 +674,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<Boolean> StreamBytesEqualAsync(this IBasicInputByteStream stream1, IBasicInputByteStream stream2, CancellationToken cancellationToken = default)
+        public static async Task<Boolean> StreamBytesEqualAsync(this ISequentialInputByteStream stream1, ISequentialInputByteStream stream2, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -697,7 +694,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<Boolean> StreamBytesEqualAsync(this IBasicInputByteStream stream1, IBasicInputByteStream stream2, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static async Task<Boolean> StreamBytesEqualAsync(this ISequentialInputByteStream stream1, ISequentialInputByteStream stream2, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -720,7 +717,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<Boolean> StreamBytesEqualAsync(this IBasicInputByteStream stream1, IBasicInputByteStream stream2, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
+        public static async Task<Boolean> StreamBytesEqualAsync(this ISequentialInputByteStream stream1, ISequentialInputByteStream stream2, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -740,7 +737,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<Boolean> StreamBytesEqualAsync(this IBasicInputByteStream stream1, IBasicInputByteStream stream2, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static async Task<Boolean> StreamBytesEqualAsync(this ISequentialInputByteStream stream1, ISequentialInputByteStream stream2, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -913,7 +910,7 @@ namespace Utility.IO
             }
         }
 
-        public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, CancellationToken cancellationToken = default)
+        public static Task CopyToAsync(this ISequentialInputByteStream source, ISequentialOutputByteStream destination, CancellationToken cancellationToken = default)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
@@ -923,7 +920,7 @@ namespace Utility.IO
             return source.InternalCopyToAsync(destination, _COPY_TO_DEFAULT_BUFFER_SIZE, null, false, cancellationToken);
         }
 
-        public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static Task CopyToAsync(this ISequentialInputByteStream source, ISequentialOutputByteStream destination, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
@@ -933,7 +930,7 @@ namespace Utility.IO
             return source.InternalCopyToAsync(destination, _COPY_TO_DEFAULT_BUFFER_SIZE, null, leaveOpen, cancellationToken);
         }
 
-        public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
+        public static Task CopyToAsync(this ISequentialInputByteStream source, ISequentialOutputByteStream destination, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
@@ -943,7 +940,7 @@ namespace Utility.IO
             return source.InternalCopyToAsync(destination, _COPY_TO_DEFAULT_BUFFER_SIZE, progress, false, cancellationToken);
         }
 
-        public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static Task CopyToAsync(this ISequentialInputByteStream source, ISequentialOutputByteStream destination, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
@@ -953,7 +950,7 @@ namespace Utility.IO
             return source.InternalCopyToAsync(destination, _COPY_TO_DEFAULT_BUFFER_SIZE, progress, leaveOpen, cancellationToken);
         }
 
-        public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, Int32 bufferSize, CancellationToken cancellationToken = default)
+        public static Task CopyToAsync(this ISequentialInputByteStream source, ISequentialOutputByteStream destination, Int32 bufferSize, CancellationToken cancellationToken = default)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
@@ -965,7 +962,7 @@ namespace Utility.IO
             return source.InternalCopyToAsync(destination, bufferSize, null, false, cancellationToken);
         }
 
-        public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, Int32 bufferSize, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static Task CopyToAsync(this ISequentialInputByteStream source, ISequentialOutputByteStream destination, Int32 bufferSize, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
@@ -977,7 +974,7 @@ namespace Utility.IO
             return source.InternalCopyToAsync(destination, bufferSize, null, leaveOpen, cancellationToken);
         }
 
-        public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, Int32 bufferSize, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
+        public static Task CopyToAsync(this ISequentialInputByteStream source, ISequentialOutputByteStream destination, Int32 bufferSize, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
@@ -989,7 +986,7 @@ namespace Utility.IO
             return source.InternalCopyToAsync(destination, bufferSize, progress, false, cancellationToken);
         }
 
-        public static Task CopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static Task CopyToAsync(this ISequentialInputByteStream source, ISequentialOutputByteStream destination, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             if (source is null)
                 throw new ArgumentNullException(nameof(source));
@@ -1075,7 +1072,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task<Int32> ReadAsync(this IBasicInputByteStream stream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
+        public static Task<Int32> ReadAsync(this ISequentialInputByteStream stream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -1088,7 +1085,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<UInt32> ReadAsync(this IBasicInputByteStream stream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
+        public static async Task<UInt32> ReadAsync(this ISequentialInputByteStream stream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -1105,7 +1102,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task<Int32> ReadAsync(this IBasicInputByteStream stream, Byte[] buffer, Range range, CancellationToken cancellationToken = default)
+        public static Task<Int32> ReadAsync(this ISequentialInputByteStream stream, Byte[] buffer, Range range, CancellationToken cancellationToken = default)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -1119,7 +1116,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task<Int32> ReadAsync(this IBasicInputByteStream stream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
+        public static Task<Int32> ReadAsync(this ISequentialInputByteStream stream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -1136,7 +1133,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<UInt32> ReadAsync(this IBasicInputByteStream stream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
+        public static async Task<UInt32> ReadAsync(this ISequentialInputByteStream stream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -1170,7 +1167,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Byte?> ReadByteOrNullAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Byte?> ReadByteOrNullAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1200,7 +1197,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Byte> ReadByteAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Byte> ReadByteAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1373,7 +1370,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<ReadOnlyMemory<Byte>> ReadBytesAsync(this IBasicInputByteStream sourceStream, Int32 count, CancellationToken cancellationToken = default)
+        public static async Task<ReadOnlyMemory<Byte>> ReadBytesAsync(this ISequentialInputByteStream sourceStream, Int32 count, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1393,7 +1390,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<ReadOnlyMemory<Byte>> ReadBytesAsync(this IBasicInputByteStream sourceStream, UInt32 count, CancellationToken cancellationToken = default)
+        public static async Task<ReadOnlyMemory<Byte>> ReadBytesAsync(this ISequentialInputByteStream sourceStream, UInt32 count, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1411,7 +1408,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task<Int32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Byte[] buffer, CancellationToken cancellationToken = default)
+        public static Task<Int32> ReadBytesAsync(this ISequentialInputByteStream sourceStream, Byte[] buffer, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1426,7 +1423,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task<Int32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
+        public static Task<Int32> ReadBytesAsync(this ISequentialInputByteStream sourceStream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1443,7 +1440,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<UInt32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
+        public static async Task<UInt32> ReadBytesAsync(this ISequentialInputByteStream sourceStream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1461,7 +1458,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task<Int32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Byte[] buffer, Range range, CancellationToken cancellationToken = default)
+        public static Task<Int32> ReadBytesAsync(this ISequentialInputByteStream sourceStream, Byte[] buffer, Range range, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1479,7 +1476,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task<Int32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
+        public static Task<Int32> ReadBytesAsync(this ISequentialInputByteStream sourceStream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1499,7 +1496,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<UInt32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
+        public static async Task<UInt32> ReadBytesAsync(this ISequentialInputByteStream sourceStream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1517,7 +1514,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task<Int32> ReadBytesAsync(this IBasicInputByteStream sourceStream, Memory<Byte> buffer, CancellationToken cancellationToken = default)
+        public static Task<Int32> ReadBytesAsync(this ISequentialInputByteStream sourceStream, Memory<Byte> buffer, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1578,7 +1575,7 @@ namespace Utility.IO
                     });
         }
 
-        public static Task<IEnumerable<Byte>> ReadByteSequenceAsync(this IBasicInputByteStream sourceStream, Int64 count, CancellationToken cancellationToken = default)
+        public static Task<IEnumerable<Byte>> ReadByteSequenceAsync(this ISequentialInputByteStream sourceStream, Int64 count, CancellationToken cancellationToken = default)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -1602,7 +1599,7 @@ namespace Utility.IO
                     });
         }
 
-        public static Task<IEnumerable<Byte>> ReadByteSequenceAsync(this IBasicInputByteStream sourceStream, UInt64 count, CancellationToken cancellationToken = default)
+        public static Task<IEnumerable<Byte>> ReadByteSequenceAsync(this ISequentialInputByteStream sourceStream, UInt64 count, CancellationToken cancellationToken = default)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -1640,7 +1637,7 @@ namespace Utility.IO
                     _count) => sourceStream.ReadAsync(_buffer, _offset, _count, cancellationToken));
         }
 
-        public static Task<ReadOnlyMemory<Byte>> ReadAllBytesAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static Task<ReadOnlyMemory<Byte>> ReadAllBytesAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1670,7 +1667,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Int16> ReadInt16LEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Int16> ReadInt16LEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1700,7 +1697,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<UInt16> ReadUInt16LEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<UInt16> ReadUInt16LEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1730,7 +1727,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Int32> ReadInt32LEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Int32> ReadInt32LEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1760,7 +1757,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<UInt32> ReadUInt32LEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<UInt32> ReadUInt32LEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1790,7 +1787,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Int64> ReadInt64LEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Int64> ReadInt64LEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1820,7 +1817,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<UInt64> ReadUInt64LEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<UInt64> ReadUInt64LEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1850,7 +1847,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Single> ReadSingleLEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Single> ReadSingleLEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1880,7 +1877,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Double> ReadDoubleLEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Double> ReadDoubleLEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1910,7 +1907,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Decimal> ReadDecimalLEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Decimal> ReadDecimalLEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1940,7 +1937,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Int16> ReadInt16BEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Int16> ReadInt16BEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -1970,7 +1967,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<UInt16> ReadUInt16BEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<UInt16> ReadUInt16BEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2000,7 +1997,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Int32> ReadInt32BEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Int32> ReadInt32BEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2030,7 +2027,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<UInt32> ReadUInt32BEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<UInt32> ReadUInt32BEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2060,7 +2057,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Int64> ReadInt64BEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Int64> ReadInt64BEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2090,7 +2087,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<UInt64> ReadUInt64BEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<UInt64> ReadUInt64BEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2120,7 +2117,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Single> ReadSingleBEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Single> ReadSingleBEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2150,7 +2147,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Double> ReadDoubleBEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Double> ReadDoubleBEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2180,7 +2177,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<Decimal> ReadDecimalBEAsync(this IBasicInputByteStream sourceStream, CancellationToken cancellationToken = default)
+        public static async Task<Decimal> ReadDecimalBEAsync(this ISequentialInputByteStream sourceStream, CancellationToken cancellationToken = default)
         {
             if (sourceStream is null)
                 throw new ArgumentNullException(nameof(sourceStream));
@@ -2251,7 +2248,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task<Int32> WriteAsync(this IBasicOutputByteStream stream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
+        public static Task<Int32> WriteAsync(this ISequentialOutputByteStream stream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -2264,7 +2261,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<UInt32> WriteAsync(this IBasicOutputByteStream stream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
+        public static async Task<UInt32> WriteAsync(this ISequentialOutputByteStream stream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -2281,7 +2278,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task<Int32> WriteAsync(this IBasicOutputByteStream stream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
+        public static Task<Int32> WriteAsync(this ISequentialOutputByteStream stream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -2298,7 +2295,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task<UInt32> WriteAsync(this IBasicOutputByteStream stream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
+        public static async Task<UInt32> WriteAsync(this ISequentialOutputByteStream stream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
         {
             if (stream is null)
                 throw new ArgumentNullException(nameof(stream));
@@ -2319,7 +2316,7 @@ namespace Utility.IO
         #region WriteByteAsync
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task WriteByteAsync(this IBasicOutputByteStream stream, Byte value, CancellationToken cancellationToken = default)
+        public static async Task WriteByteAsync(this ISequentialOutputByteStream stream, Byte value, CancellationToken cancellationToken = default)
         {
             var length = await stream.WriteAsync(new[] { value }, cancellationToken).ConfigureAwait(false);
             if (length <= 0)
@@ -2421,7 +2418,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, Byte[] buffer, CancellationToken cancellationToken = default)
+        public static Task WriteBytesAsync(this ISequentialOutputByteStream destinationStream, Byte[] buffer, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2436,7 +2433,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
+        public static Task WriteBytesAsync(this ISequentialOutputByteStream destinationStream, Byte[] buffer, Int32 offset, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2452,7 +2449,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
+        public static Task WriteBytesAsync(this ISequentialOutputByteStream destinationStream, Byte[] buffer, UInt32 offset, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2469,7 +2466,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, Byte[] buffer, Range range, CancellationToken cancellationToken = default)
+        public static Task WriteBytesAsync(this ISequentialOutputByteStream destinationStream, Byte[] buffer, Range range, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2485,7 +2482,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
+        public static Task WriteBytesAsync(this ISequentialOutputByteStream destinationStream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2506,7 +2503,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
+        public static Task WriteBytesAsync(this ISequentialOutputByteStream destinationStream, Byte[] buffer, UInt32 offset, UInt32 count, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2523,7 +2520,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task WriteBytesAsync(this IBasicOutputByteStream destinationStream, ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
+        public static async Task WriteBytesAsync(this ISequentialOutputByteStream destinationStream, ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2602,7 +2599,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task WriteByteSequenceAsync(this IBasicOutputByteStream destinationStream, IEnumerable<Byte> sequence, CancellationToken cancellationToken = default)
+        public static async Task WriteByteSequenceAsync(this ISequentialOutputByteStream destinationStream, IEnumerable<Byte> sequence, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2631,7 +2628,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task WriteByteSequenceAsync(this IBasicOutputByteStream destinationStream, IAsyncEnumerable<Byte> sequence, CancellationToken cancellationToken = default)
+        public static async Task WriteByteSequenceAsync(this ISequentialOutputByteStream destinationStream, IAsyncEnumerable<Byte> sequence, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2679,7 +2676,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteInt16LEAsync(this IBasicOutputByteStream destinationStream, Int16 value, CancellationToken cancellationToken = default)
+        public static Task WriteInt16LEAsync(this ISequentialOutputByteStream destinationStream, Int16 value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2705,7 +2702,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteUInt16LEAsync(this IBasicOutputByteStream destinationStream, UInt16 value, CancellationToken cancellationToken = default)
+        public static Task WriteUInt16LEAsync(this ISequentialOutputByteStream destinationStream, UInt16 value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2731,7 +2728,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteInt32LEAsync(this IBasicOutputByteStream destinationStream, Int32 value, CancellationToken cancellationToken = default)
+        public static Task WriteInt32LEAsync(this ISequentialOutputByteStream destinationStream, Int32 value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2757,7 +2754,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteUInt32LEAsync(this IBasicOutputByteStream destinationStream, UInt32 value, CancellationToken cancellationToken = default)
+        public static Task WriteUInt32LEAsync(this ISequentialOutputByteStream destinationStream, UInt32 value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2783,7 +2780,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteInt64LEAsync(this IBasicOutputByteStream destinationStream, Int64 value, CancellationToken cancellationToken = default)
+        public static Task WriteInt64LEAsync(this ISequentialOutputByteStream destinationStream, Int64 value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2809,7 +2806,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteUInt64LEAsync(this IBasicOutputByteStream destinationStream, UInt64 value, CancellationToken cancellationToken = default)
+        public static Task WriteUInt64LEAsync(this ISequentialOutputByteStream destinationStream, UInt64 value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2835,7 +2832,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteSingleLEAsync(this IBasicOutputByteStream destinationStream, Single value, CancellationToken cancellationToken = default)
+        public static Task WriteSingleLEAsync(this ISequentialOutputByteStream destinationStream, Single value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2861,7 +2858,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteDoubleLEAsync(this IBasicOutputByteStream destinationStream, Double value, CancellationToken cancellationToken = default)
+        public static Task WriteDoubleLEAsync(this ISequentialOutputByteStream destinationStream, Double value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2887,7 +2884,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteDecimalLEAsync(this IBasicOutputByteStream destinationStream, Decimal value, CancellationToken cancellationToken = default)
+        public static Task WriteDecimalLEAsync(this ISequentialOutputByteStream destinationStream, Decimal value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2913,7 +2910,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteInt16BEAsync(this IBasicOutputByteStream destinationStream, Int16 value, CancellationToken cancellationToken = default)
+        public static Task WriteInt16BEAsync(this ISequentialOutputByteStream destinationStream, Int16 value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2939,7 +2936,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteUInt16BEAsync(this IBasicOutputByteStream destinationStream, UInt16 value, CancellationToken cancellationToken = default)
+        public static Task WriteUInt16BEAsync(this ISequentialOutputByteStream destinationStream, UInt16 value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2965,7 +2962,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteInt32BEAsync(this IBasicOutputByteStream destinationStream, Int32 value, CancellationToken cancellationToken = default)
+        public static Task WriteInt32BEAsync(this ISequentialOutputByteStream destinationStream, Int32 value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -2991,7 +2988,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteUInt32BEAsync(this IBasicOutputByteStream destinationStream, UInt32 value, CancellationToken cancellationToken = default)
+        public static Task WriteUInt32BEAsync(this ISequentialOutputByteStream destinationStream, UInt32 value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3017,7 +3014,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteInt64BEAsync(this IBasicOutputByteStream destinationStream, Int64 value, CancellationToken cancellationToken = default)
+        public static Task WriteInt64BEAsync(this ISequentialOutputByteStream destinationStream, Int64 value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3043,7 +3040,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteUInt64BEAsync(this IBasicOutputByteStream destinationStream, UInt64 value, CancellationToken cancellationToken = default)
+        public static Task WriteUInt64BEAsync(this ISequentialOutputByteStream destinationStream, UInt64 value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3069,7 +3066,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteSingleBEAsync(this IBasicOutputByteStream destinationStream, Single value, CancellationToken cancellationToken = default)
+        public static Task WriteSingleBEAsync(this ISequentialOutputByteStream destinationStream, Single value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3095,7 +3092,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteDoubleBEAsync(this IBasicOutputByteStream destinationStream, Double value, CancellationToken cancellationToken = default)
+        public static Task WriteDoubleBEAsync(this ISequentialOutputByteStream destinationStream, Double value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3121,7 +3118,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Task WriteDecimalBEAsync(this IBasicOutputByteStream destinationStream, Decimal value, CancellationToken cancellationToken = default)
+        public static Task WriteDecimalBEAsync(this ISequentialOutputByteStream destinationStream, Decimal value, CancellationToken cancellationToken = default)
         {
             if (destinationStream is null)
                 throw new ArgumentNullException(nameof(destinationStream));
@@ -3283,7 +3280,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this IBasicInputByteStream inputStream, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this ISequentialInputByteStream inputStream, CancellationToken cancellationToken = default)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -3301,7 +3298,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this IBasicInputByteStream inputStream, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this ISequentialInputByteStream inputStream, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -3322,7 +3319,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this IBasicInputByteStream inputStream, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this ISequentialInputByteStream inputStream, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -3340,7 +3337,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this IBasicInputByteStream inputStream, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this ISequentialInputByteStream inputStream, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -3361,7 +3358,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this IBasicInputByteStream inputStream, Int32 bufferSize, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this ISequentialInputByteStream inputStream, Int32 bufferSize, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -3377,7 +3374,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this IBasicInputByteStream inputStream, Int32 bufferSize, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this ISequentialInputByteStream inputStream, Int32 bufferSize, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -3396,7 +3393,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this IBasicInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this ISequentialInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -3412,7 +3409,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this IBasicInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc24Async(this ISequentialInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -3583,7 +3580,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this IBasicInputByteStream inputStream, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this ISequentialInputByteStream inputStream, CancellationToken cancellationToken = default)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -3601,7 +3598,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this IBasicInputByteStream inputStream, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this ISequentialInputByteStream inputStream, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -3622,7 +3619,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this IBasicInputByteStream inputStream, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this ISequentialInputByteStream inputStream, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -3640,7 +3637,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this IBasicInputByteStream inputStream, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this ISequentialInputByteStream inputStream, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             const Int32 MAX_BUFFER_SIZE = 80 * 1024;
 
@@ -3661,7 +3658,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this IBasicInputByteStream inputStream, Int32 bufferSize, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this ISequentialInputByteStream inputStream, Int32 bufferSize, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -3677,7 +3674,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this IBasicInputByteStream inputStream, Int32 bufferSize, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this ISequentialInputByteStream inputStream, Int32 bufferSize, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -3696,7 +3693,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this IBasicInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this ISequentialInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -3712,7 +3709,7 @@ namespace Utility.IO
             }
         }
 
-        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this IBasicInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
+        public static async Task<(UInt32 Crc, UInt64 Length)> CalculateCrc32Async(this ISequentialInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -3734,15 +3731,14 @@ namespace Utility.IO
         #endregion
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static async IAsyncEnumerable<Byte> InternalGetByteSequence<POSITION_T, UNSIGNED_OFFSET_T>(IInputByteStream<POSITION_T> baseStream, POSITION_T? offset, UInt64? count, IProgress<UInt64>? progress, Boolean leaveOpen, [EnumeratorCancellation] CancellationToken cancellationToken)
+        private static async IAsyncEnumerable<Byte> InternalGetByteSequence<POSITION_T>(ISequentialInputByteStream baseStream, POSITION_T? offset, UInt64? count, IProgress<UInt64>? progress, Boolean leaveOpen, [EnumeratorCancellation] CancellationToken cancellationToken)
             where POSITION_T : struct
-            where UNSIGNED_OFFSET_T : struct
         {
             const Int32 BUFFER_SIZE = 80 * 1024;
 
             try
             {
-                var randomAccessStream = baseStream as IRandomInputByteStream<POSITION_T, UNSIGNED_OFFSET_T>;
+                var randomAccessStream = baseStream as IRandomInputByteStream<POSITION_T>;
                 if (randomAccessStream is not null)
                 {
                     if (offset is not null)
@@ -3798,7 +3794,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static async Task<Boolean> InternalStreamBytesEqualAsync(this IBasicInputByteStream stream1, IBasicInputByteStream stream2, IProgress<UInt64>? progress, CancellationToken cancellationToken)
+        private static async Task<Boolean> InternalStreamBytesEqualAsync(this ISequentialInputByteStream stream1, ISequentialInputByteStream stream2, IProgress<UInt64>? progress, CancellationToken cancellationToken)
         {
             const Int32 bufferSize = 81920;
 
@@ -3879,7 +3875,7 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static async Task InternalCopyToAsync(this IBasicInputByteStream source, IBasicOutputByteStream destination, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken)
+        private static async Task InternalCopyToAsync(this ISequentialInputByteStream source, ISequentialOutputByteStream destination, Int32 bufferSize, IProgress<UInt64>? progress, Boolean leaveOpen, CancellationToken cancellationToken)
         {
             var processedCounter = new ProgressCounterUInt64(progress);
             try
@@ -4023,15 +4019,15 @@ namespace Utility.IO
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Task<(UInt32 Crc, UInt64 Length)> InternalCalculateCrc24Async(this IBasicInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, CancellationToken cancellationToken)
+        private static Task<(UInt32 Crc, UInt64 Length)> InternalCalculateCrc24Async(this ISequentialInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, CancellationToken cancellationToken)
             => InternalCalculateCrcAsync(inputStream, bufferSize, progress, Crc24.CreateCalculationState(), cancellationToken);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Task<(UInt32 Crc, UInt64 Length)> InternalCalculateCrc32Async(this IBasicInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, CancellationToken cancellationToken)
+        private static Task<(UInt32 Crc, UInt64 Length)> InternalCalculateCrc32Async(this ISequentialInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, CancellationToken cancellationToken)
             => InternalCalculateCrcAsync(inputStream, bufferSize, progress, Crc32.CreateCalculationState(), cancellationToken);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static async Task<(UInt32 Crc, UInt64 Length)> InternalCalculateCrcAsync(IBasicInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, ICrcCalculationState<UInt32, UInt64> session, CancellationToken cancellationToken)
+        private static async Task<(UInt32 Crc, UInt64 Length)> InternalCalculateCrcAsync(ISequentialInputByteStream inputStream, Int32 bufferSize, IProgress<UInt64>? progress, ICrcCalculationState<UInt32> session, CancellationToken cancellationToken)
         {
             var processedCounter = new ProgressCounterUInt64(progress);
             processedCounter.Report();
@@ -4047,7 +4043,7 @@ namespace Utility.IO
                     processedCounter.AddValue((UInt32)length);
                 }
 
-                return session.GetResult();
+                return session.GetResultValue();
             }
             finally
             {

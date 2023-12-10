@@ -5,10 +5,10 @@ namespace ZipUtility.IO
 {
     public interface IHierarchicalEncoder
     {
-        IOutputByteStream<UInt64> GetEncodingStream(
-            IBasicOutputByteStream baseStream,
+        ISequentialOutputByteStream GetEncodingStream(
+            ISequentialOutputByteStream baseStream,
             ICoderOption option,
-            UInt64? unpackedStreamSize,
-            IProgress<UInt64>? unpackedCountProgress = null);
+            IProgress<UInt64>? unpackedCountProgress,
+            Boolean leaveOpen = false);
     }
 }

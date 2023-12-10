@@ -6,10 +6,10 @@ namespace ZipUtility.ZipFileHeader
 {
     internal static class StreamExtensions
     {
-        public static Int64 FindFirstSigunature(this IRandomInputByteStream<UInt64, UInt64> inputStream, UInt32 signature, UInt64 offset, UInt64 count)
+        public static Int64 FindFirstSigunature(this IRandomInputByteStream<UInt64> inputStream, UInt32 signature, UInt64 offset, UInt64 count)
             => inputStream.FindFirstSigunature(offset, count, (buffer, index) => buffer.Slice(index, 4).ToUInt32LE() == signature);
 
-        public static Int64 FindFirstSigunature(this IRandomInputByteStream<UInt64, UInt64> inputStream, UInt64 offset, UInt64 count, Func<ReadOnlyMemory<Byte>, Int32, Boolean> predicate)
+        public static Int64 FindFirstSigunature(this IRandomInputByteStream<UInt64> inputStream, UInt64 offset, UInt64 count, Func<ReadOnlyMemory<Byte>, Int32, Boolean> predicate)
         {
             var buffer = new Byte[(sizeof(UInt32))];
             var readOnlyBuffer = buffer.AsReadOnly();
@@ -33,10 +33,10 @@ namespace ZipUtility.ZipFileHeader
                 : -1;
         }
 
-        public static UInt64? FindLastSigunature(this IRandomInputByteStream<UInt64, UInt64> inputStream, UInt32 signature, UInt64 offset, UInt64 count)
+        public static UInt64? FindLastSigunature(this IRandomInputByteStream<UInt64> inputStream, UInt32 signature, UInt64 offset, UInt64 count)
             => inputStream.FindLastSigunature(offset, count, (buffer, index) => buffer.Slice(index, 4).ToUInt32LE() == signature);
 
-        public static UInt64? FindLastSigunature(this IRandomInputByteStream<UInt64, UInt64> inputStream, UInt64 offset, UInt64 count, Func<ReadOnlyMemory<Byte>, Int32, Boolean> predicate)
+        public static UInt64? FindLastSigunature(this IRandomInputByteStream<UInt64> inputStream, UInt64 offset, UInt64 count, Func<ReadOnlyMemory<Byte>, Int32, Boolean> predicate)
         {
             var buffer = new Byte[(sizeof(UInt32))];
             var readOnlyBuffer = buffer.AsReadOnly();

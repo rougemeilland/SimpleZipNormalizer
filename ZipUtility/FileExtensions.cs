@@ -128,7 +128,7 @@ namespace ZipUtility
 
             return
                 new ZipArchiveFileWriter(
-                    new SingleVolumeZipOutputStream(destinationZipFile),
+                    SingleVolumeZipOutputStream.CreateInstance(destinationZipFile),
                     zipEntryNameEncodingProvider,
                     destinationZipFile);
         }
@@ -229,7 +229,6 @@ namespace ZipUtility
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1859:可能な場合は具象型を使用してパフォーマンスを向上させる", Justification = "<保留中>")]
         private static IZipInputStream GetSourceStreamByFileNamePattern(DirectoryPath baseDirectory, FilePath sourceFile)
         {
             var match = _sevenZipMultiVolumeZipFileNamePattern.Match(sourceFile.Name);

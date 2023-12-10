@@ -4,13 +4,12 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using Utility;
-using Utility.Linq;
 using Utility.Text;
 using ZipUtility.ZipExtraField;
 
 namespace ZipUtility.ZipFileHeader
 {
-    abstract class ZipEntryInternalHeader
+    internal abstract class ZipEntryInternalHeader
     {
         private static readonly Encoding _utf8EncodingWithoutBOM;
 

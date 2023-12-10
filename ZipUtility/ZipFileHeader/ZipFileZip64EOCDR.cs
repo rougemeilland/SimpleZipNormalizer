@@ -6,7 +6,7 @@ using Utility.IO;
 
 namespace ZipUtility.ZipFileHeader
 {
-    class ZipFileZip64EOCDR
+    internal class ZipFileZip64EOCDR
     {
         public const UInt32 MinimumHeaderSize = 56U;
 
@@ -103,8 +103,8 @@ namespace ZipUtility.ZipFileHeader
                 if (totalNumberOfEntriesInTheCentralDirectoryOnThisDisk > totalNumberOfEntriesInTheCentralDirectory)
                     throw new BadZipFileFormatException($"TThe value of field \"{nameof(totalNumberOfEntriesInTheCentralDirectoryOnThisDisk)}\" in ZIP64 EOCDR exceeds the value of field \"{nameof(totalNumberOfEntriesInTheCentralDirectory)}\".: {nameof(totalNumberOfEntriesInTheCentralDirectoryOnThisDisk)}=0x{totalNumberOfEntriesInTheCentralDirectoryOnThisDisk:8}, {nameof(totalNumberOfEntriesInTheCentralDirectory)}=0x{totalNumberOfEntriesInTheCentralDirectory:8}");
 
-                if (sizeOfTheCentralDirectory > zip64EOCDRPosition - zipInputStream.FirstDiskStartPosition)
-                    throw new BadZipFileFormatException($"The value of field \"{sizeOfTheCentralDirectory}\" in ZIP64 EOCDR is too large. : {nameof(sizeOfTheCentralDirectory)}=0x{sizeOfTheCentralDirectory:x16}, totalLengthUpToZip64EOCDR=0x{zip64EOCDRPosition - zipInputStream.FirstDiskStartPosition:16}");
+                if (sizeOfTheCentralDirectory > zip64EOCDRPosition - zipInputStream.StartOfThisStream)
+                    throw new BadZipFileFormatException($"The value of field \"{sizeOfTheCentralDirectory}\" in ZIP64 EOCDR is too large. : {nameof(sizeOfTheCentralDirectory)}=0x{sizeOfTheCentralDirectory:x16}, totalLengthUpToZip64EOCDR=0x{zip64EOCDRPosition - zipInputStream.StartOfThisStream:16}");
 
                 return
                     new ZipFileZip64EOCDR(
