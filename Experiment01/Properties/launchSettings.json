@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Experiment01": {
-      "commandName": "Project",
-      "commandLineArgs": "\"D:\\テストデータ\\Deflateで圧縮されたZIPファイル(7ZIP).zip\"\r\n\"D:\\テストデータ\\Deflateで圧縮されたZIPファイル(PKZIP).zip\"\r\n\"Z:\\Downloads\\Lunor\\memdisk.zip\""
-    }
-  }
-}
