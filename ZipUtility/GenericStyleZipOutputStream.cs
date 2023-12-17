@@ -41,7 +41,7 @@ namespace ZipUtility
             _maximumVolumeSize = maximumVolumeSize;
             _volumeDisks = new List<(FilePath volumeDiskFile, UInt64 volumeDiskSize)>();
             _isDisposed = false;
-            _currentBaseStream = firstVolumeStream;
+            _currentBaseStream = firstVolumeStream.WithCache();
             _isLocked = false;
         }
 
@@ -298,7 +298,7 @@ namespace ZipUtility
             {
             }
 
-            _currentBaseStream = _baseZipArchiveFile.Create();
+            _currentBaseStream = _baseZipArchiveFile.Create().WithCache();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
