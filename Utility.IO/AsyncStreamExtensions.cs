@@ -1034,8 +1034,10 @@ namespace Utility.IO
 
             return (UInt32)(
                 await stream.ReadAsync(
-                    buffer.AsMemory((Int32)offset,
-                    buffer.Length - (Int32)offset),
+                    buffer
+                        .AsMemory(
+                            checked((Int32)offset),
+                            checked(buffer.Length - (Int32)offset)),
                     cancellationToken)
                 .ConfigureAwait(false)).Maximum(0);
         }
@@ -1066,7 +1068,7 @@ namespace Utility.IO
 
             return (UInt32)(
                 await stream.ReadAsync(
-                    buffer.AsMemory((Int32)offset, buffer.Length - (Int32)offset),
+                    buffer.AsMemory(checked((Int32)offset), checked(buffer.Length - (Int32)offset)),
                     cancellationToken)
                 .ConfigureAwait(false)).Maximum(0);
         }
@@ -2219,7 +2221,7 @@ namespace Utility.IO
                 throw new ArgumentOutOfRangeException(nameof(offset));
 
             var count = buffer.Length - (Int32)offset;
-            await stream.WriteAsync(buffer.AsMemory((Int32)offset, count), cancellationToken).ConfigureAwait(false);
+            await stream.WriteAsync(buffer.AsMemory(checked((Int32)offset), count), cancellationToken).ConfigureAwait(false);
             return (UInt32)count;
         }
 
@@ -2233,7 +2235,7 @@ namespace Utility.IO
             if (checked(offset + count > (UInt32)buffer.Length))
                 throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(count)}) is not within the {nameof(buffer)}.");
 
-            await stream.WriteAsync(buffer.AsMemory((Int32)offset, (Int32)count), cancellationToken).ConfigureAwait(false);
+            await stream.WriteAsync(buffer.AsMemory(checked((Int32)offset), checked((Int32)count)), cancellationToken).ConfigureAwait(false);
             return count;
         }
 

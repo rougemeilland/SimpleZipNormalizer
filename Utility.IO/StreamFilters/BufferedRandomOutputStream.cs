@@ -67,13 +67,13 @@ namespace Utility.IO.StreamFilters
 
         protected override void FlushCore()
         {
-            _cache.Flush(b => _baseStream.Write(b.Span));
+            _cache.Flush(b => _baseStream.WriteBytes(b.Span));
             _baseStream.Flush();
         }
 
         protected override async Task FlushAsyncCore(CancellationToken cancellationToken = default)
         {
-            await _cache.FlushAsync(b => _baseStream.WriteAsync(b, cancellationToken)).ConfigureAwait(false);
+            await _cache.FlushAsync(b => _baseStream.WriteBytesAsync(b, cancellationToken)).ConfigureAwait(false);
             await _baseStream.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
 

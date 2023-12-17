@@ -91,12 +91,12 @@ namespace Utility.IO
             }
         }
 
-        public ISequentialOutputByteStream Create()
+        public IRandomOutputByteStream<UInt64> Create()
         {
             _file.Refresh();
             try
             {
-                return _file.Create().AsOutputByteStream();
+                return _file.Create().AsOutputByteStream().AsRandomAccess<UInt64>();
             }
             finally
             {
@@ -151,12 +151,12 @@ namespace Utility.IO
             }
         }
 
-        public ISequentialInputByteStream OpenRead()
+        public IRandomInputByteStream<UInt64> OpenRead()
         {
             _file.Refresh();
             try
             {
-                return _file.OpenRead().AsInputByteStream();
+                return _file.OpenRead().AsInputByteStream().AsRandomAccess<UInt64>();
             }
             finally
             {
@@ -193,12 +193,12 @@ namespace Utility.IO
             }
         }
 
-        public ISequentialOutputByteStream OpenWrite()
+        public IRandomOutputByteStream<UInt64> OpenWrite()
         {
             _file.Refresh();
             try
             {
-                return _file.OpenWrite().AsOutputByteStream();
+                return _file.OpenWrite().AsOutputByteStream().AsRandomAccess<UInt64>();
             }
             finally
             {

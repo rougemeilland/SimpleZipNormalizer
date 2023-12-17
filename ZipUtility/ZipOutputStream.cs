@@ -11,11 +11,13 @@ namespace ZipUtility
     {
         private readonly Guid _instanceId;
         private Boolean _isDisposed;
+        private Boolean _isCompletedSuccessfully;
 
         protected ZipOutputStream()
         {
             _instanceId = Guid.NewGuid();
             _isDisposed = false;
+            _isCompletedSuccessfully = false;
         }
 
         public ZipStreamPosition Position
@@ -25,29 +27,7 @@ namespace ZipUtility
                 if (_isDisposed)
                     throw new ObjectDisposedException(GetType().FullName);
 
-                return CurrentPositionCore;
-            }
-        }
-
-        public Boolean IsMultiVolumeZipStream
-        {
-            get
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                return IsMultiVolumeZipStreamCore;
-            }
-        }
-
-        public UInt64 MaximumDiskSize
-        {
-            get
-            {
-                if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().FullName);
-
-                return MaximumDiskSizeCore;
+                return PositionCore;
             }
         }
 
@@ -75,11 +55,19 @@ namespace ZipUtility
             UnlockVolumeDiskCore();
         }
 
+        public void CompletedSuccessfully()
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(GetType().FullName);
+
+            _isCompletedSuccessfully = true;
+        }
+
         public ZipStreamPosition Add(ZipStreamPosition position, UInt64 offset)
         {
             if (_isDisposed)
                 throw new ObjectDisposedException(GetType().FullName);
-            if (!position.Host.Equals(this))
+            if (!Equals(position.Host))
                 throw new InternalLogicalErrorException();
 
             try
@@ -96,7 +84,7 @@ namespace ZipUtility
         {
             if (_isDisposed)
                 throw new ObjectDisposedException(GetType().FullName);
-            if (!position.Host.Equals(this))
+            if (!Equals(position.Host))
                 throw new InternalLogicalErrorException();
 
             try
@@ -113,9 +101,9 @@ namespace ZipUtility
         {
             if (_isDisposed)
                 throw new ObjectDisposedException(GetType().FullName);
-            if (!position1.Host.Equals(this))
+            if (!Equals(position1.Host))
                 throw new InternalLogicalErrorException();
-            if (!position2.Host.Equals(this))
+            if (!Equals(position2.Host))
                 throw new InternalLogicalErrorException();
 
             try
@@ -132,34 +120,45 @@ namespace ZipUtility
         {
             if (_isDisposed)
                 throw new ObjectDisposedException(GetType().FullName);
-            if (!position1.Host.Equals(this))
+            if (!Equals(position1.Host))
                 throw new InternalLogicalErrorException();
-            if (!position2.Host.Equals(this))
+            if (!Equals(position2.Host))
                 throw new InternalLogicalErrorException();
 
-            return CompareCore(position1.DiskNumber, position1.OffsetOnTheDisk, position2.DiskNumber, position2.OffsetOnTheDisk);
+            var (diskNumber1, offsetOnTheDisk1) = NormalizeCore(position1.DiskNumber, position1.OffsetOnTheDisk);
+            var (diskNumber2, offsetOnTheDisk2) = NormalizeCore(position2.DiskNumber, position2.OffsetOnTheDisk);
+            var c = diskNumber1.CompareTo(diskNumber2);
+            if (c != 0)
+                return c;
+            return offsetOnTheDisk1.CompareTo(offsetOnTheDisk2);
         }
 
         public Boolean Equal(ZipStreamPosition position1, ZipStreamPosition position2)
         {
             if (_isDisposed)
                 throw new ObjectDisposedException(GetType().FullName);
-            if (!position1.Host.Equals(this))
+            if (!Equals(position1.Host))
                 throw new InternalLogicalErrorException();
-            if (!position2.Host.Equals(this))
+            if (!Equals(position2.Host))
                 throw new InternalLogicalErrorException();
 
-            return EqualCore(position1.DiskNumber, position1.OffsetOnTheDisk, position2.DiskNumber, position2.OffsetOnTheDisk);
+            var (diskNumber1, offsetOnTheDisk1) = NormalizeCore(position1.DiskNumber, position1.OffsetOnTheDisk);
+            var (diskNumber2, offsetOnTheDisk2) = NormalizeCore(position2.DiskNumber, position2.OffsetOnTheDisk);
+
+            return
+                diskNumber1 == diskNumber2
+                && offsetOnTheDisk1 == offsetOnTheDisk2;
         }
 
         public Int32 GetHashCode(ZipStreamPosition position)
         {
             if (_isDisposed)
                 throw new ObjectDisposedException(GetType().FullName);
-            if (!position.Host.Equals(this))
+            if (!Equals(position.Host))
                 throw new InternalLogicalErrorException();
 
-            return GetHashCodeCore(position.DiskNumber, position.OffsetOnTheDisk);
+            var (diskNumber, offsetOnTheDisk) = NormalizeCore(position.DiskNumber, position.OffsetOnTheDisk);
+            return HashCode.Combine(diskNumber, offsetOnTheDisk);
         }
 
         public Boolean Equals(IVirtualZipFile? other)
@@ -167,7 +166,7 @@ namespace ZipUtility
                && GetType() == other.GetType()
                && _instanceId == ((ZipOutputStream)other)._instanceId;
 
-        protected abstract ZipStreamPosition CurrentPositionCore { get; }
+        protected abstract ZipStreamPosition PositionCore { get; }
 
         protected override Int32 WriteCore(ReadOnlySpan<Byte> buffer)
         {
@@ -183,18 +182,16 @@ namespace ZipUtility
 
         protected override void FlushCore() { }
         protected override Task FlushAsyncCore(CancellationToken cancellationToken = default) => Task.CompletedTask;
-        protected virtual Boolean IsMultiVolumeZipStreamCore => false;
         protected virtual UInt64 MaximumDiskSizeCore => UInt64.MaxValue;
         protected virtual void ReserveAtomicSpaceCore(UInt64 atomicSpaceSize) { }
         protected virtual void LockVolumeDiskCore() { }
         protected virtual void UnlockVolumeDiskCore() { }
+        protected abstract void CleanUpCore();
         protected abstract IRandomOutputByteStream<UInt64> GetCurrentStreamCore();
         protected abstract ZipStreamPosition AddCore(UInt32 diskNumber, UInt64 offsetOnTheDisk, UInt64 offset);
         protected abstract ZipStreamPosition SubtractCore(UInt32 diskNumber, UInt64 offsetOnTheDisk, UInt64 offset);
         protected abstract UInt64 SubtractCore(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2);
-        protected abstract Int32 CompareCore(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2);
-        protected abstract Boolean EqualCore(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2);
-        protected abstract Int32 GetHashCodeCore(UInt32 diskNumber, UInt64 offsetOnTheDisk);
+        protected virtual (UInt32 diskNumber, UInt64 offsetOnTheDisk) NormalizeCore(UInt32 diskNumber, UInt64 offsetOnTheDisk) => (diskNumber, offsetOnTheDisk);
 
         protected override void Dispose(Boolean disposing)
         {
@@ -203,6 +200,9 @@ namespace ZipUtility
                 if (disposing)
                 {
                 }
+
+                if (!_isCompletedSuccessfully)
+                    CleanUpCore();
 
                 _isDisposed = true;
             }
@@ -214,6 +214,8 @@ namespace ZipUtility
         {
             if (!_isDisposed)
             {
+                if (!_isCompletedSuccessfully)
+                    CleanUpCore();
                 _isDisposed = true;
             }
 
@@ -222,7 +224,7 @@ namespace ZipUtility
 
         private Int32 GetSizeToWrite(IRandomOutputByteStream<UInt64> stream, ReadOnlySpan<Byte> buffer)
         {
-            var sizeToWrite = checked((Int32)(MaximumDiskSize - stream.Length).Minimum((UInt64)buffer.Length));
+            var sizeToWrite = checked((Int32)(MaximumDiskSizeCore - stream.Length).Minimum((UInt64)buffer.Length));
             if (sizeToWrite <= 0)
                 throw new InternalLogicalErrorException();
             return sizeToWrite;

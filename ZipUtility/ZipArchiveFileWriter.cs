@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Utility;
 using Utility.IO;
 using Utility.Text;
+using ZipUtility.Headers.Builder;
 using static ZipUtility.ZipArchiveFileWriter;
 
 namespace ZipUtility
@@ -17,17 +19,18 @@ namespace ZipUtility
     {
         internal interface IZipFileWriterEnvironment
         {
+            FilePath ZipArchiveFile { get; }
+            IZipEntryNameEncodingProvider EntryNameEncodingProvider { get; }
             Byte ThisSoftwareVersion { get; }
             ZipEntryHostSystem HostSystem { get; }
-            IZipEntryNameEncodingProvider EntryNameEncodingProvider { get; }
-            FilePath ZipArchiveFile { get; }
+            UInt16 GetVersionNeededToExtract(ZipEntryCompressionMethodId compressionMethodId = ZipEntryCompressionMethodId.Unknown, Boolean? supportDirectory = null, Boolean? requiredZip64 = null);
         }
 
         internal interface IZipFileWriterOutputStream
         {
+            IZipOutputStream Stream { get; }
             void LockStream();
             void UnlockStream();
-            IZipOutputStream Stream { get; }
         }
 
         private enum WriterState
@@ -39,14 +42,8 @@ namespace ZipUtility
         }
 
         private const Byte _zipWriterVersion = 63;
-        private const Int32 _fixedSizeOfZip64EOCDR = 56;
-        private const Int32 _fixedSizeOfZip64EOCDL = 20;
-        private const Int32 _fixedSizeOfEOCDR = 22;
 
         private static readonly Encoding _standardUnicodeEncoding;
-        private static readonly UInt32 _signatureOfZip64EOCDR;
-        private static readonly UInt32 _signatureOfZip64EOCDL;
-        private static readonly UInt32 _signatureOfEOCDR;
 
         private readonly IZipOutputStream _zipOutputStream;
         private readonly IZipEntryNameEncodingProvider _entryNameEncodingProvider;
@@ -63,16 +60,11 @@ namespace ZipUtility
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
             _standardUnicodeEncoding = Encoding.UTF8.WithFallback(null, null).WithoutPreamble();
-            _signatureOfZip64EOCDR = Signature.MakeUInt32LESignature(0x50, 0x4b, 0x06, 0x06);
-            _signatureOfZip64EOCDL = Signature.MakeUInt32LESignature(0x50, 0x4b, 0x06, 0x07);
-            _signatureOfEOCDR = Signature.MakeUInt32LESignature(0x50, 0x4b, 0x05, 0x06);
         }
 
         internal ZipArchiveFileWriter(IZipOutputStream zipStream, IZipEntryNameEncodingProvider entryNameEncodingProvider, FilePath zipArchiveFile)
         {
             _zipOutputStream = zipStream ?? throw new ArgumentNullException(nameof(zipStream));
-            if (_zipOutputStream.IsMultiVolumeZipStream)
-                throw new NotSupportedException("Writing multi-volume ZIP files is not supported.");
             _entryNameEncodingProvider = entryNameEncodingProvider;
             _zipArchiveFile = zipArchiveFile;
             _isDisposed = false;
@@ -98,15 +90,15 @@ namespace ZipUtility
         /// それらの値は大抵のエンコーディング (例: ASCII および、UTF-8 や SHIFT-JIS などの ASCII の上位互換である他のエンコーディング) では制御文字に該当します。
         /// </para>
         /// <para>
-        /// それらの制御文字はテキストには一般的には使用されないため、通常の用途では問題ありません。
+        /// それらの制御文字は一般的なテキストには使用されないため、通常の用途では問題ありません。
         /// </para>
         /// </item>
         /// <item>
         /// <para>
-        /// コメントのバイト列のエンコーディングは規定されていないので、ZIP アーカイブを読み取るソフトウェアがデコード方法を知る手段がないことに注意してください。
+        /// コメントのバイト列のエンコーディングは規定されていないので、ZIP アーカイブを読み取るソフトウェアがコメントのデコード方法を知る手段がないことに注意してください。
         /// </para>
         /// <para>
-        /// 可能な限りよく使われているエンコーディングを使用することを推奨します。(例: ASCII または UTF-8 など)
+        /// 可能な限り、よく使われているエンコーディングを使用することを推奨します。(例: ASCII または UTF-8 など)
         /// </para>
         /// </item>
         /// </list>
@@ -114,7 +106,8 @@ namespace ZipUtility
         public ReadOnlyMemory<Byte> CommentBytes
         {
             get => _commentBytes;
-            private set
+
+            set
             {
                 if (_commentBytes.Length > UInt16.MaxValue)
                     throw new ArgumentException($"{nameof(value)} of {nameof(CommentBytes)} is too long. {nameof(value)} of {nameof(CommentBytes)} length must be at most 65535 bytes.");
@@ -147,13 +140,18 @@ namespace ZipUtility
         }
 
         /// <summary>
+        /// ZIP アーカイブの作成方法を制御するフラグを示す値を取得または設定します。
+        /// </summary>
+        public ZipWriteFlags Flags { get; set; }
+
+        /// <summary>
         /// サポートされている圧縮方式のIDのコレクションを取得します。
         /// </summary>
         public static IEnumerable<ZipEntryCompressionMethodId> SupportedCompressionIds
             => ZipEntryCompressionMethod.SupportedCompresssionMethodIds;
 
         /// <summary>
-        /// ZIP ファイルに書き込む新たなエントリを追加します。
+        /// ZIP アーカイブに書き込む新たなエントリを追加します。
         /// </summary>
         /// <param name="entryFullName">
         /// エントリのフルパス名を示す文字列です。
@@ -210,7 +208,7 @@ namespace ZipUtility
         }
 
         /// <summary>
-        /// エントリ名およびコメントのバイト列およびエンコード方式を明示的に指定することにより、ZIP ファイルに書き込む新たなエントリを追加します。
+        /// エントリ名およびコメントのバイト列およびエンコード方式を明示的に指定することにより、ZIP アーカイブに書き込む新たなエントリを追加します。
         /// </summary>
         /// <param name="entryFullName">
         /// エントリのフルパス名を示す文字列です。
@@ -241,7 +239,7 @@ namespace ZipUtility
         /// </list>
         /// このような状況は、例えば以下のような条件で発生し得ます。
         /// <list type="number">
-        /// <item>読み込んだ ZI Pファイルのエントリに UTF-8 エンコーディングであることを示すフラグが立っておらず、かつ</item>
+        /// <item>読み込んだ ZIP アーカイブのエントリに UTF-8 エンコーディングであることを示すフラグが立っておらず、かつ</item>
         /// <item>同じエントリの拡張フィールドにて明示的に UNICODE であると示されているバイト列が取得可能な場合。</item>
         /// </list>
         /// 通常はこれらのバイト列は同じ文字列を意味しているのですが、生のバイト列のエンコーディングによっては UNICODE にマップできない文字が含まれている可能性があります。
@@ -304,7 +302,7 @@ namespace ZipUtility
         }
 
         /// <summary>
-        /// ZIP ファイルの書き込みを明示的に終了します。
+        /// ZIP アーカイブの書き込みを明示的に終了します。
         /// </summary>
         public void Close()
         {
@@ -345,6 +343,8 @@ namespace ZipUtility
         /// </returns>
         public override String ToString() => $"\"{_zipArchiveFile.FullName}\"";
 
+        FilePath IZipFileWriterEnvironment.ZipArchiveFile => new(_zipArchiveFile.FullName);
+        IZipEntryNameEncodingProvider IZipFileWriterEnvironment.EntryNameEncodingProvider => _entryNameEncodingProvider;
         Byte IZipFileWriterEnvironment.ThisSoftwareVersion => _zipWriterVersion;
 
         ZipEntryHostSystem IZipFileWriterEnvironment.HostSystem
@@ -355,11 +355,28 @@ namespace ZipUtility
                 : OperatingSystem.IsMacOS()
                 ? ZipEntryHostSystem.Macintosh
                 : ZipEntryHostSystem.FAT; // 未知の OS の場合には MS-DOS とみなす
-        IZipEntryNameEncodingProvider IZipFileWriterEnvironment.EntryNameEncodingProvider => _entryNameEncodingProvider;
-        FilePath IZipFileWriterEnvironment.ZipArchiveFile => new(_zipArchiveFile.FullName);
+
+        UInt16 IZipFileWriterEnvironment.GetVersionNeededToExtract(ZipEntryCompressionMethodId compressionMethodId, Boolean? supportDirectory, Boolean? requiredZip64)
+        {
+            var versionNeededTiExtract =
+                new[]
+                {
+                        (UInt16)10, // minimum version (supported Stored compression)
+                        supportDirectory is not null && supportDirectory.Value == true  ? (UInt16)20 : (UInt16)0, // version if it contains directory entries
+                        compressionMethodId == ZipEntryCompressionMethodId.Deflate ? (UInt16)20 : (UInt16)0, // version if using Deflate compression
+                        compressionMethodId == ZipEntryCompressionMethodId.Deflate64 ? (UInt16)21 : (UInt16)0, // version if using Deflate64 compression
+                        compressionMethodId == ZipEntryCompressionMethodId.BZIP2 ? (UInt16)46 : (UInt16)0, // version if using BZIP2 compression
+                        compressionMethodId == ZipEntryCompressionMethodId.LZMA ? (UInt16)63 : (UInt16)0, // version if using LZMA compression
+                        compressionMethodId == ZipEntryCompressionMethodId.PPMd ? (UInt16)63 : (UInt16)0, // version if using PPMd+ compression
+                        requiredZip64 is not null && requiredZip64.Value ? (UInt16)45 : (UInt16)0, // version if using zip 64 extensions
+                }
+                .Max();
+            return versionNeededTiExtract;
+        }
+
+        IZipOutputStream IZipFileWriterOutputStream.Stream => _zipOutputStream;
         void IZipFileWriterOutputStream.LockStream() => LockZipStream();
         void IZipFileWriterOutputStream.UnlockStream() => UnlockZipStream();
-        IZipOutputStream IZipFileWriterOutputStream.Stream => _zipOutputStream;
 
         /// <summary>
         /// オブジェクトに関連付けられたリソースを解放します。
@@ -449,33 +466,23 @@ namespace ZipUtility
                 _writerState = WriterState.WritingTrailingHeaders;
 
                 // セントラルディレクトリヘッダの書き込み
-                var startOfCentralDirectoryHeaderPosition = _zipOutputStream.Position;
+                var centralDirectoryHeaderPositions = new List<ZipStreamPosition>();
                 foreach (var entry in _entries)
-                    entry.WriteCentralDirectoryHeader();
+                    centralDirectoryHeaderPositions.Add(entry.WriteCentralDirectoryHeader());
                 var endOfCentralDirectoryHeaderPosition = _zipOutputStream.Position;
 
-                var isZip64 =
-                    startOfCentralDirectoryHeaderPosition.DiskNumber >= UInt16.MaxValue
-                    || endOfCentralDirectoryHeaderPosition.DiskNumber >= UInt16.MaxValue
-                    || _entries.Count >= UInt16.MaxValue
-                    || endOfCentralDirectoryHeaderPosition - startOfCentralDirectoryHeaderPosition >= UInt32.MaxValue
-                    || startOfCentralDirectoryHeaderPosition.OffsetOnTheDisk >= UInt32.MaxValue;
-
-                if (isZip64)
-                {
-                    var versionNeededToExtractForZip64EOCDR = (UInt16)45; // ZIP64 は ver. 4.5 で実装しており、ZIP64 EOCDR では ver. 4.5 を超える機能は使用していないため、常にこの値。
-                    WriteZip64EOCDR(
+                // ZIP64 EOCDR, ZIP64 EOCDL, EOCDL の書き込み
+                var lastHeaders =
+                    ZipFileLastDiskHeader.Build(
                         this,
-                        startOfCentralDirectoryHeaderPosition,
+                        centralDirectoryHeaderPositions.ToArray(),
                         endOfCentralDirectoryHeaderPosition,
-                        _zipWriterVersion,
-                        versionNeededToExtractForZip64EOCDR);
-                    WriteZip64EOCDL(
-                        this,
-                        endOfCentralDirectoryHeaderPosition);
-                }
+                        _commentBytes,
+                        (Flags & ZipWriteFlags.AlwaysWriteZip64EOCDR) != ZipWriteFlags.None);
+                lastHeaders.WriteTo(_zipOutputStream);
 
-                WriteEOCDR(this, startOfCentralDirectoryHeaderPosition, endOfCentralDirectoryHeaderPosition, isZip64);
+                // ZIP アーカイブの出力が完了したことの宣言
+                _zipOutputStream.CompletedSuccessfully();
 
                 _writerState = WriterState.Completed;
             }
@@ -494,50 +501,6 @@ namespace ZipUtility
                 _lastEntry.Flush();
                 _lastEntry = null;
             }
-        }
-
-        private void WriteZip64EOCDR(IZipFileWriterOutputStream zipStream, ZipStreamPosition startOfCentralDirectoryHeader, ZipStreamPosition endOfCentralDirectoryHeader, UInt16 versionMageBy, UInt16 versionNeededToExtract)
-        {
-            var currentHeaderPosition = zipStream.Stream.Position;
-            var buffer = new Byte[_fixedSizeOfZip64EOCDR].AsMemory();
-            buffer[..4].SetValueLE(_signatureOfZip64EOCDR);
-            buffer.Slice(4, 8).SetValueLE(_fixedSizeOfZip64EOCDR - 12UL);
-            buffer.Slice(12, 2).SetValueLE(versionMageBy);
-            buffer.Slice(14, 2).SetValueLE(versionNeededToExtract);
-            buffer.Slice(16, 4).SetValueLE(currentHeaderPosition.DiskNumber);
-            buffer.Slice(20, 4).SetValueLE(startOfCentralDirectoryHeader.DiskNumber);
-            buffer.Slice(24, 8).SetValueLE((UInt64)_entries.Count); // このディスクにおけるセントラルディレクトリヘッダの数 (マルチボリュームかつセントラルディレクトリヘッダのリストの途中にボリューム境界が存在する場合に次の値と異なる)
-            buffer.Slice(32, 8).SetValueLE((UInt64)_entries.Count);
-            buffer.Slice(40, 8).SetValueLE(endOfCentralDirectoryHeader - startOfCentralDirectoryHeader);
-            buffer.Slice(48, 8).SetValueLE(startOfCentralDirectoryHeader.OffsetOnTheDisk);
-            _zipOutputStream.WriteBytes(buffer);
-        }
-
-        private void WriteZip64EOCDL(IZipFileWriterOutputStream zipWriter, ZipStreamPosition startOfZip64EOCDR)
-        {
-            var currentHeaderPosition = zipWriter.Stream.Position;
-            var buffer = new Byte[_fixedSizeOfZip64EOCDL].AsMemory();
-            buffer[..4].SetValueLE(_signatureOfZip64EOCDL);
-            buffer.Slice(4, 4).SetValueLE(!zipWriter.Stream.IsMultiVolumeZipStream ? 0 : startOfZip64EOCDR.DiskNumber);
-            buffer.Slice(8, 8).SetValueLE(startOfZip64EOCDR.OffsetOnTheDisk);
-            buffer.Slice(16, 4).SetValueLE(currentHeaderPosition.DiskNumber + 1); // ディスク番号は 0 起算であり、かつ、Zip64EOCDR は EOCDR とともに最後のディスクに存在しなければならないので、現在のディスク番号に 1 を足した数値がディスクの総数
-            _zipOutputStream.WriteBytes(buffer);
-        }
-
-        private void WriteEOCDR(IZipFileWriterOutputStream zipWriter, ZipStreamPosition startOfCentralDirectoryHeader, ZipStreamPosition endOfCentralDirectoryHeader, Boolean isZip64)
-        {
-            var currentHeaderPosition = zipWriter.Stream.Position;
-            var buffer = new Byte[_fixedSizeOfEOCDR].AsMemory();
-            buffer[..4].SetValueLE(_signatureOfEOCDR);
-            buffer.Slice(4, 2).SetValueLE(!zipWriter.Stream.IsMultiVolumeZipStream ? (UInt16)0 : isZip64 ? UInt16.MaxValue : (UInt16)currentHeaderPosition.DiskNumber);
-            buffer.Slice(6, 2).SetValueLE(!zipWriter.Stream.IsMultiVolumeZipStream ? (UInt16)0 : isZip64 ? UInt16.MaxValue : (UInt16)startOfCentralDirectoryHeader.DiskNumber);
-            buffer.Slice(8, 2).SetValueLE(isZip64 ? UInt16.MaxValue : (UInt16)_entries.Count); // このディスクにおけるセントラルディレクトリヘッダの数 (マルチボリュームかつセントラルディレクトリヘッダのリストの途中にボリューム境界が存在する場合に次の値と異なる)
-            buffer.Slice(10, 2).SetValueLE(isZip64 ? UInt16.MaxValue : (UInt16)_entries.Count);
-            buffer.Slice(12, 4).SetValueLE(isZip64 ? UInt32.MaxValue : (UInt32)(endOfCentralDirectoryHeader - startOfCentralDirectoryHeader));
-            buffer.Slice(16, 4).SetValueLE(isZip64 ? UInt32.MaxValue : (UInt32)startOfCentralDirectoryHeader.OffsetOnTheDisk);
-            buffer.Slice(20, 2).SetValueLE((UInt16)CommentBytes.Length);
-            _zipOutputStream.WriteBytes(buffer);
-            _zipOutputStream.WriteBytes(CommentBytes);
         }
 
         private void LockZipStream()

@@ -47,8 +47,6 @@ namespace SimpleZipNormalizer.CUI
 
         private static int Main(string[] args)
         {
-            // TODO: マルチボリューム ZIP アーカイブの書き込み対応
-            // TODO: ZIP64対応のテスト ディスク数が65535以上になるように分割してみる。分割サイズが64KBだとして、圧縮済みサイズが合計4GBを超えれば ZIP64 EOCDR が適用されるはず。
             var optionInteractive = false;
             var mode = CommandMode.ListZipEntries;
             var allowedEncodngNames = new List<string>();

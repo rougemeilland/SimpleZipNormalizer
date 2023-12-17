@@ -15,21 +15,6 @@ namespace ZipUtility
         ZipStreamPosition Position { get; }
 
         /// <summary>
-        /// この仮想ファイルがマルチボリュームZIPファイルであるかどうかの値を取得します。
-        /// </summary>
-        /// <value>
-        /// この仮想ファイルがマルチボリュームZIPファイルかどうかを示す <see cref="Boolean"/> 値です。
-        /// マルチボリュームZIPであるならtrue、そうではないのならfalseです。
-        /// </value>
-        Boolean IsMultiVolumeZipStream { get; }
-
-        /// <summary>
-        /// この仮想ファイルがマルチボリュームZIPファイルである場合、1ボリュームあたりの最大ファイルサイズです。
-        /// マルチボリュームではない場合は <see cref="UInt64.MaxValue"/> が返ります。
-        /// </summary>
-        UInt64 MaximumDiskSize { get; }
-
-        /// <summary>
         /// 別々のディスクに分割されてはならない不可分な領域を予約します。
         /// </summary>
         /// <param name="atomicSpaceSize">
@@ -125,5 +110,26 @@ namespace ZipUtility
         /// </list>
         /// </remarks>
         void UnlockVolumeDisk();
+
+        /// <summary>
+        /// ZIP アーカイブの出力が完了したことを宣言します。
+        /// </summary>
+        /// <remarks>
+        /// <list type="bullet">
+        /// <item>
+        /// ZIP アーカイブへの出力が正常に完了した場合には必ず <see cref="CompletedSuccessfully"/>メソッドを呼び出してください。
+        /// </item>
+        /// <item>
+        /// <term>[実装する際の注意事項]</term>
+        /// <description>
+        /// <para>
+        /// もし、<see cref="CompletedSuccessfully"/> が呼び出されることなくストリームの解放 (<see cref="IDisposable.Dispose"/> または <see cref="IAsyncDisposable.DisposeAsync"/> の呼び出し) が発生した場合は、
+        /// 作成された ZIP アーカイブが不完全であるとみなして、削除してください。
+        /// </para>
+        /// </description>
+        /// </item>
+        /// </list>
+        /// </remarks>
+        void CompletedSuccessfully();
     }
 }

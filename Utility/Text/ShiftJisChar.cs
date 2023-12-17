@@ -176,7 +176,7 @@ namespace Utility.Text
         {
             var buffer = new Byte[2];
             var length = ToByteArray(buffer);
-            return buffer.AsMemory()[..length];
+            return buffer.AsMemory(0, length);
         }
 
         public static Boolean IsSingleByteChar(Byte data) => !IsFirstByteOfMultiByteChar(data);

@@ -1,8 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Utility.Collections;
+using Utility.IO;
+using ZipUtility;
+using ZipUtility.ExtraFields;
 
 namespace Experiment01
 {
@@ -13,28 +16,17 @@ namespace Experiment01
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
-        private static void Main()
+        private static void Main(string[] args)
         {
-            Console.WriteLine($"{nameof(Path.VolumeSeparatorChar)}='{Path.VolumeSeparatorChar}'");
-            Console.WriteLine($"{nameof(Path.DirectorySeparatorChar)}='{Path.DirectorySeparatorChar}'");
-            Console.WriteLine($"{nameof(Path.AltDirectorySeparatorChar)}='{Path.AltDirectorySeparatorChar}'");
-            Console.WriteLine($"{nameof(Path.PathSeparator)}='{Path.PathSeparator}'");
-            Console.WriteLine($"{nameof(Path.GetInvalidFileNameChars)}()=[{FromCharSequenceToString(Path.GetInvalidFileNameChars())}]");
-            Console.WriteLine($"{nameof(Path.GetInvalidPathChars)}()=[{FromCharSequenceToString(Path.GetInvalidPathChars())}]");
+            using (var writer = new StreamWriter(args[0], false, Encoding.UTF8))
+            {
+                foreach (var c in RandomSequence.GetAsciiCharSequence().Take(32765-90))
+                    writer.Write(c);
+            }
 
+            Console.WriteLine("Completed.");
+            Console.Beep();
             _ = Console.ReadLine();
         }
-
-        private static string FromCharSequenceToString(IEnumerable<char> characters)
-            => string.Join(
-                ", ",
-                characters
-                    .OrderBy(c => c)
-                    .Select(c =>
-                        c is < ' ' or '\x7f'
-                        ? $"'\\x{(int)c:x2}'"
-                        : c == '\''
-                        ? "\\'"
-                        : $"'{c}'"));
     }
 }

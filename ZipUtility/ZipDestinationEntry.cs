@@ -8,7 +8,8 @@ using Utility;
 using Utility.IO;
 using Utility.Linq;
 using Utility.Text;
-using ZipUtility.ZipExtraField;
+using ZipUtility.ExtraFields;
+using ZipUtility.Headers.Builder;
 
 namespace ZipUtility
 {
@@ -17,330 +18,13 @@ namespace ZipUtility
     /// </summary>
     public class ZipDestinationEntry
     {
-        private class LocalHeaderInfo
-        {
-            private LocalHeaderInfo(
-                ZipStreamPosition localHeaderPosition,
-                UInt16 versionNeededToExtract,
-                ZipEntryGeneralPurposeBitFlag generalPurposeBitFlag,
-                ZipEntryCompressionMethodId compressionMethodId,
-                UInt16 dosDate,
-                UInt16 dosTime,
-                UInt32 crc,
-                UInt32 rawSize,
-                UInt32 rawPackedSize,
-                ReadOnlyMemory<Byte> entryFullNameBytes,
-                ExtraFieldStorage extraFields)
-            {
-                if (entryFullNameBytes.Length > UInt16.MaxValue)
-                    throw new ArgumentOutOfRangeException(nameof(entryFullNameBytes));
-
-                LocalHeaderPosition = localHeaderPosition;
-                VersionNeededToExtract = versionNeededToExtract;
-                GeneralPurposeBitFlag = generalPurposeBitFlag;
-                CompressionMethodId = compressionMethodId;
-                DosDate = dosDate;
-                DosTime = dosTime;
-                Crc = crc;
-                RawSize = rawSize;
-                RawPacked = rawPackedSize;
-                EntryFullNameBytes = entryFullNameBytes;
-                ExtraFields = extraFields ?? throw new ArgumentNullException(nameof(extraFields));
-            }
-
-            public ZipStreamPosition LocalHeaderPosition { get; }
-            public UInt16 VersionNeededToExtract { get; }
-            public ZipEntryGeneralPurposeBitFlag GeneralPurposeBitFlag { get; }
-            public ZipEntryCompressionMethodId CompressionMethodId { get; }
-            public UInt16 DosDate { get; }
-            public UInt16 DosTime { get; }
-            public UInt32 Crc { get; }
-            public UInt32 RawSize { get; }
-            public UInt32 RawPacked { get; }
-            public ReadOnlyMemory<Byte> EntryFullNameBytes { get; }
-            public ExtraFieldStorage ExtraFields { get; }
-
-            public IEnumerable<ReadOnlyMemory<Byte>> ToBytes()
-            {
-                var extraFieldsBytes = ExtraFields.ToByteArray();
-                var headerBytes = new Byte[30].AsMemory();
-                headerBytes[..4].SetValueLE(_localHeaderSignature);
-                headerBytes.Slice(4, 2).SetValueLE(VersionNeededToExtract);
-                headerBytes.Slice(6, 2).SetValueLE((UInt16)GeneralPurposeBitFlag);
-                headerBytes.Slice(8, 2).SetValueLE((UInt16)CompressionMethodId);
-                headerBytes.Slice(10, 2).SetValueLE(DosTime);
-                headerBytes.Slice(12, 2).SetValueLE(DosDate);
-                headerBytes.Slice(14, 4).SetValueLE(Crc);
-                headerBytes.Slice(18, 4).SetValueLE(RawPacked);
-                headerBytes.Slice(22, 4).SetValueLE(RawSize);
-                headerBytes.Slice(26, 2).SetValueLE((UInt16)EntryFullNameBytes.Length);
-                headerBytes.Slice(28, 2).SetValueLE((UInt16)extraFieldsBytes.Length);
-                return new[]
-                {
-                    headerBytes,
-                    EntryFullNameBytes,
-                    extraFieldsBytes,
-                };
-            }
-
-            public static LocalHeaderInfo Create(
-                ZipStreamPosition localHeaderPosition,
-                ZipEntryGeneralPurposeBitFlag generalPurposeBitFlag,
-                ZipEntryCompressionMethodId compressionMethodId,
-                UInt64 size,
-                UInt64 packedSize,
-                UInt32 crc,
-                ExtraFieldStorage extraFields,
-                ReadOnlyMemory<Byte> entryFullNameBytes,
-                DateTime? lastWriteTimeUtc,
-                Boolean isDirectory)
-            {
-                var zip64ExtraField = new Zip64ExtendedInformationExtraFieldForLocalHeader();
-                var (rawSize, rawPackedSize) = zip64ExtraField.SetValues(size, packedSize);
-                extraFields.AddExtraField(zip64ExtraField);
-
-                var (dosDate, dosTime) = GetDosDateTime(lastWriteTimeUtc);
-
-                return
-                    new LocalHeaderInfo(
-                        localHeaderPosition,
-                        GetVersionNeededToExtract(compressionMethodId, isDirectory, extraFields.Contains(Zip64ExtendedInformationExtraField.ExtraFieldId)),
-                        generalPurposeBitFlag,
-                        compressionMethodId,
-                        dosDate,
-                        dosTime,
-                        crc,
-                        rawSize,
-                        rawPackedSize,
-                        entryFullNameBytes,
-                        extraFields);
-            }
-
-            public static LocalHeaderInfo Create(
-                ZipStreamPosition localHeaderPosition,
-                ZipEntryGeneralPurposeBitFlag generalPurposeBitFlag,
-                ZipEntryCompressionMethodId compressionMethodId,
-                ExtraFieldStorage extraFields,
-                ReadOnlyMemory<Byte> entryFullNameBytes,
-                DateTime? lastWriteTimeUtc,
-                Boolean isDirectory)
-            {
-                generalPurposeBitFlag |= ZipEntryGeneralPurposeBitFlag.HasDataDescriptor;
-
-                var (dosDate, dosTime) = GetDosDateTime(lastWriteTimeUtc);
-
-                return
-                    new LocalHeaderInfo(
-                        localHeaderPosition,
-                        GetVersionNeededToExtract(compressionMethodId, isDirectory, extraFields.Contains(Zip64ExtendedInformationExtraField.ExtraFieldId)),
-                        generalPurposeBitFlag,
-                        compressionMethodId,
-                        dosDate,
-                        dosTime,
-                        0,
-                        0,
-                        0,
-                        entryFullNameBytes,
-                        extraFields);
-            }
-        }
-
-        private class DataDescriptorInfo
-        {
-            private DataDescriptorInfo(
-                Boolean requiedZip64,
-                UInt32 crc,
-                UInt64 size,
-                UInt64 packedSize)
-            {
-                Crc = crc;
-                Size = size;
-                PackedSize = packedSize;
-                RequiedZip64 = requiedZip64;
-            }
-
-            public UInt32 Crc { get; }
-            public UInt64 Size { get; }
-            public UInt64 PackedSize { get; }
-            public Boolean RequiedZip64 { get; }
-
-            public ReadOnlyMemory<Byte> ToBytes()
-            {
-                if (RequiedZip64)
-                {
-                    var headerBytes = new Byte[24].AsMemory();
-                    headerBytes[..4].SetValueLE(_dataDescriptorSignature);
-                    headerBytes.Slice(4, 4).SetValueLE(Crc);
-                    headerBytes.Slice(8, 8).SetValueLE(PackedSize);
-                    headerBytes.Slice(16, 8).SetValueLE(Size);
-                    return headerBytes;
-                }
-                else
-                {
-                    var headerBytes = new Byte[16].AsMemory();
-                    headerBytes[..4].SetValueLE(_dataDescriptorSignature);
-                    headerBytes.Slice(4, 4).SetValueLE(Crc);
-                    headerBytes.Slice(8, 4).SetValueLE(checked((UInt32)PackedSize));
-                    headerBytes.Slice(12, 4).SetValueLE(checked((UInt32)Size));
-                    return headerBytes;
-                }
-            }
-
-            public static DataDescriptorInfo Create(
-                UInt32 crc,
-                UInt64 size,
-                UInt64 packedSize)
-                => new(
-                    size >= UInt32.MaxValue || packedSize >= UInt32.MaxValue,
-                    crc,
-                    size,
-                    packedSize);
-        }
-
-        private class CentralDirectoryHeaderInfo
-        {
-            private CentralDirectoryHeaderInfo(
-                UInt16 versionMadeBy,
-                UInt16 versionNeededToExtract,
-                ZipEntryGeneralPurposeBitFlag generalPurposeBitFlag,
-                ZipEntryCompressionMethodId compressionMethodId,
-                UInt16 dosDate,
-                UInt16 dosTime,
-                UInt32 crc,
-                UInt32 rawSize,
-                UInt32 rawPackedSize,
-                ReadOnlyMemory<Byte> entryFullNameBytes,
-                ReadOnlyMemory<Byte> entryCommentBytes,
-                ExtraFieldStorage extraFields,
-                UInt32 externalFileAttributes,
-                UInt16 rawDiskNumberStart,
-                UInt32 rawRelativeOffsetOfLocalHeader)
-            {
-                if (entryFullNameBytes.Length > UInt16.MaxValue)
-                    throw new ArgumentOutOfRangeException(nameof(entryFullNameBytes));
-                if (entryCommentBytes.Length > UInt16.MaxValue)
-                    throw new ArgumentOutOfRangeException(nameof(entryCommentBytes));
-
-                VersionMadeBy = versionMadeBy;
-                VersionNeededToExtract = versionNeededToExtract;
-                GeneralPurposeBitFlag = generalPurposeBitFlag;
-                CompressionMethodId = compressionMethodId;
-                DosDate = dosDate;
-                DosTime = dosTime;
-                Crc = crc;
-                RawSize = rawSize;
-                RawPackedSize = rawPackedSize;
-                EntryFullNameBytes = entryFullNameBytes;
-                EntryCommentBytes = entryCommentBytes;
-                ExtraFields = extraFields ?? throw new ArgumentNullException(nameof(extraFields));
-                RawDiskNumberStart = rawDiskNumberStart;
-                ExternalFileAttributes = externalFileAttributes;
-                RawRelativeOffsetOfLocalHeader = rawRelativeOffsetOfLocalHeader;
-            }
-
-            public UInt16 VersionMadeBy { get; }
-            public UInt16 VersionNeededToExtract { get; }
-            public ZipEntryGeneralPurposeBitFlag GeneralPurposeBitFlag { get; }
-            public ZipEntryCompressionMethodId CompressionMethodId { get; }
-            public UInt16 DosDate { get; }
-            public UInt16 DosTime { get; }
-            public UInt32 Crc { get; }
-            public UInt32 RawSize { get; }
-            public UInt32 RawPackedSize { get; }
-            public ReadOnlyMemory<Byte> EntryFullNameBytes { get; }
-            public ReadOnlyMemory<Byte> EntryCommentBytes { get; }
-            public ExtraFieldStorage ExtraFields { get; }
-            public UInt32 ExternalFileAttributes { get; }
-            public UInt16 RawDiskNumberStart { get; }
-            public UInt32 RawRelativeOffsetOfLocalHeader { get; }
-
-            public IEnumerable<ReadOnlyMemory<Byte>> ToBytes()
-            {
-                var extraFieldsBytes = ExtraFields.ToByteArray();
-                var headerBytes = new Byte[46].AsMemory();
-                headerBytes[..4].SetValueLE(_centralDirectoryHeaderSignature);
-                headerBytes.Slice(4, 2).SetValueLE(VersionMadeBy);
-                headerBytes.Slice(6, 2).SetValueLE(VersionNeededToExtract);
-                headerBytes.Slice(8, 2).SetValueLE((UInt16)GeneralPurposeBitFlag);
-                headerBytes.Slice(10, 2).SetValueLE((UInt16)CompressionMethodId);
-                headerBytes.Slice(12, 2).SetValueLE(DosTime);
-                headerBytes.Slice(14, 2).SetValueLE(DosDate);
-                headerBytes.Slice(16, 4).SetValueLE(Crc);
-                headerBytes.Slice(20, 4).SetValueLE(RawPackedSize);
-                headerBytes.Slice(24, 4).SetValueLE(RawSize);
-                headerBytes.Slice(28, 2).SetValueLE((UInt16)EntryFullNameBytes.Length);
-                headerBytes.Slice(30, 2).SetValueLE((UInt16)extraFieldsBytes.Length);
-                headerBytes.Slice(32, 2).SetValueLE((UInt16)EntryCommentBytes.Length);
-                headerBytes.Slice(34, 2).SetValueLE(RawDiskNumberStart);
-                headerBytes.Slice(36, 2).SetValueLE((UInt16)0); // internal attributes
-                headerBytes.Slice(38, 4).SetValueLE(ExternalFileAttributes);
-                headerBytes.Slice(42, 4).SetValueLE(RawRelativeOffsetOfLocalHeader);
-                return new[]
-                {
-                    headerBytes,
-                    EntryFullNameBytes,
-                    extraFieldsBytes,
-                    EntryCommentBytes,
-                };
-            }
-
-            public static CentralDirectoryHeaderInfo Create(
-                ZipArchiveFileWriter.IZipFileWriterEnvironment zipWriter,
-                ZipStreamPosition localHeaderPosition,
-                ZipEntryGeneralPurposeBitFlag generalPurposeBitFlag,
-                ZipEntryCompressionMethodId compressionMethodId,
-                UInt64 size,
-                UInt64 packedSize,
-                UInt32 crc,
-                UInt32 externalAttributes,
-                ExtraFieldStorage extraFields,
-                ReadOnlyMemory<Byte> entryFullNameBytes,
-                ReadOnlyMemory<Byte> entryCommentBytes,
-                DateTime? lastWriteTimeUtc,
-                Boolean isDirectory,
-                Boolean useDataDescriptor)
-            {
-                if (useDataDescriptor)
-                    generalPurposeBitFlag |= ZipEntryGeneralPurposeBitFlag.HasDataDescriptor;
-
-                var zip64ExtraField = new Zip64ExtendedInformationExtraFieldForCentraHeader();
-                var (rawSize, rawPackedSize, rawLocalHeaderOffset, rawDiskNumber) =
-                    zip64ExtraField.SetValues(
-                        size,
-                        packedSize,
-                        localHeaderPosition.OffsetOnTheDisk,
-                        localHeaderPosition.DiskNumber);
-                extraFields.AddExtraField(zip64ExtraField);
-
-                var (dosDate, dosTime) = GetDosDateTime(lastWriteTimeUtc);
-
-                return
-                    new CentralDirectoryHeaderInfo(
-                        (UInt16)(((UInt16)zipWriter.HostSystem << 8) | zipWriter.ThisSoftwareVersion),
-                        GetVersionNeededToExtract(compressionMethodId, isDirectory, extraFields.Contains(Zip64ExtendedInformationExtraField.ExtraFieldId)),
-                        generalPurposeBitFlag,
-                        compressionMethodId,
-                        dosDate,
-                        dosTime,
-                        crc,
-                        rawSize,
-                        rawPackedSize,
-                        entryFullNameBytes,
-                        entryCommentBytes,
-                        extraFields,
-                        externalAttributes,
-                        rawDiskNumber,
-                        rawLocalHeaderOffset);
-            }
-        }
-
         private class ExtraFieldCollection
             : IWriteOnlyExtraFieldCollection
         {
-            private readonly ExtraFieldStorage _localHeaderExtraFields;
-            private readonly ExtraFieldStorage _centralDirectoryHeaderExtraFields;
+            private readonly ExtraFields.ExtraFieldCollection _localHeaderExtraFields;
+            private readonly ExtraFields.ExtraFieldCollection _centralDirectoryHeaderExtraFields;
 
-            public ExtraFieldCollection(ExtraFieldStorage localHeaderExtraFields, ExtraFieldStorage centralDirectoryHeaderExtraFields)
+            public ExtraFieldCollection(ExtraFields.ExtraFieldCollection localHeaderExtraFields, ExtraFields.ExtraFieldCollection centralDirectoryHeaderExtraFields)
             {
                 _localHeaderExtraFields = localHeaderExtraFields;
                 _centralDirectoryHeaderExtraFields = centralDirectoryHeaderExtraFields;
@@ -360,19 +44,16 @@ namespace ZipUtility
             }
         }
 
-        private static readonly UInt32 _localHeaderSignature;
-        private static readonly UInt32 _dataDescriptorSignature;
-        private static readonly UInt32 _centralDirectoryHeaderSignature;
         private static readonly Encoding _utf8Encoding;
         private static readonly Regex _dotEntryNamePattern;
 
         private readonly ZipArchiveFileWriter.IZipFileWriterEnvironment _zipFileWriter;
         private readonly ZipArchiveFileWriter.IZipFileWriterOutputStream _zipStream;
-        private readonly ExtraFieldStorage _localHeaderExtraFields;
-        private readonly ExtraFieldStorage _centralDirectoryHeaderExtraFields;
+        private readonly ExtraFields.ExtraFieldCollection _localHeaderExtraFields;
+        private readonly ExtraFields.ExtraFieldCollection _centralDirectoryHeaderExtraFields;
         private readonly ExtraFieldCollection _extraFields;
-        private LocalHeaderInfo? _localHeaderInfo;
-        private CentralDirectoryHeaderInfo? _centralDirectoryHeaderInfo;
+        private ZipEntryLocalHeader? _localHeaderInfo;
+        private ZipEntryCentralDirectoryHeader? _centralDirectoryHeaderInfo;
         private Boolean _isFile;
         private ZipEntryGeneralPurposeBitFlag _generalPurposeBitFlag;
         private ZipEntryCompressionMethodId _compressionMethodId;
@@ -390,9 +71,6 @@ namespace ZipUtility
         static ZipDestinationEntry()
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-            _localHeaderSignature = Signature.MakeUInt32LESignature(0x50, 0x4b, 0x03, 0x04);
-            _dataDescriptorSignature = Signature.MakeUInt32LESignature(0x50, 0x4b, 0x07, 0x08);
-            _centralDirectoryHeaderSignature = Signature.MakeUInt32LESignature(0x50, 0x4b, 0x01, 0x02);
             _utf8Encoding = Encoding.UTF8.WithFallback(null, null).WithoutPreamble();
             _dotEntryNamePattern = new Regex(@"(^|/|\\)\.{1,2}($|/|\\)", RegexOptions.Compiled);
         }
@@ -425,8 +103,8 @@ namespace ZipUtility
 
             _zipFileWriter = zipFileWriter ?? throw new ArgumentNullException(nameof(zipFileWriter));
             _zipStream = zipStream ?? throw new ArgumentNullException(nameof(zipStream));
-            _localHeaderExtraFields = new ExtraFieldStorage(ZipEntryHeaderType.LocalFileHeader);
-            _centralDirectoryHeaderExtraFields = new ExtraFieldStorage(ZipEntryHeaderType.CentralDirectoryHeader);
+            _localHeaderExtraFields = new ExtraFields.ExtraFieldCollection(ZipEntryHeaderType.LocalHeader);
+            _centralDirectoryHeaderExtraFields = new ExtraFields.ExtraFieldCollection(ZipEntryHeaderType.CentralDirectoryHeader);
             _extraFields = new ExtraFieldCollection(_localHeaderExtraFields, _centralDirectoryHeaderExtraFields);
 
             _localHeaderInfo = null;
@@ -450,7 +128,6 @@ namespace ZipUtility
             FullNameBytes = fullNameBytes;
             Comment = comment;
             CommentBytes = commentBytes;
-            LocalHeaderPosition = zipStream.Stream.Position;
 
             #region エントリのエンコーディングを決定する
 
@@ -600,8 +277,6 @@ namespace ZipUtility
         /// このエントリのコメントのバイト列です。
         /// </summary>
         public ReadOnlyMemory<Byte> CommentBytes { get; }
-
-        internal ZipStreamPosition LocalHeaderPosition { get; }
 
         /// <summary>
         /// このエントリがファイルかどうかを示す <see cref="Boolean"/> 値を取得または設定します。
@@ -1027,12 +702,12 @@ namespace ZipUtility
         internal UInt16 VersionNeededToExtractForLocalHeader => _localHeaderInfo?.VersionNeededToExtract ?? throw new InvalidOperationException();
         internal UInt16 VersionNeededToExtractForCentralDirectoryHeader => _centralDirectoryHeaderInfo?.VersionNeededToExtract ?? throw new InvalidOperationException();
 
-        internal void WriteCentralDirectoryHeader()
+        internal ZipStreamPosition WriteCentralDirectoryHeader()
         {
             if (_centralDirectoryHeaderInfo is null)
                 throw new InvalidOperationException();
 
-            _zipStream.Stream.WriteBytes(_centralDirectoryHeaderInfo.ToBytes());
+            return _centralDirectoryHeaderInfo.WriteTo(_zipStream.Stream);
         }
 
         internal void InternalFlush()
@@ -1048,8 +723,8 @@ namespace ZipUtility
                 SetupExtraFields(_extraFields, LastWriteTimeUtc, LastAccessTimeUtc, CreationTimeUtc);
 
                 _localHeaderInfo =
-                    LocalHeaderInfo.Create(
-                        LocalHeaderPosition,
+                    ZipEntryLocalHeader.Build(
+                        _zipFileWriter,
                         _generalPurposeBitFlag,
                         ZipEntryCompressionMethodId.Stored,
                         _size,
@@ -1060,10 +735,12 @@ namespace ZipUtility
                         LastWriteTimeUtc,
                         IsDirectory);
 
+                var localHeaderPosition = _localHeaderInfo.WriteTo(_zipStream.Stream);
+
                 _centralDirectoryHeaderInfo =
-                    CentralDirectoryHeaderInfo.Create(
+                    ZipEntryCentralDirectoryHeader.Build(
                         _zipFileWriter,
-                        LocalHeaderPosition,
+                        localHeaderPosition,
                         _generalPurposeBitFlag,
                         ZipEntryCompressionMethodId.Stored,
                         _size,
@@ -1077,7 +754,6 @@ namespace ZipUtility
                         IsDirectory,
                         false);
 
-                _zipStream.Stream.WriteBytes(_localHeaderInfo.ToBytes());
                 _written = true;
             }
         }
@@ -1109,13 +785,15 @@ namespace ZipUtility
                     : new FilePath(Path.GetTempFileName());
 
                 var outputStrem =
-                    temporaryFile.Create();
+                    temporaryFile.Create()
+                    .WithCache();
 
                 var packedOutputStream =
                     packedTemporaryFile is null
                     ? null
                     : compressionMethod.GetEncodingStream(
-                        packedTemporaryFile.Create(),
+                        packedTemporaryFile.Create()
+                            .WithCache(),
                         SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
                             unpackedCountProgress,
                             value => value.unpackedCount / 2));
@@ -1195,8 +873,8 @@ namespace ZipUtility
                         }
 
                         _localHeaderInfo =
-                            LocalHeaderInfo.Create(
-                                LocalHeaderPosition,
+                            ZipEntryLocalHeader.Build(
+                                _zipFileWriter,
                                 _generalPurposeBitFlag,
                                 CompressionMethodId,
                                 size,
@@ -1207,10 +885,12 @@ namespace ZipUtility
                                 LastWriteTimeUtc,
                                 IsDirectory);
 
+                        var localHeaderPosition = _localHeaderInfo.WriteTo(_zipStream.Stream);
+
                         _centralDirectoryHeaderInfo =
-                            CentralDirectoryHeaderInfo.Create(
+                            ZipEntryCentralDirectoryHeader.Build(
                                 _zipFileWriter,
-                                LocalHeaderPosition,
+                                localHeaderPosition,
                                 _generalPurposeBitFlag,
                                 CompressionMethodId,
                                 size,
@@ -1224,7 +904,6 @@ namespace ZipUtility
                                 IsDirectory,
                                 false);
 
-                        _zipStream.Stream.WriteBytes(_localHeaderInfo.ToBytes());
                         using var sourceStream = (packedTemporaryFile is null ? temporaryFile : packedTemporaryFile).OpenRead();
                         sourceStream.CopyTo(
                             _zipStream.Stream,
@@ -1263,6 +942,7 @@ namespace ZipUtility
         private ISequentialOutputByteStream GetContentStreamWithDataDescriptor(IProgress<UInt64>? unpackedCountProgress)
         {
             var packedSizeHolder = new ValueHolder<UInt64>();
+            var localHeaderPosition = (ZipStreamPosition?)null;
             try
             {
                 try
@@ -1300,8 +980,8 @@ namespace ZipUtility
                 }
 
                 _localHeaderInfo =
-                    LocalHeaderInfo.Create(
-                        LocalHeaderPosition,
+                    ZipEntryLocalHeader.Build(
+                        _zipFileWriter,
                         _generalPurposeBitFlag,
                         CompressionMethodId,
                         _localHeaderExtraFields,
@@ -1309,10 +989,11 @@ namespace ZipUtility
                         LastWriteTimeUtc,
                         IsDirectory);
 
-                _zipStream.Stream.WriteBytes(_localHeaderInfo.ToBytes());
+                localHeaderPosition = _localHeaderInfo.WriteTo(_zipStream.Stream);
                 var contentStream =
                     compressionMethod.GetEncodingStream(
                         _zipStream.Stream
+                            .WithCache()
                             .WithEndAction(packedSize => packedSizeHolder.Value = packedSize, true),
                         SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
                             unpackedCountProgress,
@@ -1331,15 +1012,18 @@ namespace ZipUtility
             {
                 try
                 {
+                    if (localHeaderPosition is null)
+                        throw new InternalLogicalErrorException();
+
                     var actualPackedSize = packedSizeHolder.Value;
 
                     var dataDescriptor =
-                        DataDescriptorInfo.Create(actualCrc, actualSize, actualPackedSize);
+                        ZipEntryDataDescriptor.Build(actualCrc, actualSize, actualPackedSize);
 
                     _centralDirectoryHeaderInfo =
-                        CentralDirectoryHeaderInfo.Create(
+                        ZipEntryCentralDirectoryHeader.Build(
                             _zipFileWriter,
-                            LocalHeaderPosition,
+                            localHeaderPosition.Value,
                             _generalPurposeBitFlag,
                             CompressionMethodId,
                             actualSize,
@@ -1353,7 +1037,7 @@ namespace ZipUtility
                             IsDirectory,
                             true);
 
-                    _zipStream.Stream.WriteBytes(dataDescriptor.ToBytes());
+                    dataDescriptor.WriteTo(_zipStream.Stream);
                     _size = actualSize;
                     _packedSize = actualPackedSize;
                     _crc = actualCrc;
@@ -1458,35 +1142,6 @@ namespace ZipUtility
             };
             extraFields.AddExtraField(windowsTimestampExtraField);
             extraFields.AddExtraField(unixTimeStampExtraField);
-        }
-
-        private static UInt16 GetVersionNeededToExtract(ZipEntryCompressionMethodId compressionMethodId, Boolean isDirectory, Boolean requiredZip64)
-        {
-            var versionNeededTiExtract =
-                new[]
-                {
-                        (UInt16)10, // minimum version (supported Stored compression)
-                        isDirectory  ? (UInt16)20 : (UInt16)0, // version if it contains directory entries
-                        compressionMethodId == ZipEntryCompressionMethodId.Deflate ? (UInt16)20 : (UInt16)0, // version if using Deflate compression
-                        compressionMethodId == ZipEntryCompressionMethodId.Deflate64 ? (UInt16)21 : (UInt16)0, // version if using Deflate64 compression
-                        compressionMethodId == ZipEntryCompressionMethodId.BZIP2 ? (UInt16)46 : (UInt16)0, // version if using BZIP2 compression
-                        compressionMethodId == ZipEntryCompressionMethodId.LZMA ? (UInt16)63 : (UInt16)0, // version if using LZMA compression
-                        compressionMethodId == ZipEntryCompressionMethodId.PPMd ? (UInt16)63 : (UInt16)0, // version if using PPMd+ compression
-                        requiredZip64 ? (UInt16)45 : (UInt16)0, // version if using zip 64 extensions
-                }
-                .Max();
-            return versionNeededTiExtract;
-        }
-        private static (UInt16 dosDate, UInt16 dosTime) GetDosDateTime(DateTime? lastWriteTimeUtc)
-        {
-            try
-            {
-                return (lastWriteTimeUtc ?? DateTime.UtcNow).FromDateTimeToDosDateTime(DateTimeKind.Local);
-            }
-            catch (Exception)
-            {
-                return (0, 0);
-            }
         }
     }
 }

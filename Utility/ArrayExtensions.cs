@@ -130,20 +130,12 @@ namespace Utility
             return new Memory<ELEMENT_T>(sourceArray, (Int32)offset, (Int32)(sourceArray.Length - offset));
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#if false
         public static Memory<ELEMENT_T> AsMemory<ELEMENT_T>(this ELEMENT_T[] sourceArray, Int32 offset, Int32 length)
         {
-            if (sourceArray is null)
-                throw new ArgumentNullException(nameof(sourceArray));
-            if (offset < 0)
-                throw new ArgumentOutOfRangeException(nameof(offset));
-            if (length < 0)
-                throw new ArgumentOutOfRangeException(nameof(length));
-            if (checked(offset + length) > (UInt32)sourceArray.Length)
-                throw new ArgumentException($"The specified range ({nameof(offset)} and {nameof(length)}) is not within the {nameof(sourceArray)}.");
-
-            return new Memory<ELEMENT_T>(sourceArray, offset, length);
+            throw new NotImplementedException(); // defined in System.MemoryExtensions.AsMemory<T>(this T[]? array, int start, int length)
         }
+#endif
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Memory<ELEMENT_T> AsMemory<ELEMENT_T>(this ELEMENT_T[] sourceArray, UInt32 offset, UInt32 length)

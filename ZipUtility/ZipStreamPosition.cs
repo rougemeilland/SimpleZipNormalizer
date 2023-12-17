@@ -48,32 +48,67 @@ namespace ZipUtility
         #region Add
 
         public ZipStreamPosition Add(UInt64 x)
-            => Host.Add(this, x);
+        {
+            if (Host is null)
+                throw new InternalLogicalErrorException();
+
+            return Host.Add(this, x);
+        }
 
         #endregion
 
         #region Subtract
 
         public UInt64 Subtract(ZipStreamPosition x)
-            => Host.Subtract(this, x);
+        {
+            if (Host is null)
+                throw new InternalLogicalErrorException();
+
+            return Host.Subtract(this, x);
+        }
 
         public ZipStreamPosition Subtract(UInt64 x)
-            => Host.Subtract(this, x);
+        {
+            if (Host is null)
+                throw new InternalLogicalErrorException();
+
+            return Host.Subtract(this, x);
+        }
 
         #endregion
 
-        public Int32 CompareTo(ZipStreamPosition other) => Host.Compare(this, other);
-        public Boolean Equals(ZipStreamPosition other) => Host.Equal(this, other);
+        public Int32 CompareTo(ZipStreamPosition other)
+        {
+            if (Host is null)
+                throw new InternalLogicalErrorException();
+
+            return Host.Compare(this, other);
+        }
+
+        public Boolean Equals(ZipStreamPosition other)
+        {
+            if (Host is null)
+                throw new InternalLogicalErrorException();
+
+            return Host.Equal(this, other);
+        }
 
         public override Boolean Equals(Object? other)
             => other is not null
                 && GetType() == other.GetType()
                 && Equals((ZipStreamPosition)other);
 
-        public override Int32 GetHashCode() => Host.GetHashCode(this);
+        public override Int32 GetHashCode()
+        {
+            if (Host is null)
+                throw new InternalLogicalErrorException();
+
+            return Host.GetHashCode(this);
+        }
 
         public override String ToString() => $"0x{DiskNumber:x8}:0x{OffsetOnTheDisk:x16}";
 
-        internal IVirtualZipFile Host { get; }
+        internal IVirtualZipFile? Host { get; }
+        internal Boolean IsDefault => Host is null;
     }
 }

@@ -1,4 +1,4 @@
-﻿using ZipUtility.ZipExtraField;
+﻿using ZipUtility.ExtraFields;
 
 namespace ZipUtility
 {

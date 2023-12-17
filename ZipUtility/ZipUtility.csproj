@@ -10,20 +10,20 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <NoWarn>1701;1702;SYSLIB1045;SYSLIB1054;CA1510;CA1512;CA1513;IDE0290;CA2208;IDE0028</NoWarn>
+    <NoWarn>1701;1702;SYSLIB1045;SYSLIB1054;CA1510;CA1512;CA1513;IDE0290;CA2208;IDE0028;CA1859</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <NoWarn>1701;1702;SYSLIB1045;SYSLIB1054;CA1510;CA1512;CA1513;IDE0290;CA2208;IDE0028</NoWarn>
+    <NoWarn>1701;1702;SYSLIB1045;SYSLIB1054;CA1510;CA1512;CA1513;IDE0290;CA2208;IDE0028;CA1859</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="ZipExtraField\_HowToProcess0x554e.cs" />
+    <Compile Remove="ExtraFields\_HowToProcess0x554e.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="ZipExtraField\_HowToProcess0x554e.cs" />
+    <None Include="ExtraFields\_HowToProcess0x554e.cs" />
   </ItemGroup>
 
   <ItemGroup>

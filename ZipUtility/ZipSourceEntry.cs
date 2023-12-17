@@ -6,8 +6,8 @@ using System.Text;
 using Utility;
 using Utility.IO;
 using Utility.Linq;
-using ZipUtility.ZipExtraField;
-using ZipUtility.ZipFileHeader;
+using ZipUtility.ExtraFields;
+using ZipUtility.Headers.Parser;
 
 namespace ZipUtility
 {
@@ -24,43 +24,33 @@ namespace ZipUtility
             ZipArchiveFileReader.IZipReaderEnvironment zipReader,
             ZipArchiveFileReader.IZipReaderStream zipStream,
             ZipEntryHeader internalHeader,
-            Int32 localFileHeaderOrder)
+            Int32 localHeaderOrder)
         {
             _zipReader = zipReader;
             _zipStream = zipStream;
 
             Index = internalHeader.CentralDirectoryHeader.Index;
-            Order = localFileHeaderOrder;
-            IsDirectory = internalHeader.CentralDirectoryHeader.IsDirectiry;
+            Order = localHeaderOrder;
+            IsDirectory = internalHeader.CentralDirectoryHeader.IsDirectory;
             LocalHeaderPosition = internalHeader.CentralDirectoryHeader.LocalHeaderPosition;
             HostSystem = internalHeader.CentralDirectoryHeader.HostSystem;
             ExternalFileAttributes = internalHeader.CentralDirectoryHeader.ExternalFileAttributes;
-
-            // CRC, Size, PackedSize はローカルヘッダからは読み取れないことがあるので必ずセントラルディレクトリヘッダから読み取る。
             Crc = internalHeader.CentralDirectoryHeader.Crc;
             Size = internalHeader.CentralDirectoryHeader.Size;
             PackedSize = internalHeader.CentralDirectoryHeader.PackedSize;
-
-            if (internalHeader.LocalFileHeader.GeneralPurposeBitFlag.HasFlag(ZipEntryGeneralPurposeBitFlag.UseUnicodeEncodingForNameAndComment)
-                != internalHeader.CentralDirectoryHeader.GeneralPurposeBitFlag.HasFlag(ZipEntryGeneralPurposeBitFlag.UseUnicodeEncodingForNameAndComment))
-            {
-                throw new BadZipFileFormatException("The value of general purpose flag bit 11 does not match between local header and central directory header.");
-            }
-
             EntryTextEncoding =
-                internalHeader.LocalFileHeader.GeneralPurposeBitFlag.HasFlag(ZipEntryGeneralPurposeBitFlag.UseUnicodeEncodingForNameAndComment)
+                internalHeader.LocalHeader.GeneralPurposeBitFlag.HasFlag(ZipEntryGeneralPurposeBitFlag.UseUnicodeEncodingForNameAndComment)
                 ? ZipEntryTextEncoding.UTF8
                 : ZipEntryTextEncoding.Unknown;
-
-            LocalHeaderExtraFields = new ExtraFieldStorage(internalHeader.LocalFileHeader.ExtraFields);
-            CentralDirectoryHeaderExtraFields = new ExtraFieldStorage(internalHeader.CentralDirectoryHeader.ExtraFields);
+            LocalHeaderExtraFields = new ExtraFieldCollection(internalHeader.LocalHeader.ExtraFields);
+            CentralDirectoryHeaderExtraFields = new ExtraFieldCollection(internalHeader.CentralDirectoryHeader.ExtraFields);
 
             // セントラルディレクトリヘッダおよびローカルヘッダの複数の拡張ヘッダから、最も精度の高い (つまり precision が最も小さい) タイムスタンプを取得する。
             LastWriteTimeUtc =
                 new[]
                 {
-                    internalHeader.LocalFileHeader.DosDateTime,
-                    internalHeader.LocalFileHeader.LastWriteTimeUtc,
+                    internalHeader.LocalHeader.DosDateTime,
+                    internalHeader.LocalHeader.LastWriteTimeUtc,
                     internalHeader.CentralDirectoryHeader.DosDateTime,
                     internalHeader.CentralDirectoryHeader.LastWriteTimeUtc,
                 }
@@ -71,7 +61,7 @@ namespace ZipUtility
             LastAccessTimeUtc =
                 new[]
                 {
-                    internalHeader.LocalFileHeader.LastAccessTimeUtc,
+                    internalHeader.LocalHeader.LastAccessTimeUtc,
                     internalHeader.CentralDirectoryHeader.LastAccessTimeUtc,
                 }
                 .WhereNotNull()
@@ -81,7 +71,7 @@ namespace ZipUtility
             CreationTimeUtc =
                 new[]
                 {
-                    internalHeader.LocalFileHeader.CreationTimeUtc,
+                    internalHeader.LocalHeader.CreationTimeUtc,
                     internalHeader.CentralDirectoryHeader.CreationTimeUtc,
                 }
                 .WhereNotNull()
@@ -89,16 +79,16 @@ namespace ZipUtility
                 .Select(item => (DateTime?)item.dateTime)
                 .FirstOrDefault();
 
-            FullName = internalHeader.LocalFileHeader.FullName;
-            FullNameBytes = internalHeader.LocalFileHeader.FullNameBytes;
+            FullName = internalHeader.LocalHeader.FullName;
+            FullNameBytes = internalHeader.LocalHeader.FullNameBytes;
             Comment = internalHeader.CentralDirectoryHeader.Comment;
             CommentBytes = internalHeader.CentralDirectoryHeader.CommentBytes;
-            ExactEntryEncoding = internalHeader.LocalFileHeader.ExactEntryEncoding;
-            PossibleEntryEncodings = internalHeader.LocalFileHeader.PossibleEntryEncodings;
-            CompressionMethodId = internalHeader.LocalFileHeader.CompressionMethodId;
-            _generalPurposeBitFlag = internalHeader.LocalFileHeader.GeneralPurposeBitFlag;
-            DataPosition = internalHeader.LocalFileHeader.DataPosition;
-            RequiredZip64ForLocalHeader = internalHeader.LocalFileHeader.RequiredZip64;
+            ExactEntryEncoding = internalHeader.LocalHeader.ExactEntryEncoding;
+            PossibleEntryEncodings = internalHeader.LocalHeader.PossibleEntryEncodings;
+            CompressionMethodId = internalHeader.LocalHeader.CompressionMethodId;
+            _generalPurposeBitFlag = internalHeader.LocalHeader.GeneralPurposeBitFlag;
+            DataPosition = internalHeader.LocalHeader.DataPosition;
+            RequiredZip64ForLocalHeader = internalHeader.LocalHeader.RequiredZip64;
             RequiredZip64ForCentralDirectoryHeader = internalHeader.CentralDirectoryHeader.RequiredZip64;
             if (HostSystem.IsAnyOf(ZipEntryHostSystem.FAT, ZipEntryHostSystem.VFAT, ZipEntryHostSystem.Windows_NTFS, ZipEntryHostSystem.OS2_HPFS))
                 FullName = FullName.Replace(@"\", "/");

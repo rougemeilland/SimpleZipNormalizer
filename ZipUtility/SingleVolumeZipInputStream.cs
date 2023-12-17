@@ -29,14 +29,11 @@ namespace ZipUtility
             var stream = zipArchiveFile.OpenRead();
             try
             {
-                if (stream is not IRandomInputByteStream<UInt64> randomAccessStream)
-                    throw new NotSupportedException();
-
                 var zipStream =
                     new SingleVolumeZipInputStream(
-                        randomAccessStream.Length,
+                        stream.Length,
                         zipArchiveFile,
-                        randomAccessStream);
+                        stream);
                 success = true;
                 return zipStream;
             }
@@ -94,34 +91,6 @@ namespace ZipUtility
                 throw new InternalLogicalErrorException();
 
             return checked(offsetOnTheDisk1 - offsetOnTheDisk2);
-        }
-
-        protected override Int32 CompareCore(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2)
-        {
-            if (diskNumber1 != 0)
-                throw new InternalLogicalErrorException();
-            if (diskNumber2 != 0)
-                throw new InternalLogicalErrorException();
-
-            return offsetOnTheDisk1.CompareTo(offsetOnTheDisk2);
-        }
-
-        protected override Boolean EqualCore(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2)
-        {
-            if (diskNumber1 != 0)
-                throw new InternalLogicalErrorException();
-            if (diskNumber2 != 0)
-                throw new InternalLogicalErrorException();
-
-            return offsetOnTheDisk1 == offsetOnTheDisk2;
-        }
-
-        protected override Int32 GetHashCodeCore(UInt32 diskNumber, UInt64 offsetOnTheDisk)
-        {
-            if (diskNumber != 0)
-                throw new InternalLogicalErrorException();
-
-            return offsetOnTheDisk.GetHashCode();
         }
 
         protected override void Dispose(Boolean disposing)

@@ -27,6 +27,55 @@ namespace ZipUtility
         /// <param name="zipFile">
         /// 検証する ZIP アーカイブファイルです。
         /// </param>
+        /// <param name="progress">
+        /// <para>
+        /// 処理の進行状況の通知を受け取るためのオブジェクトです。通知を受け取らない場合は null です。
+        /// </para>
+        /// <para>
+        /// 進行状況は、0 以上 1 以下の <see cref="Double"/> 値です。初期値は 0 で、作業が進行するごとに増加していき、作業が完了すると 1 になります。
+        /// </para>
+        /// </param>
+        /// <returns>
+        /// ZIP アーカイブを読み込むためのオブジェクトです。
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="zipFile"/>  が null です。
+        /// </exception>
+        public static ZipArchiveValidationResult ValidateAsZipFile(this FilePath zipFile, IProgress<Double>? progress = null)
+            => zipFile.ValidateAsZipFile(ZipEntryNameEncodingProvider.CreateInstance(), ValidationStringency.Normal, progress);
+
+        /// <summary>
+        /// ZIP アーカイブの内容を検証します。
+        /// </summary>
+        /// <param name="zipFile">
+        /// 検証する ZIP アーカイブファイルです。
+        /// </param>
+        /// <param name="stringency">
+        /// 読み込む ZIP アーカイブに対する検証の厳格性を示す値です。
+        /// </param>
+        /// <param name="progress">
+        /// <para>
+        /// 処理の進行状況の通知を受け取るためのオブジェクトです。通知を受け取らない場合は null です。
+        /// </para>
+        /// <para>
+        /// 進行状況は、0 以上 1 以下の <see cref="Double"/> 値です。初期値は 0 で、作業が進行するごとに増加していき、作業が完了すると 1 になります。
+        /// </para>
+        /// </param>
+        /// <returns>
+        /// ZIP アーカイブを読み込むためのオブジェクトです。
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="zipFile"/> が null です。
+        /// </exception>
+        public static ZipArchiveValidationResult ValidateAsZipFile(this FilePath zipFile, ValidationStringency stringency, IProgress<Double>? progress = null)
+            => zipFile.ValidateAsZipFile(ZipEntryNameEncodingProvider.CreateInstance(), stringency, progress);
+
+        /// <summary>
+        /// ZIP アーカイブの内容を検証します。
+        /// </summary>
+        /// <param name="zipFile">
+        /// 検証する ZIP アーカイブファイルです。
+        /// </param>
         /// <param name="zipEntryNameEncodingProvider">
         /// ZIP アーカイブのエントリのエンコーディングを解決するプロバイダです。
         /// </param>
@@ -45,14 +94,61 @@ namespace ZipUtility
         /// <paramref name="zipFile"/> または <paramref name="zipEntryNameEncodingProvider"/> が null です。
         /// </exception>
         public static ZipArchiveValidationResult ValidateAsZipFile(this FilePath zipFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider, IProgress<Double>? progress = null)
+            => zipFile.ValidateAsZipFile(zipEntryNameEncodingProvider, ValidationStringency.Normal, progress);
+
+        /// <summary>
+        /// ZIP アーカイブの内容を検証します。
+        /// </summary>
+        /// <param name="zipFile">
+        /// 検証する ZIP アーカイブファイルです。
+        /// </param>
+        /// <param name="zipEntryNameEncodingProvider">
+        /// ZIP アーカイブのエントリのエンコーディングを解決するプロバイダです。
+        /// </param>
+        /// <param name="stringency">
+        /// 読み込む ZIP アーカイブに対する検証の厳格性を示す値です。
+        /// </param>
+        /// <param name="progress">
+        /// <para>
+        /// 処理の進行状況の通知を受け取るためのオブジェクトです。通知を受け取らない場合は null です。
+        /// </para>
+        /// <para>
+        /// 進行状況は、0 以上 1 以下の <see cref="Double"/> 値です。初期値は 0 で、作業が進行するごとに増加していき、作業が完了すると 1 になります。
+        /// </para>
+        /// </param>
+        /// <returns>
+        /// ZIP アーカイブを読み込むためのオブジェクトです。
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="zipFile"/> または <paramref name="zipEntryNameEncodingProvider"/> が null です。
+        /// </exception>
+        public static ZipArchiveValidationResult ValidateAsZipFile(this FilePath zipFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider, ValidationStringency stringency, IProgress<Double>? progress = null)
         {
             if (zipFile is null)
                 throw new ArgumentNullException(nameof(zipFile));
             if (zipEntryNameEncodingProvider is null)
                 throw new ArgumentNullException(nameof(zipEntryNameEncodingProvider));
 
-            return InternalValidateZipFile(zipFile, zipEntryNameEncodingProvider, progress);
+            return InternalValidateZipFile(zipFile, zipEntryNameEncodingProvider, stringency, progress);
         }
+
+        /// <summary>
+        /// ZIP アーカイブを読み込むためのオブジェクトを取得します。
+        /// </summary>
+        /// <param name="sourceZipFile">
+        /// 読み込む ZIP アーカイブファイルです。
+        /// </param>
+        /// <param name="stringency">
+        /// 読み込む ZIP アーカイブに対する検証の厳格性を示す値です。
+        /// </param>
+        /// <returns>
+        /// ZIP アーカイブを読み込むためのオブジェクトです。
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="sourceZipFile"/> が null です。
+        /// </exception>
+        public static ZipArchiveFileReader OpenAsZipFile(this FilePath sourceZipFile, ValidationStringency stringency = ValidationStringency.Normal)
+            => sourceZipFile.OpenAsZipFile(ZipEntryNameEncodingProvider.CreateInstance(), stringency);
 
         /// <summary>
         /// ZIP アーカイブを読み込むためのオブジェクトを取得します。
@@ -63,13 +159,16 @@ namespace ZipUtility
         /// <param name="zipEntryNameEncodingProvider">
         /// ZIP アーカイブのエントリのエンコーディングを解決するプロバイダです。
         /// </param>
+        /// <param name="stringency">
+        /// 読み込む ZIP アーカイブに対する検証の厳格性を示す値です。
+        /// </param>
         /// <returns>
         /// ZIP アーカイブを読み込むためのオブジェクトです。
         /// </returns>
         /// <exception cref="ArgumentNullException">
         /// <paramref name="sourceZipFile"/> または <paramref name="zipEntryNameEncodingProvider"/> が null です。
         /// </exception>
-        public static ZipArchiveFileReader OpenAsZipFile(this FilePath sourceZipFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider)
+        public static ZipArchiveFileReader OpenAsZipFile(this FilePath sourceZipFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider, ValidationStringency stringency = ValidationStringency.Normal)
         {
             if (sourceZipFile is null)
                 throw new ArgumentNullException(nameof(sourceZipFile));
@@ -85,7 +184,7 @@ namespace ZipUtility
                 var success = false;
                 try
                 {
-                    var zipFile = ZipArchiveFileReader.Parse(zipEntryNameEncodingProvider, sourceZipFile, sourceStream);
+                    var zipFile = ZipArchiveFileReader.Parse(sourceZipFile, sourceStream, zipEntryNameEncodingProvider, stringency);
                     success = true;
                     return zipFile;
                 }
@@ -93,7 +192,7 @@ namespace ZipUtility
                 {
                     sourceStream.Dispose();
                     var lastDiskNumber = ex.LastDiskNumber;
-                    sourceStream = GetSourceStreamByLastDiskNumber(baseDirectory, sourceZipFile, lastDiskNumber);
+                    sourceStream = GetSourceStreamByLastDiskNumber(baseDirectory, sourceZipFile, lastDiskNumber, stringency);
                     success = true;
                 }
                 finally
@@ -107,33 +206,54 @@ namespace ZipUtility
         /// <summary>
         /// ZIP アーカイブを新規に作成するためのオブジェクトを取得します。
         /// </summary>
-        /// <param name="destinationZipFile">
+        /// <param name="zipArchiveFile">
         /// 作成する ZIP アーカイブファイルです。
         /// </param>
-        /// <param name="zipEntryNameEncodingProvider">
-        /// ZIP アーカイブのエントリのエンコーディングを解決するプロバイダです。
+        /// <param name="maximumVolumeSize">
+        /// ZIP アーカイブの 1 ボリュームあたりの最大の長さのバイト数です。省略時の値は <see cref="UInt32.MaxValue"/> です。
         /// </param>
         /// <returns>
         /// ZIP アーカイブを作成するためのオブジェクトです。
         /// </returns>
         /// <exception cref="ArgumentNullException">
-        /// <paramref name="destinationZipFile"/> または <paramref name="zipEntryNameEncodingProvider"/> が null です。
+        /// <paramref name="zipArchiveFile"/> が null です。
         /// </exception>
-        public static ZipArchiveFileWriter CreateAsZipFile(this FilePath destinationZipFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider)
+        public static ZipArchiveFileWriter CreateAsZipFile(this FilePath zipArchiveFile, UInt64 maximumVolumeSize = UInt64.MaxValue)
+            => zipArchiveFile.CreateAsZipFile(ZipEntryNameEncodingProvider.CreateInstance(), maximumVolumeSize);
+
+        /// <summary>
+        /// ZIP アーカイブを新規に作成するためのオブジェクトを取得します。
+        /// </summary>
+        /// <param name="zipArchiveFile">
+        /// 作成する ZIP アーカイブファイルです。
+        /// </param>
+        /// <param name="zipEntryNameEncodingProvider">
+        /// ZIP アーカイブのエントリのエンコーディングを解決するプロバイダです。
+        /// </param>
+        /// <param name="maximumVolumeSize">
+        /// ZIP アーカイブの 1 ボリュームあたりの最大の長さのバイト数です。省略時の値は <see cref="UInt32.MaxValue"/> です。
+        /// </param>
+        /// <returns>
+        /// ZIP アーカイブを作成するためのオブジェクトです。
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="zipArchiveFile"/> または <paramref name="zipEntryNameEncodingProvider"/> が null です。
+        /// </exception>
+        public static ZipArchiveFileWriter CreateAsZipFile(this FilePath zipArchiveFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider, UInt64 maximumVolumeSize = UInt64.MaxValue)
         {
-            if (destinationZipFile is null)
-                throw new ArgumentNullException(nameof(destinationZipFile));
+            if (zipArchiveFile is null)
+                throw new ArgumentNullException(nameof(zipArchiveFile));
             if (zipEntryNameEncodingProvider is null)
                 throw new ArgumentNullException(nameof(zipEntryNameEncodingProvider));
 
             return
                 new ZipArchiveFileWriter(
-                    SingleVolumeZipOutputStream.CreateInstance(destinationZipFile),
+                    GenericStyleZipOutputStream.CreateInstance(zipArchiveFile, maximumVolumeSize),
                     zipEntryNameEncodingProvider,
-                    destinationZipFile);
+                    zipArchiveFile);
         }
 
-        private static ZipArchiveValidationResult InternalValidateZipFile(FilePath file, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider, IProgress<Double>? progress)
+        private static ZipArchiveValidationResult InternalValidateZipFile(FilePath file, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider, ValidationStringency stringency, IProgress<Double>? progress)
         {
             // progress 値は以下のように定義される
             //   処理できたエントリの非圧縮サイズ の合計 / ZIP ファイルのサイズ
@@ -159,7 +279,7 @@ namespace ZipUtility
                 var processedPackedSize = 0UL;
                 var totalProcessedRate = 0.0;
 
-                using (var zipFile = file.OpenAsZipFile(zipEntryNameEncodingProvider))
+                using (var zipFile = file.OpenAsZipFile(zipEntryNameEncodingProvider, stringency))
                 {
                     // 進捗率の配分は、GetEntries() が 10% で、データの比較が 90% とする。
 
@@ -252,7 +372,7 @@ namespace ZipUtility
             }
         }
 
-        private static ZipInputStream GetSourceStreamByLastDiskNumber(DirectoryPath baseDirectory, FilePath sourceFile, UInt32 lastDiskNumber)
+        private static ZipInputStream GetSourceStreamByLastDiskNumber(DirectoryPath baseDirectory, FilePath sourceFile, UInt32 lastDiskNumber, ValidationStringency stringency)
         {
             var match = _generalMultiVolumeZipFileNamePattern.Match(sourceFile.Name);
             if (!match.Success)
@@ -263,12 +383,12 @@ namespace ZipUtility
             {
                 var file = baseDirectory.GetFile($"{body}.z{diskNumber + 1:D2}");
                 if (!file.Exists)
-                    throw new BadZipFileFormatException("There is a missing disk in a multi-volume ZIP file.");
+                    throw new BadZipFileFormatException($"There is a missing disk in a multi-volume ZIP file.: volume-file=\"{file.FullName}\"");
                 volumeFiles.Add(file);
             }
 
             volumeFiles.Add(sourceFile);
-            return MultiVolumeZipInputStream.CreateInstance(volumeFiles.ToArray());
+            return MultiVolumeZipInputStream.CreateInstance(volumeFiles.ToArray(), stringency);
         }
     }
 }

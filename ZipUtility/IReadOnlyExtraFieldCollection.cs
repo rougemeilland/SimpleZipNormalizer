@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using ZipUtility.ZipExtraField;
+using ZipUtility.ExtraFields;
 
 namespace ZipUtility
 {
@@ -26,11 +26,14 @@ namespace ZipUtility
         /// <typeparam name="EXTRA_FIELD_T">
         /// コレクションから取得したい拡張フィールドのクラスです。
         /// </typeparam>
+        /// <param name="stringency">
+        /// 拡張フィールドを取得する際に適用される厳密性を示す列挙体です。
+        /// </param>
         /// <returns>
         /// <typeparamref name="EXTRA_FIELD_T"/> 型パラメタで与えられた拡張フィールドがコレクションに含まれていればそのオブジェクトのコピーが返ります。
         /// 含まれていなかった場合は null が返ります。
         /// </returns>
-        EXTRA_FIELD_T? GetExtraField<EXTRA_FIELD_T>() where EXTRA_FIELD_T : class, IExtraField, new();
+        EXTRA_FIELD_T? GetExtraField<EXTRA_FIELD_T>(ValidationStringency stringency) where EXTRA_FIELD_T : class, IExtraField, new();
 
         /// <summary>
         /// 拡張フィールドのコレクションのバイト配列表現を表すバイトシーケンスを取得します。

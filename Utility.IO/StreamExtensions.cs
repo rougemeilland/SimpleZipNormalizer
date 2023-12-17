@@ -4247,14 +4247,16 @@ namespace Utility.IO
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void InternalWriteBytes(Int32 offset, Int32 count, Func<Int32, Int32, Int32> writer)
         {
-            var index = 0;
             while (count > 0)
             {
-                var length = writer(offset + index, count);
+                var length = writer(offset, count);
                 if (length <= 0)
                     break;
-                index += length;
-                count -= length;
+                checked
+                {
+                    offset += length;
+                    count -= length;
+                }
             }
         }
 

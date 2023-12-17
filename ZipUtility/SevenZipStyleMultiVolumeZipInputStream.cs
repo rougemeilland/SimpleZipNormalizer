@@ -51,7 +51,7 @@ namespace ZipUtility
                 throw new ArgumentException("The number of volumes in the multi-volume ZIP file is less than 2.", nameof(zipArchiveFiles));
 
             var internalVolumeDiskList = new List<(FilePath volumeFile, UInt64 volumeSize, IRandomInputByteStream<UInt64> stream)>();
-            var currentStream = (ISequentialInputByteStream?)null;
+            var currentStream = (IRandomInputByteStream<UInt64>?)null;
             var success = false;
             try
             {
@@ -59,12 +59,10 @@ namespace ZipUtility
                 {
                     var currentInternalVolmeDisk = zipArchiveFiles.Span[index];
                     currentStream = currentInternalVolmeDisk.OpenRead();
-                    if (currentStream is not IRandomInputByteStream<UInt64> randomAccessStream)
-                        throw new NotSupportedException();
-                    var currentVolumeSize = randomAccessStream.Length;
+                    var currentVolumeSize = currentStream.Length;
                     if (currentVolumeSize <= 0)
                         throw new BadZipFileFormatException($"Volume disk file size is 0.: \"{currentInternalVolmeDisk.FullName}\"");
-                    internalVolumeDiskList.Add((currentInternalVolmeDisk, currentVolumeSize, randomAccessStream));
+                    internalVolumeDiskList.Add((currentInternalVolmeDisk, currentVolumeSize, currentStream));
                 }
 
                 var internalVolumeDiskArray = internalVolumeDiskList.ToArray();
@@ -179,34 +177,6 @@ namespace ZipUtility
                 throw new InternalLogicalErrorException();
 
             return checked(offsetOnTheDisk1 - offsetOnTheDisk2);
-        }
-
-        protected override Int32 CompareCore(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2)
-        {
-            if (diskNumber1 != 0)
-                throw new InternalLogicalErrorException();
-            if (diskNumber2 != 0)
-                throw new InternalLogicalErrorException();
-
-            return offsetOnTheDisk1.CompareTo(offsetOnTheDisk2);
-        }
-
-        protected override Boolean EqualCore(UInt32 diskNumber1, UInt64 offsetOnTheDisk1, UInt32 diskNumber2, UInt64 offsetOnTheDisk2)
-        {
-            if (diskNumber1 != 0)
-                throw new InternalLogicalErrorException();
-            if (diskNumber2 != 0)
-                throw new InternalLogicalErrorException();
-
-            return offsetOnTheDisk1 == offsetOnTheDisk2;
-        }
-
-        protected override Int32 GetHashCodeCore(UInt32 diskNumber, UInt64 offsetOnTheDisk)
-        {
-            if (diskNumber != 0)
-                throw new InternalLogicalErrorException();
-
-            return offsetOnTheDisk.GetHashCode();
         }
 
         protected override void Dispose(Boolean disposing)

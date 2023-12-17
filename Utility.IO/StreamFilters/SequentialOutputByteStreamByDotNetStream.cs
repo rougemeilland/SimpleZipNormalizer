@@ -33,6 +33,14 @@ namespace Utility.IO.StreamFilters
             }
         }
 
+        public override String ToString()
+        {
+            if (_baseStream is FileStream fileStream)
+                return fileStream.Name;
+            else
+                return base.ToString() ?? GetType().FullName ?? "???";
+        }
+
         protected override Int32 WriteCore(ReadOnlySpan<Byte> buffer)
         {
             _baseStream.Write(buffer);
