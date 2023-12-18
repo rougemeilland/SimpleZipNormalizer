@@ -25,10 +25,11 @@ namespace ZipUtility
 
         public static ZipInputStream CreateInstance(FilePath zipArchiveFile)
         {
+            var stream = (IRandomInputByteStream<UInt64>?)null;
             var success = false;
-            var stream = zipArchiveFile.OpenRead();
             try
             {
+                stream = zipArchiveFile.OpenRead().WithCache();
                 var zipStream =
                     new SingleVolumeZipInputStream(
                         stream.Length,
@@ -40,7 +41,7 @@ namespace ZipUtility
             finally
             {
                 if (!success)
-                    stream.Dispose();
+                    stream?.Dispose();
             }
         }
 

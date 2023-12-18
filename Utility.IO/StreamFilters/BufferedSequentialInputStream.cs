@@ -8,10 +8,10 @@ namespace Utility.IO.StreamFilters
         : SequentialInputByteStreamFilter
     {
         private readonly ISequentialInputByteStream _baseStream;
-        private readonly ReadOnlyBytesCache _cache;
+        private readonly ReadOnlyBytesCache<InvalidPositionType> _cache;
 
         public BufferedSequentialInputStream(ISequentialInputByteStream baseStream, Boolean leaveOpen)
-            : this(baseStream, ReadOnlyBytesCache.DEFAULT_BUFFER_SIZE, leaveOpen)
+            : this(baseStream, ReadOnlyBytesCache<InvalidPositionType>.DEFAULT_BUFFER_SIZE, leaveOpen)
         {
         }
 
@@ -26,7 +26,7 @@ namespace Utility.IO.StreamFilters
                     throw new ArgumentOutOfRangeException(nameof(bufferSize));
 
                 _baseStream = baseStream;
-                _cache = new ReadOnlyBytesCache(bufferSize);
+                _cache = new ReadOnlyBytesCache<InvalidPositionType>(bufferSize);
             }
             catch (Exception)
             {
@@ -37,9 +37,17 @@ namespace Utility.IO.StreamFilters
         }
 
         protected override Int32 ReadCore(Span<Byte> buffer)
-            => _cache.Read(buffer, b => _baseStream.Read(b.Span));
+            => _cache.Read(
+                buffer,
+                b => (null, _baseStream.Read(b.Span)));
 
         protected override Task<Int32> ReadAsyncCore(Memory<Byte> buffer, CancellationToken cancellationToken)
-            => _cache.ReadAsync(buffer, b => _baseStream.ReadAsync(b, cancellationToken));
+            => _cache.ReadAsync(
+                buffer,
+                async b =>
+                {
+                    var length = await _baseStream.ReadAsync(b, cancellationToken).ConfigureAwait(false);
+                    return (null, length);
+                });
     }
 }

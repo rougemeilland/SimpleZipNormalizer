@@ -993,7 +993,6 @@ namespace ZipUtility
                 var contentStream =
                     compressionMethod.GetEncodingStream(
                         _zipStream.Stream
-                            .WithCache()
                             .WithEndAction(packedSize => packedSizeHolder.Value = packedSize, true),
                         SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
                             unpackedCountProgress,

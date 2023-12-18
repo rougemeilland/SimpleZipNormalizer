@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using Utility;
 using Utility.IO;
@@ -26,19 +27,24 @@ namespace ZipUtility
     internal class SevenZipStyleMultiVolumeZipInputStream
         : ZipInputStream
     {
+        private const Int32 _STREAM_CACHE_CAPACITY = 8;
+
         private readonly UInt64 _totalDiskSize;
-        private readonly ReadOnlyMemory<(FilePath volumeFile, UInt64 volumeSize, IRandomInputByteStream<UInt64> stream)> _internalVolumeDisks;
+        private readonly ReadOnlyMemory<(FilePath volumeFile, UInt64 volumeSize)> _internalVolumeDisks;
         private readonly UInt64 _internalVolumeDiskSizePerDisk;
         private readonly ReadOnlyMemory<UInt64> _totalLengthToThatInternalDisk;
+        private readonly VolumeDiskStreamCache<IRandomInputByteStream<UInt64>> _streamCache;
+
         private Boolean _isDisposed;
         private Int32 _currentInternalVolmeDiskNumber;
 
-        private SevenZipStyleMultiVolumeZipInputStream(UInt64 totalDiskSize, ReadOnlyMemory<(FilePath volumeFile, UInt64 volumeSize, IRandomInputByteStream<UInt64> stream)> internalVolumeDisks, UInt64 internalVolumeDiskSizePerDisk, ReadOnlyMemory<UInt64> totalLengthToThatInternalDisk)
+        private SevenZipStyleMultiVolumeZipInputStream(UInt64 totalDiskSize, ReadOnlyMemory<(FilePath volumeFile, UInt64 volumeSize)> internalVolumeDisks, UInt64 internalVolumeDiskSizePerDisk, ReadOnlyMemory<UInt64> totalLengthToThatInternalDisk)
         {
             _totalDiskSize = totalDiskSize;
             _internalVolumeDisks = internalVolumeDisks;
             _internalVolumeDiskSizePerDisk = internalVolumeDiskSizePerDisk;
             _totalLengthToThatInternalDisk = totalLengthToThatInternalDisk;
+            _streamCache = new VolumeDiskStreamCache<IRandomInputByteStream<UInt64>>(_STREAM_CACHE_CAPACITY, OpenInternalVolumeDisk);
             _isDisposed = false;
             _currentInternalVolmeDiskNumber = 0;
         }
@@ -50,60 +56,48 @@ namespace ZipUtility
             if (zipArchiveFiles.Length < 1)
                 throw new ArgumentException("The number of volumes in the multi-volume ZIP file is less than 2.", nameof(zipArchiveFiles));
 
-            var internalVolumeDiskList = new List<(FilePath volumeFile, UInt64 volumeSize, IRandomInputByteStream<UInt64> stream)>();
-            var currentStream = (IRandomInputByteStream<UInt64>?)null;
-            var success = false;
-            try
+            var internalVolumeDiskList = new List<(FilePath volumeFile, UInt64 volumeSize)>();
+            for (var index = 0; index < zipArchiveFiles.Length; ++index)
             {
-                for (var index = 0; index < zipArchiveFiles.Length; ++index)
-                {
-                    var currentInternalVolmeDisk = zipArchiveFiles.Span[index];
-                    currentStream = currentInternalVolmeDisk.OpenRead();
-                    var currentVolumeSize = currentStream.Length;
-                    if (currentVolumeSize <= 0)
-                        throw new BadZipFileFormatException($"Volume disk file size is 0.: \"{currentInternalVolmeDisk.FullName}\"");
-                    internalVolumeDiskList.Add((currentInternalVolmeDisk, currentVolumeSize, currentStream));
-                }
+                var currentInternalVolmeDisk = zipArchiveFiles.Span[index];
+                var currentVolumeSize = checked((UInt64)currentInternalVolmeDisk.Length);
+                if (currentVolumeSize <= 0)
+                    throw new BadZipFileFormatException($"Volume disk file size is 0.: \"{currentInternalVolmeDisk.FullName}\"");
+                internalVolumeDiskList.Add((currentInternalVolmeDisk, currentVolumeSize));
+            }
 
-                var internalVolumeDiskArray = internalVolumeDiskList.ToArray();
+            var internalVolumeDiskArray = internalVolumeDiskList.ToArray();
 #if DEBUG
-                if (internalVolumeDiskArray.Length < 2)
-                    throw new Exception();
+            if (internalVolumeDiskArray.Length < 2)
+                throw new Exception();
 #endif
 
-                var totalDiskSize = 0UL;
-                var totalLengthToThatDisk = new UInt64[internalVolumeDiskArray.Length];
-                for (var index = 0; index < internalVolumeDiskArray.Length; ++index)
-                {
-                    var currentInternalVolumeDiskSize = internalVolumeDiskArray[index].volumeSize;
-                    if (index < internalVolumeDiskArray.Length - 2)
-                    {
-                        // 最後のディスクを除いて長さが同じであることのチェック
-                        var nextInternalVolumeDiskSize = internalVolumeDiskArray[index + 1].volumeSize;
-                        if (nextInternalVolumeDiskSize != currentInternalVolumeDiskSize)
-                            throw new BadZipFileFormatException("Volume disks with different sizes were found among volume disks other than the last.");
-                    }
-
-                    totalLengthToThatDisk[index] = totalDiskSize;
-                    checked
-                    {
-                        totalDiskSize += currentInternalVolumeDiskSize;
-                    }
-                }
-
-                var zipStream = new SevenZipStyleMultiVolumeZipInputStream(totalDiskSize, internalVolumeDiskArray, internalVolumeDiskArray[0].volumeSize, totalLengthToThatDisk);
-                success = true;
-                return zipStream;
-            }
-            finally
+            var totalDiskSize = 0UL;
+            var totalLengthToThatDisk = new UInt64[internalVolumeDiskArray.Length];
+            for (var index = 0; index < internalVolumeDiskArray.Length; ++index)
             {
-                if (!success)
+                var currentInternalVolumeDiskSize = internalVolumeDiskArray[index].volumeSize;
+                if (index < internalVolumeDiskArray.Length - 2)
                 {
-                    currentStream?.Dispose();
-                    foreach (var (_, _, stream) in internalVolumeDiskList)
-                        stream.Dispose();
+                    // 最後のディスクを除いて長さが同じであることのチェック
+                    var nextInternalVolumeDiskSize = internalVolumeDiskArray[index + 1].volumeSize;
+                    if (nextInternalVolumeDiskSize != currentInternalVolumeDiskSize)
+                        throw new BadZipFileFormatException("Volume disks with different sizes were found among volume disks other than the last.");
+                }
+
+                totalLengthToThatDisk[index] = totalDiskSize;
+                checked
+                {
+                    totalDiskSize += currentInternalVolumeDiskSize;
                 }
             }
+
+            return
+                new SevenZipStyleMultiVolumeZipInputStream(
+                    totalDiskSize,
+                    internalVolumeDiskArray,
+                    internalVolumeDiskArray[0].volumeSize,
+                    totalLengthToThatDisk);
         }
 
         protected override ZipStreamPosition EndOfThisStreamCore => new(0, _totalDiskSize, this);
@@ -111,7 +105,7 @@ namespace ZipUtility
         protected override ZipStreamPosition PositionCore
             => new(
                 0,
-                checked(_totalLengthToThatInternalDisk.Span[_currentInternalVolmeDiskNumber] + _internalVolumeDisks.Span[_currentInternalVolmeDiskNumber].stream.Position),
+                checked(_totalLengthToThatInternalDisk.Span[_currentInternalVolmeDiskNumber] + _streamCache.GetStream(_currentInternalVolmeDiskNumber).Position),
                 this);
 
         protected override void SeekCore(UInt32 diskNumber, UInt64 offsetOnTheDisk)
@@ -126,12 +120,11 @@ namespace ZipUtility
             if (internalDiskNumber >= _internalVolumeDisks.Length)
                 throw new ArgumentOutOfRangeException($"An attempt was made to access a position outside the bounds of the volume disk in a 7-zip style multi-volume ZIP file.: {nameof(offsetOnTheDisk)}=0x{offsetOnTheDisk:16}", nameof(offsetOnTheDisk));
 
-            var (_, volumeSize, stream) = _internalVolumeDisks.Span[internalDiskNumber];
-            if (offsetOnTheInternalDisk > volumeSize)
+            if (offsetOnTheInternalDisk > _internalVolumeDisks.Span[internalDiskNumber].volumeSize)
                 throw new ArgumentOutOfRangeException($"An attempt was made to access a position outside the bounds of the volume disk in a 7-zip style multi-volume ZIP file.: {nameof(offsetOnTheDisk)}=0x{offsetOnTheDisk:16}", nameof(offsetOnTheDisk));
 
             _currentInternalVolmeDiskNumber = internalDiskNumber;
-            stream.Seek(offsetOnTheInternalDisk);
+            _streamCache.GetStream(_currentInternalVolmeDiskNumber).Seek(offsetOnTheInternalDisk);
         }
 
         protected override Boolean ValidatePositionCore(UInt32 diskNumber, UInt64 offsetOnTheDisk)
@@ -141,9 +134,9 @@ namespace ZipUtility
         {
             while (true)
             {
-                var (_, volumeSize, stream) = _internalVolumeDisks.Span[_currentInternalVolmeDiskNumber];
-                if (stream.Position < volumeSize)
-                    return stream;
+                var currentInternalVolmeStream = _streamCache.GetStream(_currentInternalVolmeDiskNumber);
+                if (currentInternalVolmeStream.Position < _internalVolumeDisks.Span[_currentInternalVolmeDiskNumber].volumeSize)
+                    return currentInternalVolmeStream;
                 if (!MoveToNextDisk())
                     return null;
             }
@@ -184,10 +177,7 @@ namespace ZipUtility
             if (!_isDisposed)
             {
                 if (disposing)
-                {
-                    for (var index = 0; index < _internalVolumeDisks.Length; ++index)
-                        _internalVolumeDisks.Span[index].stream.Dispose();
-                }
+                    _streamCache.Dispose();
 
                 _isDisposed = true;
             }
@@ -199,8 +189,7 @@ namespace ZipUtility
         {
             if (!_isDisposed)
             {
-                for (var index = 0; index < _internalVolumeDisks.Length; ++index)
-                    await _internalVolumeDisks.Span[index].stream.DisposeAsync().ConfigureAwait(false);
+                await _streamCache.DisposeAsync().ConfigureAwait(false);
                 _isDisposed = true;
             }
 
@@ -217,8 +206,37 @@ namespace ZipUtility
                 ++_currentInternalVolmeDiskNumber;
             }
 
-            _internalVolumeDisks.Span[_currentInternalVolmeDiskNumber].stream.Seek(0);
+            _streamCache.GetStream(_currentInternalVolmeDiskNumber).Seek(0);
             return true;
+        }
+
+        private IRandomInputByteStream<UInt64> OpenInternalVolumeDisk(Int32 internalVolumeDiskNumber)
+        {
+            var stream = (IRandomInputByteStream<UInt64>?)null;
+            var success = false;
+            try
+            {
+                var (volumeFile, volumeSize) = _internalVolumeDisks.Span[checked((Int32)internalVolumeDiskNumber)];
+                try
+                {
+                    stream = volumeFile.OpenRead().WithCache();
+                }
+                catch (Exception ex)
+                {
+                    throw new IOException($"Failed to open the ZIP archive volume file.: path=\"{volumeFile.FullName}\"", ex);
+                }
+
+                if (stream.Length != volumeSize)
+                    throw new IOException($"Detected that the size of a ZIP archive's volume file has changed.: path=\"{volumeFile.FullName}\"");
+
+                success = true;
+                return stream;
+            }
+            finally
+            {
+                if (!success)
+                    stream?.Dispose();
+            }
         }
     }
 }

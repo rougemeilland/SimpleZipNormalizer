@@ -5,6 +5,7 @@ using System.Text;
 using Utility;
 using Utility.Collections;
 using Utility.IO;
+using Utility.Linq;
 
 namespace Experiment01
 {
@@ -17,45 +18,91 @@ namespace Experiment01
 
         private static void Main(string[] args)
         {
-            var baseDirectory = new DirectoryPath(args[0]);
-            var commentSize = 0x7ffe;
-            var commentBytes = Encoding.UTF8.GetBytes($"This comment is {commentSize:N0} bytes long.\n" + new string(RandomSequence.GetAsciiCharSequence().Take(commentSize).ToArray())).AsReadOnly()[..commentSize];
+            using (var ms = new MemoryStream())
+            {
+                _ = ms.Seek(0, SeekOrigin.Begin);
+                using (var outStream = ms.AsOutputByteStream(true).AsRandomAccess<ulong>().WithCache(8))
+                {
+                    outStream.Seek(0);
+                    outStream.WriteBytes(new byte[] { 1, 2, 3, 4, 5 });
+                    outStream.Seek(3);
+                    outStream.WriteBytes(new byte[] { 6, 7, 8, 9, 10, 11,});
+                    outStream.Flush();
+                }
 
-            baseDirectory.GetFile("comment.txt").WriteAllBytes(commentBytes);
+                Console.WriteLine($"random-write: [ {$"{string.Join(", ", ms.ToArray())}]"}");
 
-            WriteContentFile(baseDirectory, (0xffffffffLU - 64 * 1024UL * 5 + 64 * 1024LU * 2) / 4);
-            WriteContentFile(baseDirectory, (0xffffffffLU - 64 * 1024UL * 5 + 64 * 1024LU * 1) / 4);
-            WriteContentFile(baseDirectory, (0xffffffffLU - 64 * 1024UL * 5 + 64 * 1024LU * 0) / 4);
-            WriteContentFile(baseDirectory, (0xffffffffLU - 64 * 1024UL * 5 - 64 * 1024LU * 1) / 4);
-            WriteContentFile(baseDirectory, (0xffffffffLU - 64 * 1024UL * 5 - 64 * 1024LU * 2) / 4);
+                _ = ms.Seek(0, SeekOrigin.Begin);
+                using (var outStream = ms.AsOutputByteStream(true).AsRandomAccess<ulong>().WithCache(8))
+                {
+                    outStream.Seek(0);
+                    outStream.WriteBytes(new byte[] { 11, 12, 13, 14, 15, });
+                    outStream.Seek(5);
+                    outStream.WriteBytes(new byte[] { 16, 17, 18, 19, 20, 21,});
+                    outStream.Flush();
+                }
 
-            //WriteContentFile(baseDirectory, 0xffffffffLU - 613LU + 64 * 1024LU * 2); // PKZIPを使用して、コメントなしで圧縮すると65538ボリュームのZIPファイルになる
-            //WriteContentFile(baseDirectory, 0xffffffffLU - 613LU + 64 * 1024LU * 1); // PKZIPを使用して、コメントなしで圧縮すると65537ボリュームのZIPファイルになる
-            //WriteContentFile(baseDirectory, 0xffffffffLU - 613LU + 64 * 1024LU * 0); // PKZIPを使用して、コメントなしで圧縮すると65536ボリュームのZIPファイルになる
-            //WriteContentFile(baseDirectory, 0xffffffffLU - 613LU - 64 * 1024LU * 1); // PKZIPを使用して、コメントなしで圧縮すると65535ボリュームのZIPファイルになる
-            //WriteContentFile(baseDirectory, 0xffffffffLU - 613LU - 64 * 1024LU * 2); // PKZIPを使用して、コメントなしで圧縮すると65534ボリュームのZIPファイルになる
+                Console.WriteLine($"random-write: [ {$"{string.Join(", ", ms.ToArray())}]"}");
+
+                _ = ms.Seek(0, SeekOrigin.Begin);
+                using (var outStream = ms.AsOutputByteStream(true).AsRandomAccess<ulong>().WithCache(8))
+                {
+                    outStream.Seek(0);
+                    outStream.WriteBytes(new byte[] { 21, 22, 23, 24, 25, });
+                    outStream.Seek(7);
+                    outStream.WriteBytes(new byte[] { 26, 27, 28, 29, 30, 31,});
+                    outStream.Flush();
+                }
+
+                Console.WriteLine($"random-write: [ {$"{string.Join(", ", ms.ToArray())}]"}");
+            }
+
+            using (var ms = new MemoryStream(Enumerable.Range(1, 20).Select(n => (byte)n).ToArray()))
+            {
+                _ = ms.Seek(0, SeekOrigin.Begin);
+                using (var inStream = ms.AsInputByteStream(true).AsRandomAccess<ulong>().WithCache(8))
+                {
+                    inStream.Seek(0);
+                    var data1 = inStream.ReadBytes(8);
+                    inStream.Seek(5);
+                    var data2 = inStream.ReadBytes(8);
+                    Console.WriteLine($"random-read: [ {$"{string.Join(", ", data1.AsEnumerable().Concat(data2.AsEnumerable()))}]"}");
+                }
+
+                _ = ms.Seek(0, SeekOrigin.Begin);
+                using (var inStream = ms.AsInputByteStream(true).AsRandomAccess<ulong>().WithCache(8))
+                {
+                    inStream.Seek(0);
+                    var data1 = inStream.ReadBytes(8);
+                    inStream.Seek(7);
+                    var data2 = inStream.ReadBytes(8);
+                    Console.WriteLine($"random-read: [ {$"{string.Join(", ", data1.AsEnumerable().Concat(data2.AsEnumerable()))}]"}");
+                }
+
+                _ = ms.Seek(0, SeekOrigin.Begin);
+                using (var inStream = ms.AsInputByteStream(true).AsRandomAccess<ulong>().WithCache(8))
+                {
+                    inStream.Seek(0);
+                    var data1 = inStream.ReadBytes(8);
+                    inStream.Seek(8);
+                    var data2 = inStream.ReadBytes(8);
+                    Console.WriteLine($"random-read: [ {$"{string.Join(", ", data1.AsEnumerable().Concat(data2.AsEnumerable()))}]"}");
+                }
+
+                _ = ms.Seek(0, SeekOrigin.Begin);
+                using (var inStream = ms.AsInputByteStream(true).AsRandomAccess<ulong>().WithCache(8))
+                {
+                    inStream.Seek(0);
+                    var data1 = inStream.ReadBytes(8);
+                    inStream.Seek(9);
+                    var data2 = inStream.ReadBytes(8);
+                    Console.WriteLine($"random-read: [ {$"{string.Join(", ", data1.AsEnumerable().Concat(data2.AsEnumerable()))}]"}");
+                }
+            }
 
             Console.WriteLine("Completed.");
             Console.Beep();
             _ = Console.ReadLine();
-        }
-
-        private static void WriteContentFile(DirectoryPath baseDirectory, ulong fileSize)
-        {
-            using (var outStream = new FileStream(baseDirectory.GetFile($"content {fileSize:N0} (0x{fileSize:x16}) bytes.txt").FullName, FileMode.Create, FileAccess.Write, FileShare.None))
-            {
-                const int BUFFER_LENGTH = 1024 * 1024;
-                while (fileSize > 0)
-                {
-                    var length = checked((int)fileSize.Minimum((ulong)BUFFER_LENGTH));
-                    var data = RandomSequence.GetAsciiCharSequence().Select(c => (byte)(int)c).Take(length).ToArray();
-                    outStream.WriteBytes(data);
-                    checked
-                    {
-                        fileSize -= (ulong)data.Length;
-                    }
-                }
-            }
         }
     }
 }

@@ -8,11 +8,11 @@ namespace Utility.IO.StreamFilters
         : SequentialOutputByteStreamFilter
     {
         private readonly ISequentialOutputByteStream _baseStream;
-        private readonly WriteOnlyBytesCache _cache;
+        private readonly WriteOnlyBytesCache<InvalidPositionType> _cache;
         private Boolean _isDisposed;
 
         public BufferedSequentialOutputStream(ISequentialOutputByteStream baseStream, Boolean leaveOpen)
-            : this(baseStream, WriteOnlyBytesCache.DEFAULT_BUFFER_SIZE, leaveOpen)
+            : this(baseStream, WriteOnlyBytesCache<InvalidPositionType>.DEFAULT_BUFFER_SIZE, leaveOpen)
         {
         }
 
@@ -27,7 +27,7 @@ namespace Utility.IO.StreamFilters
                     throw new ArgumentOutOfRangeException(nameof(bufferSize));
 
                 _baseStream = baseStream;
-                _cache = new WriteOnlyBytesCache(bufferSize);
+                _cache = new WriteOnlyBytesCache<InvalidPositionType>(bufferSize);
                 _isDisposed = false;
             }
             catch (Exception)
@@ -39,20 +39,40 @@ namespace Utility.IO.StreamFilters
         }
 
         protected override Int32 WriteCore(ReadOnlySpan<Byte> buffer)
-            => _cache.Write(buffer, b => _baseStream.Write(b.Span));
+            => _cache.Write(
+                buffer,
+                b =>
+                {
+                    _baseStream.WriteBytes(b.Span);
+                    return null;
+                });
 
         protected override Task<Int32> WriteAsyncCore(ReadOnlyMemory<Byte> buffer, CancellationToken cancellationToken)
-            => _cache.WriteAsync(buffer, b => _baseStream.WriteAsync(b, cancellationToken));
+            => _cache.WriteAsync(
+                buffer,
+                async b =>
+                {
+                    await _baseStream.WriteBytesAsync(b, cancellationToken).ConfigureAwait(false);
+                    return null;
+                });
 
         protected override void FlushCore()
         {
-            _cache.Flush(b => _baseStream.WriteBytes(b.Span));
+            _cache.Flush(b =>
+            {
+                _baseStream.WriteBytes(b.Span);
+                return null;
+            });
             _baseStream.Flush();
         }
 
         protected override async Task FlushAsyncCore(CancellationToken cancellationToken = default)
         {
-            await _cache.FlushAsync(b => _baseStream.WriteBytesAsync(b, cancellationToken)).ConfigureAwait(false);
+            await _cache.FlushAsync(async b =>
+            {
+                await _baseStream.WriteBytesAsync(b, cancellationToken).ConfigureAwait(false);
+                return null;
+            }).ConfigureAwait(false);
             await _baseStream.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
 

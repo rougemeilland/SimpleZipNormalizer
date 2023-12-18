@@ -207,8 +207,7 @@ namespace ZipUtility
                     hierarchicalDecoder
                     .GetDecodingStream(
                         zipInputStream.WithPartial(offset, packedSize, true)
-                            .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2))
-                            .WithCache(),
+                            .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2)),
                         _decoderOption,
                         size,
                         packedSize,
@@ -229,8 +228,7 @@ namespace ZipUtility
                 using var outputStream = new NullOutputStream();
                 decoder.Decode(
                     zipInputStream.WithPartial(offset, packedSize, true)
-                        .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2))
-                        .WithCache(),
+                        .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2)),
                     outputStream
                         .WithCrc32Calculation(crcHolder),
                     _decoderOption,
@@ -378,8 +376,7 @@ namespace ZipUtility
                     return
                         hierarchicalDecoder.GetDecodingStream(
                             baseStream
-                                .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2, 0, packedSize))
-                                .WithCache(),
+                                .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2, 0, packedSize)),
                             _decoderOption,
                             unpackedSize,
                             packedSize,
@@ -403,8 +400,7 @@ namespace ZipUtility
                             using var queueWriter = queue.GetWriter();
                             decoder.Decode(
                                 baseStream
-                                    .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2, 0, packedSize))
-                                    .WithCache(),
+                                    .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2, 0, packedSize)),
                                 queueWriter
                                     .WithCache(),
                                 decoderOption,
@@ -443,7 +439,6 @@ namespace ZipUtility
                         hierarchicalEncoder.GetEncodingStream(
                             baseStream
                                 .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2))
-                                .WithCache()
                                 .WithEndAction(_ => progressCounter.Report()),
                             _encoderOption,
                             SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue1))
@@ -467,7 +462,6 @@ namespace ZipUtility
                                 queueReader,
                                 baseStream
                                     .WithProgression(SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue2))
-                                    .WithCache()
                                     .WithEndAction(_ => progressCounter.Report()),
                                 encoderOption,
                                 SafetyProgress.CreateIncreasingProgress<UInt64>(progressCounter.SetValue1));

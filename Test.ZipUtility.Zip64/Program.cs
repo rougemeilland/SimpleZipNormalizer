@@ -15,7 +15,7 @@ namespace Test.ZipUtility.Zip64
 
 #if true
             // ボリューム数 = UInt16.MaxValue - 3 / UInt16.MaxValue - 2 / UInt16.MaxValue -1 / UInt16.MaxValue / UInt16.MaxValue + 1
-            foreach (var value in new[] { ushort.MaxValue - 3U, ushort.MaxValue - 2U, ushort.MaxValue - 1U, ushort.MaxValue, ushort.MaxValue + 1U })
+            foreach (var value in new[] { ushort.MaxValue - 2U, ushort.MaxValue - 1U, ushort.MaxValue, ushort.MaxValue + 1U, ushort.MaxValue + 2U, ushort.MaxValue + 3U })
             {
                 const ulong VOLUME_SIZE = 1024;
 
