@@ -292,7 +292,7 @@ namespace SimpleZipNormalizer.CUI
             try
             {
                 using var sourceArchiveReader = sourceZipFile.OpenAsZipFile(entryNameEncodingProvider);
-                foreach (var entry in sourceArchiveReader.GetEntries(progress))
+                foreach (var entry in sourceArchiveReader.EnumerateEntries(progress))
                 {
                     var localExtraIdsText = string.Join(",", entry.LocalHeaderExtraFields.EnumerateExtraFieldIds().Select(id => $"0x{id:x4}"));
                     var centralExtraIdsText = string.Join(",", entry.CentralDirectoryHeaderExtraFields.EnumerateExtraFieldIds().Select(id => $"0x{id:x4}"));
@@ -328,13 +328,13 @@ namespace SimpleZipNormalizer.CUI
                 using var sourceArchiveReader = sourceZipFile.OpenAsZipFile(entryNameEncodingProvider);
                 var sourceZipFileLength = sourceZipFile.Length;
                 var rootNode = PathNode.CreateRootNode();
-                var badEntries = sourceArchiveReader.GetEntries().Where(entry => entry.FullName.IsUnknownEncodingText()).ToList();
+                var badEntries = sourceArchiveReader.EnumerateEntries().Where(entry => entry.FullName.IsUnknownEncodingText()).ToList();
                 if (badEntries.Count > 0)
                     throw new Exception($".NETで認識できない名前のエントリがZIPファイルに含まれています。: ZIP file name:\"{sourceZipFile.FullName}\", Entry name: \"{badEntries.First().FullName}\"");
 
                 progress?.Report(0);
                 var sourceEntries =
-                    sourceArchiveReader.GetEntries(
+                    sourceArchiveReader.EnumerateEntries(
                         SafetyProgress.CreateIncreasingProgress(
                             progress,
                             value => value * 0.05,
@@ -389,7 +389,7 @@ namespace SimpleZipNormalizer.CUI
                     VerifyNormalizedEntries(
                         sourceZipFile,
                         sourceEntries,
-                        normalizedZipArchiveReader.GetEntries(
+                        normalizedZipArchiveReader.EnumerateEntries(
                             SafetyProgress.CreateIncreasingProgress(
                                 progress,
                                 value => 0.50 + value * 0.05,
@@ -451,8 +451,8 @@ namespace SimpleZipNormalizer.CUI
                         .Any(otherItem =>
                             otherItem.sourceEntry is not null
                             && (
-                                otherItem.newOrder > item.newOrder && otherItem.sourceEntry.Order < item.sourceEntry.Order
-                                || otherItem.newOrder < item.newOrder && otherItem.sourceEntry.Order > item.sourceEntry.Order)));
+                                otherItem.newOrder > item.newOrder && otherItem.sourceEntry.LocationOrder < item.sourceEntry.LocationOrder
+                                || otherItem.newOrder < item.newOrder && otherItem.sourceEntry.LocationOrder > item.sourceEntry.LocationOrder)));
 
         private static void CreateNormalizedZipArchive(
             FilePath destinationZipFile,

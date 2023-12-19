@@ -15,30 +15,30 @@ namespace ZipUtility.Headers.Parser
         }
 
         private ZipFileZip64EOCDL(
-            ZipStreamPosition zip64EOCDLPosition,
+            ZipStreamPosition headerPosition,
+            UInt64 headerSize,
             UInt32 numberOfTheDiskWithTheStartOfTheZip64EndOfCentralDirectory,
             UInt64 offsetOfTheZip64EndOfCentralDirectoryRecord,
-            UInt32 totalNumberOfDisks,
-            UInt64 headerSize)
+            UInt32 totalNumberOfDisks)
         {
-            Zip64EOCDLPosition = zip64EOCDLPosition;
+            HeaderPosition = headerPosition;
+            HeaderSize = headerSize;
             NumberOfTheDiskWithTheStartOfTheZip64EndOfCentralDirectory = numberOfTheDiskWithTheStartOfTheZip64EndOfCentralDirectory;
             OffsetOfTheZip64EndOfCentralDirectoryRecord = offsetOfTheZip64EndOfCentralDirectoryRecord;
             TotalNumberOfDisks = totalNumberOfDisks;
-            HeaderSize = headerSize;
         }
 
-        public ZipStreamPosition Zip64EOCDLPosition { get; }
+        public ZipStreamPosition HeaderPosition { get; }
+        public UInt64 HeaderSize { get; }
         public UInt32 NumberOfTheDiskWithTheStartOfTheZip64EndOfCentralDirectory { get; }
         public UInt64 OffsetOfTheZip64EndOfCentralDirectoryRecord { get; }
         public UInt32 TotalNumberOfDisks { get; }
-        public UInt64 HeaderSize { get; }
 
         public Boolean CheckDiskNumber(UInt32 actualLastDiskNumber)
             => TotalNumberOfDisks == checked(actualLastDiskNumber + 1)
                 && NumberOfTheDiskWithTheStartOfTheZip64EndOfCentralDirectory <= actualLastDiskNumber;
 
-        public static ZipFileZip64EOCDL? Parse(ReadOnlySpan<Byte> buffer, ZipStreamPosition zip64EOCDLPosition)
+        public static ZipFileZip64EOCDL? Parse(ReadOnlySpan<Byte> buffer, ZipStreamPosition headerPositionOfZip64EOCDL)
         {
             var signature = buffer[..4].ToUInt32LE();
             if (signature != _zip64EndOfCentralDirectoryLocatorSignature)
@@ -48,11 +48,11 @@ namespace ZipUtility.Headers.Parser
             var totalNumberOfDisks = buffer.Slice(16, 4).ToUInt32LE();
             return
                 new ZipFileZip64EOCDL(
-                    zip64EOCDLPosition,
+                    headerPositionOfZip64EOCDL,
+                    FixedHeaderSize,
                     numberOfTheDiskWithTheStartOfTheZip64EndOfCentralDirectory,
                     offsetOfTheZip64EndOfCentralDirectoryRecord,
-                    totalNumberOfDisks,
-                    FixedHeaderSize);
+                    totalNumberOfDisks);
         }
     }
 }

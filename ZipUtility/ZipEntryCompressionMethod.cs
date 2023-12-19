@@ -189,6 +189,7 @@ namespace ZipUtility
                 instance ?? throw new CompressionMethodNotSupportedException(compressionMethodId);
         }
 
+#if false
         internal UInt32 CalculateCrc32(
             IZipInputStream zipInputStream,
             ZipStreamPosition offset,
@@ -245,6 +246,7 @@ namespace ZipUtility
                 throw new IllegalRuntimeEnvironmentException($"Can not uncompress content: method={CompressionMethodId}.");
             }
         }
+#endif
 
         private static ZipEntryCompressionMethod? CreateCompressionMethodDefaultInstance(IDictionary<(CompressionMethodId CompressionMethodId, CoderType CoderType), ICompressionCoder> compresssionMethodSource, CompressionMethodId compressionMethodId, Func<ICompressionCoder, IO.ICoderOption> optionGetter)
         {

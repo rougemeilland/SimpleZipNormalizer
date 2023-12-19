@@ -30,7 +30,7 @@ namespace Utility.IO
         /// 読み込んだデータを格納するための <see cref="Memory{Byte}">Memory&lt;<see cref="Byte"/>&gt;</see> です。
         /// </param>
         /// <param name="cancellationToken">
-        /// 読み込みの中断を検出するための <see cref="CancellationToken"/> です。
+        /// キャンセル要求を監視するためのトークンです。既定値は <see cref="CancellationToken.None"/> です。
         /// </param>
         /// <returns>
         /// <see cref="Int32"/> を返します。

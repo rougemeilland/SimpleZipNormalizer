@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,7 +8,6 @@ using Utility;
 using Utility.IO;
 using Utility.Text;
 using ZipUtility.Headers.Builder;
-using static ZipUtility.ZipArchiveFileWriter;
 
 namespace ZipUtility
 {
@@ -15,30 +15,15 @@ namespace ZipUtility
     /// 新規に ZIP アーカイブを作成するクラスです。
     /// </summary>
     public class ZipArchiveFileWriter
-        : IDisposable, IAsyncDisposable, IZipFileWriterEnvironment, IZipFileWriterOutputStream
+        : IDisposable, IAsyncDisposable, IZipFileWriterParameter, IZipFileWriterOutputStreamAccesser
     {
-        internal interface IZipFileWriterEnvironment
-        {
-            FilePath ZipArchiveFile { get; }
-            IZipEntryNameEncodingProvider EntryNameEncodingProvider { get; }
-            Byte ThisSoftwareVersion { get; }
-            ZipEntryHostSystem HostSystem { get; }
-            UInt16 GetVersionNeededToExtract(ZipEntryCompressionMethodId compressionMethodId = ZipEntryCompressionMethodId.Unknown, Boolean? supportDirectory = null, Boolean? requiredZip64 = null);
-        }
-
-        internal interface IZipFileWriterOutputStream
-        {
-            IZipOutputStream Stream { get; }
-            void LockStream();
-            void UnlockStream();
-        }
-
         private enum WriterState
         {
             Initial = 0,
-            WritingContents,
-            WritingTrailingHeaders,
+            EntryCreated,
+            WritingContent,
             Completed,
+            Error,
         }
 
         private const Byte _zipWriterVersion = 63;
@@ -48,10 +33,11 @@ namespace ZipUtility
         private readonly IZipOutputStream _zipOutputStream;
         private readonly IZipEntryNameEncodingProvider _entryNameEncodingProvider;
         private readonly FilePath _zipArchiveFile;
-        private readonly List<ZipDestinationEntry> _entries;
+        private readonly FilePath _temporaryFileForCentoralDirectories;
+        private readonly ISequentialOutputByteStream _outStreamForCentoralDirectories;
         private Boolean _isDisposed;
         private Boolean _isLocked;
-        private UInt32 _currentIndex;
+        private UInt64 _currentEntryCount;
         private WriterState _writerState;
         private ReadOnlyMemory<Byte> _commentBytes;
         private ZipDestinationEntry? _lastEntry;
@@ -67,10 +53,11 @@ namespace ZipUtility
             _zipOutputStream = zipStream ?? throw new ArgumentNullException(nameof(zipStream));
             _entryNameEncodingProvider = entryNameEncodingProvider;
             _zipArchiveFile = zipArchiveFile;
+            _temporaryFileForCentoralDirectories = new FilePath(Path.GetTempFileName());
+            _outStreamForCentoralDirectories = _temporaryFileForCentoralDirectories.Create().WithCache();
             _isDisposed = false;
-            _entries = new List<ZipDestinationEntry>();
             _isLocked = false;
-            _currentIndex = 0;
+            _currentEntryCount = 0;
             _writerState = WriterState.Initial;
             _lastEntry = null;
             CommentBytes = ReadOnlyMemory<Byte>.Empty;
@@ -115,27 +102,6 @@ namespace ZipUtility
                     throw new ArgumentException($"{nameof(value)} of {nameof(CommentBytes)} contains inappropriate characters.");
 
                 _commentBytes = value;
-            }
-        }
-
-        /// <summary>
-        /// ZIP アーカイブ に含まれているエントリのコレクションを取得します。
-        /// </summary>
-        public IEnumerable<ZipDestinationEntry> Entries
-        {
-            get
-            {
-                LockZipStream();
-                try
-                {
-                    FlushLatestEntry();
-                }
-                finally
-                {
-                    UnlockZipStream();
-                }
-
-                return _entries;
             }
         }
 
@@ -288,7 +254,7 @@ namespace ZipUtility
                 throw new ArgumentException($"{nameof(entryCommentBytes)} is too long. {nameof(entryCommentBytes)} must be less than or equal to {UInt16.MaxValue} bytes.");
             if (possibleEntryEncodings is null)
                 throw new ArgumentNullException(nameof(possibleEntryEncodings));
-            if (_writerState is not (WriterState.Initial or WriterState.WritingContents))
+            if (_writerState is not WriterState.Initial and not WriterState.EntryCreated)
                 throw new InvalidOperationException();
 
             return
@@ -343,11 +309,11 @@ namespace ZipUtility
         /// </returns>
         public override String ToString() => $"\"{_zipArchiveFile.FullName}\"";
 
-        FilePath IZipFileWriterEnvironment.ZipArchiveFile => new(_zipArchiveFile.FullName);
-        IZipEntryNameEncodingProvider IZipFileWriterEnvironment.EntryNameEncodingProvider => _entryNameEncodingProvider;
-        Byte IZipFileWriterEnvironment.ThisSoftwareVersion => _zipWriterVersion;
+        FilePath IZipFileWriterParameter.ZipArchiveFile => new(_zipArchiveFile.FullName);
+        IZipEntryNameEncodingProvider IZipFileWriterParameter.EntryNameEncodingProvider => _entryNameEncodingProvider;
+        Byte IZipFileWriterParameter.ThisSoftwareVersion => _zipWriterVersion;
 
-        ZipEntryHostSystem IZipFileWriterEnvironment.HostSystem
+        ZipEntryHostSystem IZipFileWriterParameter.HostSystem
             => OperatingSystem.IsWindows()
                 ? ZipEntryHostSystem.FAT
                 : OperatingSystem.IsLinux()
@@ -356,27 +322,46 @@ namespace ZipUtility
                 ? ZipEntryHostSystem.Macintosh
                 : ZipEntryHostSystem.FAT; // 未知の OS の場合には MS-DOS とみなす
 
-        UInt16 IZipFileWriterEnvironment.GetVersionNeededToExtract(ZipEntryCompressionMethodId compressionMethodId, Boolean? supportDirectory, Boolean? requiredZip64)
+        UInt16 IZipFileWriterParameter.GetVersionNeededToExtract(ZipEntryCompressionMethodId compressionMethodId, Boolean? supportDirectory, Boolean? requiredZip64)
         {
             var versionNeededTiExtract =
                 new[]
                 {
-                        (UInt16)10, // minimum version (supported Stored compression)
-                        supportDirectory is not null && supportDirectory.Value == true  ? (UInt16)20 : (UInt16)0, // version if it contains directory entries
-                        compressionMethodId == ZipEntryCompressionMethodId.Deflate ? (UInt16)20 : (UInt16)0, // version if using Deflate compression
-                        compressionMethodId == ZipEntryCompressionMethodId.Deflate64 ? (UInt16)21 : (UInt16)0, // version if using Deflate64 compression
-                        compressionMethodId == ZipEntryCompressionMethodId.BZIP2 ? (UInt16)46 : (UInt16)0, // version if using BZIP2 compression
-                        compressionMethodId == ZipEntryCompressionMethodId.LZMA ? (UInt16)63 : (UInt16)0, // version if using LZMA compression
-                        compressionMethodId == ZipEntryCompressionMethodId.PPMd ? (UInt16)63 : (UInt16)0, // version if using PPMd+ compression
-                        requiredZip64 is not null && requiredZip64.Value ? (UInt16)45 : (UInt16)0, // version if using zip 64 extensions
+                    (UInt16)10, // minimum version (supported Stored compression)
+                    supportDirectory is not null && supportDirectory.Value == true  ? (UInt16)20 : (UInt16)0, // version if it contains directory entries
+                    compressionMethodId == ZipEntryCompressionMethodId.Deflate ? (UInt16)20 : (UInt16)0, // version if using Deflate compression
+                    compressionMethodId == ZipEntryCompressionMethodId.Deflate64 ? (UInt16)21 : (UInt16)0, // version if using Deflate64 compression
+                    compressionMethodId == ZipEntryCompressionMethodId.BZIP2 ? (UInt16)46 : (UInt16)0, // version if using BZIP2 compression
+                    compressionMethodId == ZipEntryCompressionMethodId.LZMA ? (UInt16)63 : (UInt16)0, // version if using LZMA compression
+                    compressionMethodId == ZipEntryCompressionMethodId.PPMd ? (UInt16)63 : (UInt16)0, // version if using PPMd+ compression
+                    requiredZip64 is not null && requiredZip64.Value ? (UInt16)45 : (UInt16)0, // version if using zip 64 extensions
                 }
                 .Max();
             return versionNeededTiExtract;
         }
 
-        IZipOutputStream IZipFileWriterOutputStream.Stream => _zipOutputStream;
-        void IZipFileWriterOutputStream.LockStream() => LockZipStream();
-        void IZipFileWriterOutputStream.UnlockStream() => UnlockZipStream();
+        IZipOutputStream IZipFileWriterOutputStreamAccesser.MainStream => _zipOutputStream;
+        ISequentialOutputByteStream IZipFileWriterOutputStreamAccesser.StreamForCentralDirectoryHeaders => _outStreamForCentoralDirectories;
+
+        void IZipFileWriterOutputStreamAccesser.BeginToWriteContent()
+        {
+            if (_writerState != WriterState.EntryCreated)
+                throw new InternalLogicalErrorException();
+
+            _writerState = WriterState.WritingContent;
+        }
+
+        void IZipFileWriterOutputStreamAccesser.EndToWritingContent()
+        {
+            if (_writerState != WriterState.WritingContent)
+                throw new InternalLogicalErrorException();
+
+            _writerState = WriterState.Initial;
+        }
+
+        void IZipFileWriterOutputStreamAccesser.SetErrorMark() => _writerState = WriterState.Error;
+        void IZipFileWriterOutputStreamAccesser.LockZipStream() => LockZipStream();
+        void IZipFileWriterOutputStreamAccesser.UnlockZipStream() => UnlockZipStream();
 
         /// <summary>
         /// オブジェクトに関連付けられたリソースを解放します。
@@ -397,7 +382,13 @@ namespace ZipUtility
                 }
 
                 if (disposing)
+                {
+                    _outStreamForCentoralDirectories.Dispose();
                     _zipOutputStream.Dispose();
+                }
+
+                if (_temporaryFileForCentoralDirectories.Exists)
+                    _temporaryFileForCentoralDirectories.Delete();
                 _isDisposed = true;
             }
         }
@@ -420,14 +411,10 @@ namespace ZipUtility
                 {
                 }
 
-                try
-                {
-                    await _zipOutputStream.DisposeAsync().ConfigureAwait(false);
-                }
-                catch (Exception)
-                {
-                }
-
+                await _outStreamForCentoralDirectories.DisposeAsync().ConfigureAwait(false);
+                await _zipOutputStream.DisposeAsync().ConfigureAwait(false);
+                if (_temporaryFileForCentoralDirectories.Exists)
+                    _temporaryFileForCentoralDirectories.Delete();
                 _isDisposed = true;
             }
         }
@@ -436,19 +423,23 @@ namespace ZipUtility
         {
             FlushLatestEntry();
 
-            _writerState = WriterState.WritingContents;
+            _writerState = WriterState.EntryCreated;
             var newEntry =
                 new ZipDestinationEntry(
                     this,
                     this,
-                    _currentIndex++,
+                    _currentEntryCount,
                     entryFullName,
                     entryFullNameBytes,
                     entryComment,
                     entryCommentBytes,
                     exactEntryEncoding,
                     possibleEntryEncodings);
-            _entries.Add(newEntry);
+            checked
+            {
+                ++_currentEntryCount;
+            }
+
             _lastEntry = newEntry;
             return newEntry;
         }
@@ -458,25 +449,60 @@ namespace ZipUtility
             FlushLatestEntry();
 
             LockZipStream();
+            var success = false;
             try
             {
-                if (_writerState is not (WriterState.Initial or WriterState.WritingContents))
+                if (_writerState is not WriterState.Initial and not WriterState.EntryCreated)
                     throw new InvalidOperationException();
 
-                _writerState = WriterState.WritingTrailingHeaders;
-
                 // セントラルディレクトリヘッダの書き込み
-                var centralDirectoryHeaderPositions = new List<ZipStreamPosition>();
-                foreach (var entry in _entries)
-                    centralDirectoryHeaderPositions.Add(entry.WriteCentralDirectoryHeader());
-                var endOfCentralDirectoryHeaderPosition = _zipOutputStream.Position;
+                _outStreamForCentoralDirectories.Dispose();
+                var currentDiskNumber = 0U;
+                var numberOfCentralDirectoryHeadersOnCurrenetDisk = 0U;
+                var startOfCentralDirectories = (ZipStreamPosition?)null;
+                try
+                {
+                    using var inStream = _temporaryFileForCentoralDirectories.OpenRead().WithCache();
+                    for (var count = 0UL; count < _currentEntryCount; ++count)
+                    {
+                        var length = inStream.ReadUInt32LE();
+                        var headerBytes = inStream.ReadBytes(length);
+                        if (checked((UInt32)headerBytes.Length) != length)
+                            throw new UnexpectedEndOfStreamException();
+                        var position = WriteChunkToZipStream(_zipOutputStream, headerBytes);
+                        if (position.DiskNumber == currentDiskNumber)
+                        {
+                            checked
+                            {
+                                ++numberOfCentralDirectoryHeadersOnCurrenetDisk;
+                            }
+                        }
+                        else
+                        {
+                            currentDiskNumber = position.DiskNumber;
+                            numberOfCentralDirectoryHeadersOnCurrenetDisk = 1;
+                        }
+
+                        startOfCentralDirectories ??= position;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _writerState = WriterState.Error;
+                    throw new InternalLogicalErrorException("Failed to write to central directories.", ex);
+                }
+
+                var endOfCentralDirectories = _zipOutputStream.Position;
 
                 // ZIP64 EOCDR, ZIP64 EOCDL, EOCDL の書き込み
                 var lastHeaders =
                     ZipFileLastDiskHeader.Build(
                         this,
-                        centralDirectoryHeaderPositions.ToArray(),
-                        endOfCentralDirectoryHeaderPosition,
+                        startOfCentralDirectories ?? endOfCentralDirectories,
+                        endOfCentralDirectories,
+                        _currentEntryCount,
+                        currentDiskNumber,
+                        numberOfCentralDirectoryHeadersOnCurrenetDisk,
                         _commentBytes,
                         (Flags & ZipWriteFlags.AlwaysWriteZip64EOCDR) != ZipWriteFlags.None);
                 lastHeaders.WriteTo(_zipOutputStream);
@@ -485,9 +511,12 @@ namespace ZipUtility
                 _zipOutputStream.CompletedSuccessfully();
 
                 _writerState = WriterState.Completed;
+                success = true;
             }
             finally
             {
+                if (!success)
+                    _writerState = WriterState.Error;
                 UnlockZipStream();
             }
         }
@@ -518,6 +547,32 @@ namespace ZipUtility
             lock (this)
             {
                 _isLocked = false;
+            }
+        }
+
+        private static ZipStreamPosition WriteChunkToZipStream(IZipOutputStream outputStream, ReadOnlyMemory<Byte> chunk)
+        {
+            // 不可分書き込みを宣言する。
+            // ※このとき書き込み対象のボリュームディスクが変化する可能性があることに注意。
+            outputStream.ReserveAtomicSpace(checked((UInt64)chunk.Length));
+
+            // 不可分書き込みのために出力先ボリュームをロックする。
+            outputStream.LockVolumeDisk();
+            try
+            {
+                // 先頭位置を保存する
+                var position = outputStream.Position;
+
+                // データを書き込む
+                outputStream.WriteBytes(chunk);
+
+                // 先頭位置を返す。
+                return position;
+            }
+            finally
+            {
+                // 出力先ボリュームのロックを解除する。
+                outputStream.UnlockVolumeDisk();
             }
         }
     }

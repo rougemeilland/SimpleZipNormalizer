@@ -10,9 +10,12 @@ namespace ZipUtility.Headers.Builder
 
         private static readonly UInt32 _signatureOfZip64EOCDR;
 
-        private readonly ZipArchiveFileWriter.IZipFileWriterEnvironment _zipWriter;
-        private readonly ReadOnlyMemory<ZipStreamPosition> _centralDirectoryPositions;
-        private readonly ZipStreamPosition _endOfCentralDirectories;
+        private readonly IZipFileWriterParameter _zipWriterParameter;
+        private readonly ZipStreamPosition _startOfCentralDirectoryHeaders;
+        private readonly ZipStreamPosition _endOfCentralDirectoryHeaders;
+        private readonly UInt64 _totalNumberOfCentralDirectoryHeaders;
+        private readonly UInt32 _diskNumberOfDiskWithLastCentralDirectoryHeader;
+        private readonly UInt32 _numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader;
 
         static ZipFileZip64EOCDR_Ver1()
         {
@@ -20,13 +23,19 @@ namespace ZipUtility.Headers.Builder
         }
 
         private ZipFileZip64EOCDR_Ver1(
-            ZipArchiveFileWriter.IZipFileWriterEnvironment zipWriter,
-            ReadOnlyMemory<ZipStreamPosition> centralDirectoryPositions,
-            ZipStreamPosition endOfCentralDirectories)
+            IZipFileWriterParameter zipWriterParameter,
+            ZipStreamPosition startOfCentralDirectoryHeaders,
+            ZipStreamPosition endOfCentralDirectoryHeaders,
+            UInt64 totalNumberOfCentralDirectoryHeaders,
+            UInt32 diskNumberOfDiskWithLastCentralDirectoryHeader,
+            UInt32 numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader)
         {
-            _zipWriter = zipWriter;
-            _centralDirectoryPositions = centralDirectoryPositions;
-            _endOfCentralDirectories = endOfCentralDirectories;
+            _zipWriterParameter = zipWriterParameter;
+            _startOfCentralDirectoryHeaders = startOfCentralDirectoryHeaders;
+            _endOfCentralDirectoryHeaders = endOfCentralDirectoryHeaders;
+            _totalNumberOfCentralDirectoryHeaders = totalNumberOfCentralDirectoryHeaders;
+            _diskNumberOfDiskWithLastCentralDirectoryHeader = diskNumberOfDiskWithLastCentralDirectoryHeader;
+            _numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader = numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader;
         }
 
         public static UInt64 GetLength() => FixedHeaderSize;
@@ -35,46 +44,36 @@ namespace ZipUtility.Headers.Builder
         {
             var positionOfThisHeader = outputStream.Position;
 
-            var firstCentralDirectoryPosition =
-                _centralDirectoryPositions.Length > 0
-                ? _centralDirectoryPositions.Span[0]
-                : _endOfCentralDirectories;
-
-            var numberOfCentralDirectoriesOnThisDisk = 0UL;
-            for (var index = _centralDirectoryPositions.Length - 1; index >= 0; --index)
-            {
-                if (_centralDirectoryPositions.Span[index].DiskNumber != positionOfThisHeader.DiskNumber)
-                    break;
-                checked
-                {
-                    ++numberOfCentralDirectoriesOnThisDisk;
-                }
-            }
-
             // ZIP 64 EOCDR を書き込む。
             var headerBuffer = new Byte[FixedHeaderSize];
             headerBuffer.Slice(0, 4).SetValueLE(_signatureOfZip64EOCDR);
             headerBuffer.Slice(4, 8).SetValueLE(FixedHeaderSize - 12LU);
-            headerBuffer.Slice(12, 2).SetValueLE(_zipWriter.ThisSoftwareVersion);
-            headerBuffer.Slice(14, 2).SetValueLE(_zipWriter.GetVersionNeededToExtract(ZipEntryCompressionMethodId.Unknown, false, true));
+            headerBuffer.Slice(12, 2).SetValueLE(_zipWriterParameter.ThisSoftwareVersion);
+            headerBuffer.Slice(14, 2).SetValueLE(_zipWriterParameter.GetVersionNeededToExtract(ZipEntryCompressionMethodId.Unknown, false, true));
             headerBuffer.Slice(16, 4).SetValueLE(positionOfThisHeader.DiskNumber);
-            headerBuffer.Slice(20, 4).SetValueLE(firstCentralDirectoryPosition.DiskNumber);
-            headerBuffer.Slice(24, 8).SetValueLE(numberOfCentralDirectoriesOnThisDisk);
-            headerBuffer.Slice(32, 8).SetValueLE(checked((UInt64)_centralDirectoryPositions.Length));
-            headerBuffer.Slice(40, 8).SetValueLE(_endOfCentralDirectories - firstCentralDirectoryPosition);
-            headerBuffer.Slice(48, 8).SetValueLE(firstCentralDirectoryPosition.OffsetOnTheDisk);
+            headerBuffer.Slice(20, 4).SetValueLE(_startOfCentralDirectoryHeaders.DiskNumber);
+            headerBuffer.Slice(24, 8).SetValueLE(positionOfThisHeader.DiskNumber == _diskNumberOfDiskWithLastCentralDirectoryHeader ? _numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader : 0);
+            headerBuffer.Slice(32, 8).SetValueLE(_totalNumberOfCentralDirectoryHeaders);
+            headerBuffer.Slice(40, 8).SetValueLE(_endOfCentralDirectoryHeaders - _startOfCentralDirectoryHeaders);
+            headerBuffer.Slice(48, 8).SetValueLE(_startOfCentralDirectoryHeaders.OffsetOnTheDisk);
             outputStream.WriteBytes(headerBuffer);
 
             return positionOfThisHeader;
         }
 
         public static ZipFileZip64EOCDR_Ver1 Build(
-            ZipArchiveFileWriter.IZipFileWriterEnvironment zipWriter,
-            ReadOnlyMemory<ZipStreamPosition> centralDirectoryPositions,
-            ZipStreamPosition endOfCentralDirectories)
+            IZipFileWriterParameter zipWriterParameter,
+            ZipStreamPosition startOfCentralDirectoryHeaders,
+            ZipStreamPosition endOfCentralDirectoryHeaders,
+            UInt64 totalNumberOfCentralDirectoryHeaders,
+            UInt32 diskNumberOfDiskWithLastCentralDirectoryHeader,
+            UInt32 numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader)
             => new(
-                zipWriter,
-                centralDirectoryPositions,
-                endOfCentralDirectories);
+                zipWriterParameter,
+                startOfCentralDirectoryHeaders,
+                endOfCentralDirectoryHeaders,
+                totalNumberOfCentralDirectoryHeaders,
+                diskNumberOfDiskWithLastCentralDirectoryHeader,
+                numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader);
     }
 }

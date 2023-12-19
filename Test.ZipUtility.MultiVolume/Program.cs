@@ -111,11 +111,11 @@ namespace Test.ZipUtility.MultiVolume
                 using (var reader = zipArchive.OpenAsZipFile(ValidationStringency.Strict))
                 {
                     Console.WriteLine($"検査中... \"{zipArchive.FullName}\"");
-                    var entries = reader.GetEntries();
+                    var entries = reader.EnumerateEntries();
                     var count = 0UL;
                     foreach (var entry in entries)
                     {
-                        Console.WriteLine($"検査中 ({count + 1}/{entries.Count})... \"{zipArchive.FullName}\"");
+                        Console.WriteLine($"検査中 ({count + 1}/{numberOfEntries})... \"{zipArchive.FullName}\"");
                         VerifyContentData(entry);
                         checked
                         {

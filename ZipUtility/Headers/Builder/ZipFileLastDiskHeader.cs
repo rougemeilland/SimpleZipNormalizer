@@ -1,26 +1,34 @@
 ﻿using System;
-using Utility;
 
 namespace ZipUtility.Headers.Builder
 {
     internal class ZipFileLastDiskHeader
     {
-        private readonly ZipArchiveFileWriter.IZipFileWriterEnvironment _zipWriter;
-        private readonly ReadOnlyMemory<ZipStreamPosition> _centralDirectoryPositions;
-        private readonly ZipStreamPosition _endOfCentralDirectories;
+        private readonly IZipFileWriterParameter _zipWriterParameter;
+        private readonly ZipStreamPosition _startOfCentralDirectoryHeaders;
+        private readonly ZipStreamPosition _endOfCentralDirectoryHeaders;
+        private readonly UInt64 _totalNumberOfCentralDirectoryHeaders;
+        private readonly UInt32 _diskNumberOfDiskWithLastCentralDirectoryHeader;
+        private readonly UInt32 _numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader;
         private readonly ReadOnlyMemory<Byte> _commentBytes;
         private readonly Boolean _alwaysApplyZip64EOCDR;
 
         private ZipFileLastDiskHeader(
-            ZipArchiveFileWriter.IZipFileWriterEnvironment zipWriter,
-            ReadOnlyMemory<ZipStreamPosition> centralDirectoryPositions,
-            ZipStreamPosition endOfCentralDirectories,
+            IZipFileWriterParameter zipWriterParameter,
+            ZipStreamPosition startOfCentralDirectoryHeaders,
+            ZipStreamPosition endOfCentralDirectoryHeaders,
+            UInt64 totalNumberOfCentralDirectoryHeaders,
+            UInt32 diskNumberOfDiskWithLastCentralDirectoryHeader,
+            UInt32 numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader,
             ReadOnlyMemory<Byte> commentBytes,
             Boolean alwaysApplyZip64EOCDR)
         {
-            _zipWriter = zipWriter;
-            _centralDirectoryPositions = centralDirectoryPositions;
-            _endOfCentralDirectories = endOfCentralDirectories;
+            _zipWriterParameter = zipWriterParameter;
+            _startOfCentralDirectoryHeaders = startOfCentralDirectoryHeaders;
+            _endOfCentralDirectoryHeaders = endOfCentralDirectoryHeaders;
+            _totalNumberOfCentralDirectoryHeaders = totalNumberOfCentralDirectoryHeaders;
+            _diskNumberOfDiskWithLastCentralDirectoryHeader = diskNumberOfDiskWithLastCentralDirectoryHeader;
+            _numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader = numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader;
             _commentBytes = commentBytes;
             _alwaysApplyZip64EOCDR = alwaysApplyZip64EOCDR;
         }
@@ -30,8 +38,11 @@ namespace ZipUtility.Headers.Builder
             var requiredZip64 =
                 _alwaysApplyZip64EOCDR
                 || IsRequiredZip64(
-                    _centralDirectoryPositions,
-                    _endOfCentralDirectories,
+                    _startOfCentralDirectoryHeaders,
+                    _endOfCentralDirectoryHeaders,
+                    _totalNumberOfCentralDirectoryHeaders,
+                    _diskNumberOfDiskWithLastCentralDirectoryHeader,
+                    _numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader,
                     outputStream.Position);
             if (requiredZip64)
             {
@@ -52,7 +63,14 @@ namespace ZipUtility.Headers.Builder
                 try
                 {
                     // ZIP64 EOCDR を書き込む
-                    var zip64EOCDR = ZipFileZip64EOCDR_Ver1.Build(_zipWriter, _centralDirectoryPositions, _endOfCentralDirectories);
+                    var zip64EOCDR =
+                        ZipFileZip64EOCDR_Ver1.Build(
+                            _zipWriterParameter,
+                            _startOfCentralDirectoryHeaders,
+                            _endOfCentralDirectoryHeaders,
+                            _totalNumberOfCentralDirectoryHeaders,
+                            _diskNumberOfDiskWithLastCentralDirectoryHeader,
+                            _numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader);
                     var positionOfZip64EOCDR = zip64EOCDR.WriteTo(outputStream);
 
                     // ZIP64 EOCDL を書き込む。
@@ -60,7 +78,14 @@ namespace ZipUtility.Headers.Builder
                     zip64EOCDL.WriteTo(outputStream);
 
                     // EOCDR を書き込む。
-                    var eocdr = ZipFileEOCDR.Build(_centralDirectoryPositions, _endOfCentralDirectories, _commentBytes);
+                    var eocdr =
+                        ZipFileEOCDR.Build(
+                            _startOfCentralDirectoryHeaders,
+                            _endOfCentralDirectoryHeaders,
+                            _totalNumberOfCentralDirectoryHeaders,
+                            _diskNumberOfDiskWithLastCentralDirectoryHeader,
+                            _numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader,
+                            _commentBytes);
                     eocdr.WriteTo(outputStream);
                 }
                 finally
@@ -82,7 +107,14 @@ namespace ZipUtility.Headers.Builder
                 try
                 {
                     // EOCDR を書き込む。
-                    var eocdr = ZipFileEOCDR.Build(_centralDirectoryPositions, _endOfCentralDirectories, _commentBytes);
+                    var eocdr =
+                        ZipFileEOCDR.Build(
+                            _startOfCentralDirectoryHeaders,
+                            _endOfCentralDirectoryHeaders,
+                            _totalNumberOfCentralDirectoryHeaders,
+                            _diskNumberOfDiskWithLastCentralDirectoryHeader,
+                            _numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader,
+                            _commentBytes);
                     eocdr.WriteTo(outputStream);
                 }
                 finally
@@ -94,51 +126,48 @@ namespace ZipUtility.Headers.Builder
         }
 
         public static ZipFileLastDiskHeader Build(
-            ZipArchiveFileWriter.IZipFileWriterEnvironment zipWriter,
-            ReadOnlyMemory<ZipStreamPosition> centralDirectoryPositions,
-            ZipStreamPosition endOfCentralDirectories,
+            IZipFileWriterParameter zipWriterParameter,
+            ZipStreamPosition startOfCentralDirectoryHeaders,
+            ZipStreamPosition endOfCentralDirectoryHeaders,
+            UInt64 totalNumberOfCentralDirectoryHeaders,
+            UInt32 diskNumberOfDiskWithLastCentralDirectoryHeader,
+            UInt32 numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader,
             ReadOnlyMemory<Byte> commentBytes,
             Boolean alwaysApplyZip64EOCDR)
             => new(
-                zipWriter,
-                centralDirectoryPositions,
-                endOfCentralDirectories,
+                zipWriterParameter,
+                startOfCentralDirectoryHeaders,
+                endOfCentralDirectoryHeaders,
+                totalNumberOfCentralDirectoryHeaders,
+                diskNumberOfDiskWithLastCentralDirectoryHeader,
+                numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader,
                 commentBytes,
                 alwaysApplyZip64EOCDR);
 
+        // ※ ZIP64 拡張仕様の条件のうち、
+        //   currentPosition.DiskNumber >= UInt16.MaxValue ではなく currentPosition.DiskNumber >= UInt16.MaxValue - 1
+        //   になっている理由について。
+        //
+        // この時点でのボリュームディスク番号が UInt16.MaxValue - 1 であり、かつ他の値は ZIP64 拡張仕様を使用する条件を満たしていない場合について考える。
+        // 通常の ZIP64 の仕様によれば、次は EOCDR を書き込まなければならないことになっている。
+        // もし、この EOCDR の書き込みがボリューム境界をまたいでしまう場合は、EOCDR は次のボリュームに書かれねばならない。
+        // しかし、そうすると、EOCDR が書かれるディスク番号が UInt16.MaxValue となって、結局 ZIP64 拡張仕様を使用しなければならなくなる。
+        //
+        // もし、このような事態は発生する可能性がある場合は最初から ZIP64 拡張仕様を使用するようにするために、
+        // ZIP64 拡張仕様の対象かどうかのチェックにおいて「EOCDRのあるディスク番号」の比較は「UInt16.MaxValue 以上」ではなく 「UInt16.MaxValue - 1 以上」としている。
         private static Boolean IsRequiredZip64(
-            ReadOnlyMemory<ZipStreamPosition> centralDirectoryPositions,
-            ZipStreamPosition endOfCentralDirectories,
+            ZipStreamPosition startOfCentralDirectoryHeaders,
+            ZipStreamPosition endOfCentralDirectoryHeaders,
+            UInt64 totalNumberOfCentralDirectoryHeaders,
+            UInt32 diskNumberOfDiskWithLastCentralDirectoryHeader,
+            UInt32 numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader,
             ZipStreamPosition currentPosition)
-        {
-            var firstCentralDirectoryPosition =
-                centralDirectoryPositions.Length > 0
-                ? centralDirectoryPositions.Span[0]
-                : (ZipStreamPosition?)null;
-
-            // 常に
-            // numberOfCentralDirectoriesOnThisDisk <= totalNumberOfCentralDirectories == _centralDirectoryPositions.Length
-            // であるため、numberOfCentralDirectoriesOnThisDisk は以下ではチェックしない。
-
-            // ※ ZIP64 拡張仕様の条件のうち、
-            //   currentPosition.DiskNumber >= UInt16.MaxValue ではなく currentPosition.DiskNumber >= UInt16.MaxValue - 1
-            //   になっている理由について。
-            //
-            // この時点でのボリュームディスク番号が UInt16.MaxValue - 1 であり、かつ他の値は ZIP64 拡張仕様を使用する条件を満たしていない場合について考える。
-            // 通常の ZIP64 の仕様によれば、次は EOCDR を書き込まなければならないことになっている。
-            // もし、この EOCDR の書き込みがボリューム境界をまたいでしまう場合は、EOCDR は次のボリュームに書かれねばならない。
-            // しかし、そうすると、EOCDR が書かれるディスク番号が UInt16.MaxValue となって、結局 ZIP64 拡張仕様を使用しなければならなくなる。
-            //
-            // もし、このような事態は発生する可能性がある場合は最初から ZIP64 拡張仕様を使用するようにするために、
-            // ZIP64 拡張仕様の対象かどうかのチェックにおいて「EOCDRのあるディスク番号」の比較は「UInt16.MaxValue 以上」ではなく 「UInt16.MaxValue - 1 以上」としている。
-
-            return
-                currentPosition.DiskNumber >= UInt16.MaxValue - 1
-                || firstCentralDirectoryPosition is not null
-                    && (firstCentralDirectoryPosition.Value.DiskNumber >= UInt16.MaxValue
-                        || firstCentralDirectoryPosition.Value.OffsetOnTheDisk >= UInt32.MaxValue)
-                || centralDirectoryPositions.Length >= UInt16.MaxValue
-                || endOfCentralDirectories - firstCentralDirectoryPosition >= UInt32.MaxValue;
-        }
+            => currentPosition.DiskNumber >= UInt16.MaxValue - 1
+                || totalNumberOfCentralDirectoryHeaders > 0
+                    && (startOfCentralDirectoryHeaders.DiskNumber >= UInt16.MaxValue
+                        || startOfCentralDirectoryHeaders.OffsetOnTheDisk >= UInt32.MaxValue)
+                || diskNumberOfDiskWithLastCentralDirectoryHeader == currentPosition.DiskNumber && numberOfCentralDirectoryHeadersOnDiskWithLastCentralDirectoryHeader >= UInt16.MaxValue
+                || totalNumberOfCentralDirectoryHeaders >= UInt16.MaxValue
+                || endOfCentralDirectoryHeaders - startOfCentralDirectoryHeaders >= UInt32.MaxValue;
     }
 }

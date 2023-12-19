@@ -47,13 +47,11 @@ namespace ZipUtility
         private static readonly Encoding _utf8Encoding;
         private static readonly Regex _dotEntryNamePattern;
 
-        private readonly ZipArchiveFileWriter.IZipFileWriterEnvironment _zipFileWriter;
-        private readonly ZipArchiveFileWriter.IZipFileWriterOutputStream _zipStream;
+        private readonly IZipFileWriterParameter _zipWriterParameter;
+        private readonly IZipFileWriterOutputStreamAccesser _zipWriterStreamAccesser;
         private readonly ExtraFields.ExtraFieldCollection _localHeaderExtraFields;
         private readonly ExtraFields.ExtraFieldCollection _centralDirectoryHeaderExtraFields;
         private readonly ExtraFieldCollection _extraFields;
-        private ZipEntryLocalHeader? _localHeaderInfo;
-        private ZipEntryCentralDirectoryHeader? _centralDirectoryHeaderInfo;
         private Boolean _isFile;
         private ZipEntryGeneralPurposeBitFlag _generalPurposeBitFlag;
         private ZipEntryCompressionMethodId _compressionMethodId;
@@ -76,9 +74,9 @@ namespace ZipUtility
         }
 
         internal ZipDestinationEntry(
-            ZipArchiveFileWriter.IZipFileWriterEnvironment zipFileWriter,
-            ZipArchiveFileWriter.IZipFileWriterOutputStream zipStream,
-            UInt32 index,
+            IZipFileWriterParameter zipWriterParameter,
+            IZipFileWriterOutputStreamAccesser zipWriterStreamAccesser,
+            UInt64 index,
             String fullName,
             ReadOnlyMemory<Byte> fullNameBytes,
             String comment,
@@ -101,14 +99,12 @@ namespace ZipUtility
             if (_dotEntryNamePattern.IsMatch(fullName))
                 throw new ArgumentException($"Entry names containing directory names \".\" or \"..\" are not allowed.: {fullName}", nameof(fullName));
 
-            _zipFileWriter = zipFileWriter ?? throw new ArgumentNullException(nameof(zipFileWriter));
-            _zipStream = zipStream ?? throw new ArgumentNullException(nameof(zipStream));
+            _zipWriterParameter = zipWriterParameter ?? throw new ArgumentNullException(nameof(zipWriterParameter));
+            _zipWriterStreamAccesser = zipWriterStreamAccesser ?? throw new ArgumentNullException(nameof(zipWriterStreamAccesser));
             _localHeaderExtraFields = new ExtraFields.ExtraFieldCollection(ZipEntryHeaderType.LocalHeader);
             _centralDirectoryHeaderExtraFields = new ExtraFields.ExtraFieldCollection(ZipEntryHeaderType.CentralDirectoryHeader);
             _extraFields = new ExtraFieldCollection(_localHeaderExtraFields, _centralDirectoryHeaderExtraFields);
 
-            _localHeaderInfo = null;
-            _centralDirectoryHeaderInfo = null;
             _generalPurposeBitFlag = ZipEntryGeneralPurposeBitFlag.None;
             _isFile = true;
             _compressionMethodId = ZipEntryCompressionMethodId.Stored;
@@ -254,27 +250,27 @@ namespace ZipUtility
         }
 
         /// <summary>
-        /// このエントリが追加された順番を示す整数です。
+        /// このエントリを識別する値を取得します。
         /// </summary>
-        public UInt32 Index { get; }
+        public UInt64 Index { get; }
 
         /// <summary>
-        /// このエントリのエントリ名の文字列です。
+        /// このエントリのエントリ名の文字列を取得します。
         /// </summary>
         public String FullName { get; }
 
         /// <summary>
-        /// このエントリのエントリ名のバイト列です。
+        /// このエントリのエントリ名のバイト列を取得します。
         /// </summary>
         public ReadOnlyMemory<Byte> FullNameBytes { get; }
 
         /// <summary>
-        /// このエントリのコメントの文字列です。
+        /// このエントリのコメントの文字列を取得します。
         /// </summary>
         public String Comment { get; }
 
         /// <summary>
-        /// このエントリのコメントのバイト列です。
+        /// このエントリのコメントのバイト列を取得します。
         /// </summary>
         public ReadOnlyMemory<Byte> CommentBytes { get; }
 
@@ -590,7 +586,7 @@ namespace ZipUtility
         public IWriteOnlyExtraFieldCollection ExtraFields => _extraFields;
 
         /// <summary>
-        /// 書き込まれたデータの長さを取得します。まだデータが書き込まれていない場合は null です。
+        /// 書き込まれたデータの長さを取得します。
         /// </summary>
         public UInt64 Size
         {
@@ -604,7 +600,7 @@ namespace ZipUtility
         }
 
         /// <summary>
-        /// 書き込まれたデータの圧縮された長さを取得します。まだデータが書き込まれていない場合は null です。
+        /// 書き込まれたデータの圧縮された長さを取得します。
         /// </summary>
         /// <remarks>
         /// <list type="bullet">
@@ -623,7 +619,7 @@ namespace ZipUtility
         }
 
         /// <summary>
-        /// 書き込まれたデータの CRC 値を取得します。まだデータが書き込まれていない場合は null です。
+        /// 書き込まれたデータの CRC 値を取得します。
         /// </summary>
         public UInt32 Crc
         {
@@ -655,24 +651,37 @@ namespace ZipUtility
         /// </exception>
         public ISequentialOutputByteStream GetContentStream(IProgress<UInt64>? unpackedCountProgress = null)
         {
-            _zipStream.LockStream();
+            _zipWriterStreamAccesser.LockZipStream();
+            _zipWriterStreamAccesser.BeginToWriteContent();
+            var success = false;
+            try
+            {
+                if (_written)
+                    throw new InvalidOperationException();
+                if (!_isFile)
+                    throw new InvalidOperationException();
+                if (LastWriteTimeUtc is not null && LastWriteTimeUtc.Value.Kind == DateTimeKind.Unspecified)
+                    throw new InvalidOperationException($"The value of {nameof(LastWriteTimeUtc)}.{nameof(LastWriteTimeUtc.Value.Kind)} property must not be {nameof(DateTimeKind)}.{nameof(DateTimeKind.Unspecified)}.");
+                if (LastAccessTimeUtc is not null && LastAccessTimeUtc.Value.Kind == DateTimeKind.Unspecified)
+                    throw new InvalidOperationException($"The value of {nameof(LastAccessTimeUtc)}.{nameof(LastAccessTimeUtc.Value.Kind)} property must not be {nameof(DateTimeKind)}.{nameof(DateTimeKind.Unspecified)}.");
+                if (CreationTimeUtc is not null && CreationTimeUtc.Value.Kind == DateTimeKind.Unspecified)
+                    throw new InvalidOperationException($"The value of {nameof(CreationTimeUtc)}.{nameof(CreationTimeUtc.Value.Kind)} property must not be {nameof(DateTimeKind)}.{nameof(DateTimeKind.Unspecified)}.");
 
-            if (_written)
-                throw new InvalidOperationException();
-            if (!_isFile)
-                throw new InvalidOperationException();
-
-            if (LastWriteTimeUtc is not null && LastWriteTimeUtc.Value.Kind == DateTimeKind.Unspecified)
-                throw new InvalidOperationException($"The value of {nameof(LastWriteTimeUtc)}.{nameof(LastWriteTimeUtc.Value.Kind)} property must not be {nameof(DateTimeKind)}.{nameof(DateTimeKind.Unspecified)}.");
-            if (LastAccessTimeUtc is not null && LastAccessTimeUtc.Value.Kind == DateTimeKind.Unspecified)
-                throw new InvalidOperationException($"The value of {nameof(LastAccessTimeUtc)}.{nameof(LastAccessTimeUtc.Value.Kind)} property must not be {nameof(DateTimeKind)}.{nameof(DateTimeKind.Unspecified)}.");
-            if (CreationTimeUtc is not null && CreationTimeUtc.Value.Kind == DateTimeKind.Unspecified)
-                throw new InvalidOperationException($"The value of {nameof(CreationTimeUtc)}.{nameof(CreationTimeUtc.Value.Kind)} property must not be {nameof(DateTimeKind)}.{nameof(DateTimeKind.Unspecified)}.");
-
-            return
-                _useDataDescriptor
-                ? GetContentStreamWithDataDescriptor(unpackedCountProgress)
-                : GetContentStreamWithoutDataDescriptor(unpackedCountProgress);
+                var stream =
+                    _useDataDescriptor
+                    ? GetContentStreamWithDataDescriptor(unpackedCountProgress)
+                    : GetContentStreamWithoutDataDescriptor(unpackedCountProgress);
+                success = true;
+                return stream;
+            }
+            finally
+            {
+                if (!success)
+                {
+                    _zipWriterStreamAccesser.SetErrorMark();
+                    _zipWriterStreamAccesser.UnlockZipStream();
+                }
+            }
         }
 
         /// <summary>
@@ -680,14 +689,14 @@ namespace ZipUtility
         /// </summary>
         public void Flush()
         {
-            _zipStream.LockStream();
+            _zipWriterStreamAccesser.LockZipStream();
             try
             {
                 InternalFlush();
             }
             finally
             {
-                _zipStream.UnlockStream();
+                _zipWriterStreamAccesser.UnlockZipStream();
             }
         }
 
@@ -697,18 +706,7 @@ namespace ZipUtility
         /// <returns>
         /// オブジェクトの内容を示す文字列です。
         /// </returns>
-        public override String ToString() => $"\"{_zipFileWriter.ZipArchiveFile.FullName}/{FullName}\"";
-
-        internal UInt16 VersionNeededToExtractForLocalHeader => _localHeaderInfo?.VersionNeededToExtract ?? throw new InvalidOperationException();
-        internal UInt16 VersionNeededToExtractForCentralDirectoryHeader => _centralDirectoryHeaderInfo?.VersionNeededToExtract ?? throw new InvalidOperationException();
-
-        internal ZipStreamPosition WriteCentralDirectoryHeader()
-        {
-            if (_centralDirectoryHeaderInfo is null)
-                throw new InvalidOperationException();
-
-            return _centralDirectoryHeaderInfo.WriteTo(_zipStream.Stream);
-        }
+        public override String ToString() => $"\"{_zipWriterParameter.ZipArchiveFile.FullName}/{FullName}\"";
 
         internal void InternalFlush()
         {
@@ -722,9 +720,9 @@ namespace ZipUtility
 
                 SetupExtraFields(_extraFields, LastWriteTimeUtc, LastAccessTimeUtc, CreationTimeUtc);
 
-                _localHeaderInfo =
+                var localHeader =
                     ZipEntryLocalHeader.Build(
-                        _zipFileWriter,
+                        _zipWriterParameter,
                         _generalPurposeBitFlag,
                         ZipEntryCompressionMethodId.Stored,
                         _size,
@@ -734,12 +732,11 @@ namespace ZipUtility
                         FullNameBytes,
                         LastWriteTimeUtc,
                         IsDirectory);
+                var localHeaderPosition = localHeader.WriteTo(_zipWriterStreamAccesser.MainStream);
 
-                var localHeaderPosition = _localHeaderInfo.WriteTo(_zipStream.Stream);
-
-                _centralDirectoryHeaderInfo =
+                var centralDirectoryHeader =
                     ZipEntryCentralDirectoryHeader.Build(
-                        _zipFileWriter,
+                        _zipWriterParameter,
                         localHeaderPosition,
                         _generalPurposeBitFlag,
                         ZipEntryCompressionMethodId.Stored,
@@ -753,6 +750,8 @@ namespace ZipUtility
                         LastWriteTimeUtc,
                         IsDirectory,
                         false);
+                _zipWriterStreamAccesser.StreamForCentralDirectoryHeaders.WriteUInt32LE(centralDirectoryHeader.Length);
+                centralDirectoryHeader.WriteTo(_zipWriterStreamAccesser.StreamForCentralDirectoryHeaders);
 
                 _written = true;
             }
@@ -810,12 +809,12 @@ namespace ZipUtility
                 {
                     temporaryFile?.SafetyDelete();
                     packedTemporaryFile?.SafetyDelete();
-                    _zipStream.UnlockStream();
                 }
             }
 
             void EndOfCopyingToTemporaryFile(UInt32 actualCrc, UInt64 actualSize)
             {
+                var success = false;
                 try
                 {
                     if (temporaryFile is not null && temporaryFile.Exists)
@@ -872,9 +871,9 @@ namespace ZipUtility
                             }
                         }
 
-                        _localHeaderInfo =
+                        var localHeader =
                             ZipEntryLocalHeader.Build(
-                                _zipFileWriter,
+                                _zipWriterParameter,
                                 _generalPurposeBitFlag,
                                 CompressionMethodId,
                                 size,
@@ -884,12 +883,11 @@ namespace ZipUtility
                                 FullNameBytes,
                                 LastWriteTimeUtc,
                                 IsDirectory);
+                        var localHeaderPosition = localHeader.WriteTo(_zipWriterStreamAccesser.MainStream);
 
-                        var localHeaderPosition = _localHeaderInfo.WriteTo(_zipStream.Stream);
-
-                        _centralDirectoryHeaderInfo =
+                        var centralDirectoryHeader =
                             ZipEntryCentralDirectoryHeader.Build(
-                                _zipFileWriter,
+                                _zipWriterParameter,
                                 localHeaderPosition,
                                 _generalPurposeBitFlag,
                                 CompressionMethodId,
@@ -903,10 +901,12 @@ namespace ZipUtility
                                 LastWriteTimeUtc,
                                 IsDirectory,
                                 false);
+                        _zipWriterStreamAccesser.StreamForCentralDirectoryHeaders.WriteUInt32LE(centralDirectoryHeader.Length);
+                        centralDirectoryHeader.WriteTo(_zipWriterStreamAccesser.StreamForCentralDirectoryHeaders);
 
                         using var sourceStream = (packedTemporaryFile is null ? temporaryFile : packedTemporaryFile).OpenRead();
                         sourceStream.CopyTo(
-                            _zipStream.Stream,
+                            _zipWriterStreamAccesser.MainStream,
                             SafetyProgress.CreateProgress<UInt64, UInt64>(
                                 unpackedCountProgress,
                                 value =>
@@ -927,14 +927,18 @@ namespace ZipUtility
                         {
                         }
 
+                        _zipWriterStreamAccesser.EndToWritingContent();
                         _written = true;
+                        success = true;
                     }
                 }
                 finally
                 {
+                    if (!success)
+                        _zipWriterStreamAccesser.SetErrorMark();
                     temporaryFile.SafetyDelete();
                     packedTemporaryFile?.SafetyDelete();
-                    _zipStream.UnlockStream();
+                    _zipWriterStreamAccesser.UnlockZipStream();
                 }
             }
         }
@@ -945,70 +949,62 @@ namespace ZipUtility
             var localHeaderPosition = (ZipStreamPosition?)null;
             try
             {
-                try
-                {
-                    unpackedCountProgress?.Report(0);
-                }
-                catch (Exception)
-                {
-                }
-
-                SetupExtraFields(_extraFields, LastWriteTimeUtc, LastAccessTimeUtc, CreationTimeUtc);
-
-                var compressionMethod = CompressionMethodId.GetCompressionMethod(CompressionLevel);
-
-                //
-                // 圧縮方式が Deflate の場合、圧縮レベルをフラグとして設定する
-                //
-                if (CompressionMethodId.IsAnyOf(ZipEntryCompressionMethodId.Deflate, ZipEntryCompressionMethodId.Deflate64))
-                {
-                    switch (CompressionLevel)
-                    {
-                        case ZipEntryCompressionLevel.Normal:
-                        default:
-                            break;
-                        case ZipEntryCompressionLevel.Maximum:
-                            _generalPurposeBitFlag |= ZipEntryGeneralPurposeBitFlag.CompresssionOption0;
-                            break;
-                        case ZipEntryCompressionLevel.Fast:
-                            _generalPurposeBitFlag |= ZipEntryGeneralPurposeBitFlag.CompresssionOption1;
-                            break;
-                        case ZipEntryCompressionLevel.SuperFast:
-                            _generalPurposeBitFlag |= ZipEntryGeneralPurposeBitFlag.CompresssionOption0 | ZipEntryGeneralPurposeBitFlag.CompresssionOption1;
-                            break;
-                    }
-                }
-
-                _localHeaderInfo =
-                    ZipEntryLocalHeader.Build(
-                        _zipFileWriter,
-                        _generalPurposeBitFlag,
-                        CompressionMethodId,
-                        _localHeaderExtraFields,
-                        FullNameBytes,
-                        LastWriteTimeUtc,
-                        IsDirectory);
-
-                localHeaderPosition = _localHeaderInfo.WriteTo(_zipStream.Stream);
-                var contentStream =
-                    compressionMethod.GetEncodingStream(
-                        _zipStream.Stream
-                            .WithEndAction(packedSize => packedSizeHolder.Value = packedSize, true),
-                        SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
-                            unpackedCountProgress,
-                            value => value.unpackedCount / 2))
-                    .WithCrc32Calculation(EndOfWrintingContents);
-                return contentStream;
-
+                unpackedCountProgress?.Report(0);
             }
             catch (Exception)
             {
-                _zipStream.UnlockStream();
-                throw;
             }
+
+            SetupExtraFields(_extraFields, LastWriteTimeUtc, LastAccessTimeUtc, CreationTimeUtc);
+
+            var compressionMethod = CompressionMethodId.GetCompressionMethod(CompressionLevel);
+
+            //
+            // 圧縮方式が Deflate の場合、圧縮レベルをフラグとして設定する
+            //
+            if (CompressionMethodId.IsAnyOf(ZipEntryCompressionMethodId.Deflate, ZipEntryCompressionMethodId.Deflate64))
+            {
+                switch (CompressionLevel)
+                {
+                    case ZipEntryCompressionLevel.Normal:
+                    default:
+                        break;
+                    case ZipEntryCompressionLevel.Maximum:
+                        _generalPurposeBitFlag |= ZipEntryGeneralPurposeBitFlag.CompresssionOption0;
+                        break;
+                    case ZipEntryCompressionLevel.Fast:
+                        _generalPurposeBitFlag |= ZipEntryGeneralPurposeBitFlag.CompresssionOption1;
+                        break;
+                    case ZipEntryCompressionLevel.SuperFast:
+                        _generalPurposeBitFlag |= ZipEntryGeneralPurposeBitFlag.CompresssionOption0 | ZipEntryGeneralPurposeBitFlag.CompresssionOption1;
+                        break;
+                }
+            }
+
+            var localHeaderInfo =
+                ZipEntryLocalHeader.Build(
+                    _zipWriterParameter,
+                    _generalPurposeBitFlag,
+                    CompressionMethodId,
+                    _localHeaderExtraFields,
+                    FullNameBytes,
+                    LastWriteTimeUtc,
+                    IsDirectory);
+            localHeaderPosition = localHeaderInfo.WriteTo(_zipWriterStreamAccesser.MainStream);
+
+            var contentStream =
+                compressionMethod.GetEncodingStream(
+                    _zipWriterStreamAccesser.MainStream
+                        .WithEndAction(packedSize => packedSizeHolder.Value = packedSize, true),
+                    SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), UInt64>(
+                        unpackedCountProgress,
+                        value => value.unpackedCount / 2))
+                .WithCrc32Calculation(EndOfWrintingContents);
+            return contentStream;
 
             void EndOfWrintingContents(UInt32 actualCrc, UInt64 actualSize)
             {
+                var success = false;
                 try
                 {
                     if (localHeaderPosition is null)
@@ -1019,9 +1015,9 @@ namespace ZipUtility
                     var dataDescriptor =
                         ZipEntryDataDescriptor.Build(actualCrc, actualSize, actualPackedSize);
 
-                    _centralDirectoryHeaderInfo =
+                    var centralDirectoryHeader =
                         ZipEntryCentralDirectoryHeader.Build(
-                            _zipFileWriter,
+                            _zipWriterParameter,
                             localHeaderPosition.Value,
                             _generalPurposeBitFlag,
                             CompressionMethodId,
@@ -1035,8 +1031,10 @@ namespace ZipUtility
                             LastWriteTimeUtc,
                             IsDirectory,
                             true);
+                    _zipWriterStreamAccesser.StreamForCentralDirectoryHeaders.WriteUInt32LE(centralDirectoryHeader.Length);
+                    centralDirectoryHeader.WriteTo(_zipWriterStreamAccesser.StreamForCentralDirectoryHeaders);
 
-                    dataDescriptor.WriteTo(_zipStream.Stream);
+                    dataDescriptor.WriteTo(_zipWriterStreamAccesser.MainStream);
                     _size = actualSize;
                     _packedSize = actualPackedSize;
                     _crc = actualCrc;
@@ -1049,11 +1047,15 @@ namespace ZipUtility
                     {
                     }
 
+                    _zipWriterStreamAccesser.EndToWritingContent();
                     _written = true;
+                    success = true;
                 }
                 finally
                 {
-                    _zipStream.UnlockStream();
+                    if (!success)
+                        _zipWriterStreamAccesser.SetErrorMark();
+                    _zipWriterStreamAccesser.UnlockZipStream();
                 }
             }
         }

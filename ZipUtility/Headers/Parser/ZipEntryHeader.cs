@@ -8,18 +8,18 @@ namespace ZipUtility.Headers.Parser
         public ZipEntryHeader(ZipEntryCentralDirectoryHeader centralDirectoryHeader, ZipEntryLocalHeader localHeader)
         {
             if (centralDirectoryHeader.LocalHeaderPosition != localHeader.LocalHeaderPosition)
-                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.LocalHeaderPosition)} does not match between the central directory header and local directory header.: centralDirectoryIndex={centralDirectoryHeader.Index}");
+                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.LocalHeaderPosition)} does not match between the central directory header and local directory header.: centralDirectory={centralDirectoryHeader.CentralDirectoryHeaderPosition}");
             if (!centralDirectoryHeader.FullNameBytes.Span.SequenceEqual(localHeader.FullNameBytes.Span))
-                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.FullNameBytes)} does not match between the central directory header and local directory header.: centralDirectoryIndex={centralDirectoryHeader.Index}");
+                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.FullNameBytes)} does not match between the central directory header and local directory header.: centralDirectory={centralDirectoryHeader.CentralDirectoryHeaderPosition}");
             if (centralDirectoryHeader.CompressionMethodId != localHeader.CompressionMethodId)
-                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.CompressionMethodId)} does not match between the central directory header and local directory header.: centralDirectoryIndex={centralDirectoryHeader.Index}");
+                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.CompressionMethodId)} does not match between the central directory header and local directory header.: centralDirectory={centralDirectoryHeader.CentralDirectoryHeaderPosition}");
             if (centralDirectoryHeader.DosDateTime != localHeader.DosDateTime)
-                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.DosDateTime)} does not match between the central directory header and local directory header.: centralDirectoryIndex={centralDirectoryHeader.Index}");
+                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.DosDateTime)} does not match between the central directory header and local directory header.: centralDirectory={centralDirectoryHeader.CentralDirectoryHeaderPosition}");
 
             if (centralDirectoryHeader.GeneralPurposeBitFlag.HasFlag(ZipEntryGeneralPurposeBitFlag.HasDataDescriptor)
                 != localHeader.GeneralPurposeBitFlag.HasFlag(ZipEntryGeneralPurposeBitFlag.HasDataDescriptor))
             {
-                throw new BadZipFileFormatException($"The value of general purpose flag 3bit does not match between the central directory header and local directory header.: centralDirectoryIndex={centralDirectoryHeader.Index}");
+                throw new BadZipFileFormatException($"The value of general purpose flag 3bit does not match between the central directory header and local directory header.: centralDirectory={centralDirectoryHeader.CentralDirectoryHeaderPosition}");
             }
 
             if (centralDirectoryHeader.GeneralPurposeBitFlag.HasFlag(ZipEntryGeneralPurposeBitFlag.UseUnicodeEncodingForNameAndComment)
@@ -29,16 +29,20 @@ namespace ZipUtility.Headers.Parser
             }
 
             if (centralDirectoryHeader.Crc != localHeader.Crc)
-                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.Crc)} does not match between the central directory header and local directory header.: centralDirectoryIndex={centralDirectoryHeader.Index}");
+                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.Crc)} does not match between the central directory header and local directory header.: centralDirectory={centralDirectoryHeader.CentralDirectoryHeaderPosition}");
             if (centralDirectoryHeader.PackedSize != localHeader.PackedSize)
-                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.PackedSize)} does not match between the central directory header and local directory header.: centralDirectoryIndex={centralDirectoryHeader.Index}");
+                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.PackedSize)} does not match between the central directory header and local directory header.: centralDirectory={centralDirectoryHeader.CentralDirectoryHeaderPosition}");
             if (centralDirectoryHeader.Size != localHeader.Size)
-                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.PackedSize)} does not match between the central directory header and local directory header.: centralDirectoryIndex={centralDirectoryHeader.Index}");
+                throw new BadZipFileFormatException($"The value of {nameof(centralDirectoryHeader.PackedSize)} does not match between the central directory header and local directory header.: centralDirectory={centralDirectoryHeader.CentralDirectoryHeaderPosition}");
 
+            ID = new ZipEntryId(centralDirectoryHeader.CentralDirectoryHeaderPosition);
+            LocationOrder = new ZipEntryLocationOrder(localHeader.LocalHeaderPosition);
             CentralDirectoryHeader = centralDirectoryHeader;
             LocalHeader = localHeader;
         }
 
+        public ZipEntryId ID { get; }
+        public ZipEntryLocationOrder LocationOrder { get; }
         public ZipEntryCentralDirectoryHeader CentralDirectoryHeader { get; }
         public ZipEntryLocalHeader LocalHeader { get; }
     }

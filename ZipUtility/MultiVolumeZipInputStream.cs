@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
 using Utility;
 using Utility.IO;
@@ -188,7 +189,8 @@ namespace ZipUtility
         {
             var currentDiskNumber = diskNumber;
             var currentOffset = checked(offsetOnTheDisk + offset);
-            while (currentDiskNumber < _volumeDisks.Length)
+            var numberOfVolumeDisks = checked((UInt32)_volumeDisks.Length);
+            while (currentDiskNumber < numberOfVolumeDisks)
             {
                 var currentVolumeDiskLength = _volumeDisks.Span[checked((Int32)currentDiskNumber)].volumeSize;
                 if (currentOffset < currentVolumeDiskLength)
@@ -200,7 +202,10 @@ namespace ZipUtility
                 }
             }
 
-            throw new OverflowException();
+            if (currentOffset > 0)
+                throw new OverflowException();
+
+            return new ZipStreamPosition(_lastDiskNumber, LastDiskSize, this);
         }
 
         protected override ZipStreamPosition SubtractCore(UInt32 diskNumber, UInt64 offsetOnTheDisk, UInt64 offset)

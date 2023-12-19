@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using Utility;
 using Utility.IO;
 
@@ -18,7 +16,8 @@ namespace ZipUtility.Headers.Parser
         }
 
         private ZipFileZip64EOCDR(
-            ZipStreamPosition zip64EOCDRPosition,
+            ZipStreamPosition headerPosition,
+            UInt64 headerSize,
             UInt16 versionMadeBy,
             UInt16 versionNeededToExtract,
             UInt32 numberOfThisDisk,
@@ -26,10 +25,10 @@ namespace ZipUtility.Headers.Parser
             UInt64 totalNumberOfEntriesInTheCentralDirectoryOnThisDisk,
             UInt64 totalNumberOfEntriesInTheCentralDirectory,
             UInt64 sizeOfTheCentralDirectory,
-            UInt64 offsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber,
-            UInt64 headerSize)
+            UInt64 offsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber)
         {
-            Zip64EOCDRPosition = zip64EOCDRPosition;
+            HeaderPosition = headerPosition;
+            HeaderSize = headerSize;
             VersionMadeBy = versionMadeBy;
             VersionNeededToExtract = versionNeededToExtract;
             NumberOfThisDisk = numberOfThisDisk;
@@ -38,10 +37,10 @@ namespace ZipUtility.Headers.Parser
             TotalNumberOfEntriesInTheCentralDirectory = totalNumberOfEntriesInTheCentralDirectory;
             SizeOfTheCentralDirectory = sizeOfTheCentralDirectory;
             OffsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber = offsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber;
-            HeaderSize = headerSize;
         }
 
-        public ZipStreamPosition Zip64EOCDRPosition { get; }
+        public ZipStreamPosition HeaderPosition { get; }
+        public UInt64 HeaderSize { get; }
         public UInt16 VersionMadeBy { get; }
         public UInt16 VersionNeededToExtract { get; }
         public UInt32 NumberOfThisDisk { get; }
@@ -50,7 +49,6 @@ namespace ZipUtility.Headers.Parser
         public UInt64 TotalNumberOfEntriesInTheCentralDirectory { get; }
         public UInt64 SizeOfTheCentralDirectory { get; }
         public UInt64 OffsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber { get; }
-        public UInt64 HeaderSize { get; }
 
         public static ZipFileZip64EOCDR Parse(
             ZipArchiveFileReader.IZipReaderEnvironment zipReader,
@@ -79,7 +77,7 @@ namespace ZipUtility.Headers.Parser
             if (!zipInputStream.CheckIfCanAtomicRead(MinimumHeaderSize))
                 throw new BadZipFileFormatException($"ZIP64 EOCDR is not in the expected position or is fragmented.: position=\"{zipInputStream.Position}\"");
 
-            var zip64EOCDRPosition = zipInputStream.Position;
+            var headerPosition = zipInputStream.Position;
 
             // ボリュームをロックする。これ以降、ボリュームをまたいだ読み込みが禁止される。
             zipInputStream.LockVolumeDisk();
@@ -87,7 +85,7 @@ namespace ZipUtility.Headers.Parser
             {
                 var minimumHeaderBytes = zipInputStream.ReadBytes(MinimumHeaderSize);
                 if (minimumHeaderBytes.Length != checked((Int32)MinimumHeaderSize))
-                    throw new BadZipFileFormatException($"Unable to read ZIP64 EOCDR to the end.: position=\"{zip64EOCDRPosition}\"");
+                    throw new BadZipFileFormatException($"Unable to read ZIP64 EOCDR to the end.: position=\"{headerPosition}\"");
                 var signature = minimumHeaderBytes[..4].ToUInt32LE();
                 if (signature != _zip64EndOfCentralDirectoryRecordSignature)
                     throw new BadZipFileFormatException("Not found 'zip64 end of central directory record' for ZIP-64");
@@ -107,8 +105,8 @@ namespace ZipUtility.Headers.Parser
                 var sizeOfTheCentralDirectory = minimumHeaderBytes.Slice(40, 8).ToUInt64LE();
                 var offsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber = minimumHeaderBytes.Slice(48, 8).ToUInt64LE();
 
-                if (numberOfThisDisk != zip64EOCDRPosition.DiskNumber)
-                    throw new BadZipFileFormatException($"The value of field {nameof(numberOfThisDisk)} in ZIP64 EOCDR is different from the actual value.: {nameof(numberOfThisDisk)}=0x{numberOfThisDisk:8}, ZIP64 EOCDR Position = \"{zip64EOCDRPosition}\"");
+                if (numberOfThisDisk != headerPosition.DiskNumber)
+                    throw new BadZipFileFormatException($"The value of field {nameof(numberOfThisDisk)} in ZIP64 EOCDR is different from the actual value.: {nameof(numberOfThisDisk)}=0x{numberOfThisDisk:8}, ZIP64 EOCDR Position = \"{headerPosition}\"");
 
                 if (numberOfThisDisk >= zip64EOCDL.TotalNumberOfDisks)
                     throw new BadZipFileFormatException($"The value of field \"{nameof(numberOfThisDisk)}\" in ZIP64 EOCDR is greater than the last disk number.: {nameof(numberOfThisDisk)}=0x{numberOfThisDisk:8}");
@@ -116,12 +114,13 @@ namespace ZipUtility.Headers.Parser
                 if (totalNumberOfEntriesInTheCentralDirectoryOnThisDisk > totalNumberOfEntriesInTheCentralDirectory)
                     throw new BadZipFileFormatException($"TThe value of field \"{nameof(totalNumberOfEntriesInTheCentralDirectoryOnThisDisk)}\" in ZIP64 EOCDR exceeds the value of field \"{nameof(totalNumberOfEntriesInTheCentralDirectory)}\".: {nameof(totalNumberOfEntriesInTheCentralDirectoryOnThisDisk)}=0x{totalNumberOfEntriesInTheCentralDirectoryOnThisDisk:8}, {nameof(totalNumberOfEntriesInTheCentralDirectory)}=0x{totalNumberOfEntriesInTheCentralDirectory:8}");
 
-                if (sizeOfTheCentralDirectory > zip64EOCDRPosition - zipInputStream.StartOfThisStream)
-                    throw new BadZipFileFormatException($"The value of field \"{sizeOfTheCentralDirectory}\" in ZIP64 EOCDR is too large. : {nameof(sizeOfTheCentralDirectory)}=0x{sizeOfTheCentralDirectory:x16}, totalLengthUpToZip64EOCDR=0x{zip64EOCDRPosition - zipInputStream.StartOfThisStream:16}");
+                if (sizeOfTheCentralDirectory > headerPosition - zipInputStream.StartOfThisStream)
+                    throw new BadZipFileFormatException($"The value of field \"{sizeOfTheCentralDirectory}\" in ZIP64 EOCDR is too large. : {nameof(sizeOfTheCentralDirectory)}=0x{sizeOfTheCentralDirectory:x16}, totalLengthUpToZip64EOCDR=0x{headerPosition - zipInputStream.StartOfThisStream:16}");
 
                 return
                     new ZipFileZip64EOCDR(
-                        zip64EOCDRPosition,
+                        headerPosition,
+                        MinimumHeaderSize,
                         versionMadeBy,
                         versionNeededToExtract,
                         numberOfThisDisk,
@@ -129,22 +128,21 @@ namespace ZipUtility.Headers.Parser
                         totalNumberOfEntriesInTheCentralDirectoryOnThisDisk,
                         totalNumberOfEntriesInTheCentralDirectory,
                         sizeOfTheCentralDirectory,
-                        offsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber,
-                        MinimumHeaderSize);
+                        offsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber);
             }
             catch (InvalidOperationException ex)
             {
                 // ボリュームがロックされている最中に、ボリュームをまたいだ読み込みが行われた場合
 
                 // ヘッダがボリュームをまたいでいると判断し、ZIP アーカイブの破損とみなす。
-                throw new BadZipFileFormatException($"It is possible that the ZIP64 EOCDR is split across multiple disks.: position=\"{zip64EOCDRPosition}\"", ex);
+                throw new BadZipFileFormatException($"It is possible that the ZIP64 EOCDR is split across multiple disks.: position=\"{headerPosition}\"", ex);
             }
             catch (UnexpectedEndOfStreamException ex)
             {
                 // ヘッダの読み込み中に ZIP アーカイブの終端に達した場合
 
                 // ZIP アーカイブの破損とみなす。
-                throw new BadZipFileFormatException($"Unable to read ZIP64 EOCDR.: position=\"{zip64EOCDRPosition}\"", ex);
+                throw new BadZipFileFormatException($"Unable to read ZIP64 EOCDR.: position=\"{headerPosition}\"", ex);
             }
             finally
             {

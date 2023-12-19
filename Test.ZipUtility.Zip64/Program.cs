@@ -51,7 +51,7 @@ namespace Test.ZipUtility.Zip64
 
 #if true
             // セントラルディレクトリヘッダの合計数 = UInt16.MaxValue -1 / UInt16.MaxValue / UInt16.MaxValue + 1
-            foreach (var value in new[] { ushort.MaxValue - 1, ushort.MaxValue, ushort.MaxValue + 1 })
+            foreach (var value in new[] { ushort.MaxValue - 1U, ushort.MaxValue, ushort.MaxValue + 1U })
             {
                 const ulong VOLUME_SIZE = 1024;
 
@@ -92,14 +92,14 @@ namespace Test.ZipUtility.Zip64
             _ = Console.ReadLine();
         }
 
-        private static void DoTest1(DirectoryPath baseDirectory, string fileName, ulong volumeSize, ZipWriteFlags flag, int numberOfEntries, ulong contentSize, Func<int, ushort> commentSizeGetter, bool useDatadescriptor)
+        private static void DoTest1(DirectoryPath baseDirectory, string fileName, ulong volumeSize, ZipWriteFlags flag, ulong numberOfEntries, ulong contentSize, Func<ulong, ushort> commentSizeGetter, bool useDatadescriptor)
         {
             var zipArchive = baseDirectory.GetFile(fileName);
             using (var zipWriter = zipArchive.CreateAsZipFile(volumeSize))
             {
                 zipWriter.Flags = flag;
-                var step = (numberOfEntries / 100).Maximum(1);
-                for (var count = 0; count < numberOfEntries; ++count)
+                var step = (numberOfEntries / 100).Maximum(1UL);
+                for (var count = 0UL; count < numberOfEntries; ++count)
                 {
                     if (count % step == 0 || count == numberOfEntries - 1)
                         Console.WriteLine($"書き込み中 {count + 1}/{numberOfEntries}... \"{zipArchive.FullName}\"");
@@ -121,13 +121,13 @@ namespace Test.ZipUtility.Zip64
                 using (var reader = zipArchive.OpenAsZipFile(ValidationStringency.Strict))
                 {
                     Console.WriteLine($"検査中... \"{zipArchive.FullName}\"");
-                    var entries = reader.GetEntries();
-                    var step = checked((ulong)(entries.Count / 100).Maximum(1));
+                    var entries = reader.EnumerateEntries();
+                    var step = checked((ulong)(numberOfEntries / 100).Maximum(1UL));
                     var count = 0UL;
                     foreach (var entry in entries)
                     {
-                        if (count % step == 0 || count == checked((ulong)(entries.Count - 1)))
-                            Console.WriteLine($"検査中 ({count + 1}/{entries.Count})... \"{zipArchive.FullName}\"");
+                        if (count % step == 0 || count == numberOfEntries - 1)
+                            Console.WriteLine($"検査中 ({count + 1}/{numberOfEntries})... \"{zipArchive.FullName}\"");
                         VerifyContentData(entry);
                         checked
                         {

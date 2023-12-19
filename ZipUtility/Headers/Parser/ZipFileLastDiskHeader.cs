@@ -66,7 +66,7 @@ namespace ZipUtility.Headers.Parser
                     zipInputStream.LastDiskStartPosition + possibleFirstHeaderOffsetOnLastDisk,
                     new DiskHeaderEnumeratorParameter(zipInputStream, stringency))
                 .OrderBy(item => item.mayBeMultiVolume) // シングルボリュームと仮定されていて実はマルチボリュームである疑いがあるものは後回し
-                .ThenByDescending(item => item.header.EOCDR.EOCDRPosition) // オフセットが大きい (つまりディスクの末尾に近い) ものを優先
+                .ThenByDescending(item => item.header.EOCDR.HeaderPosition) // オフセットが大きい (つまりディスクの末尾に近い) ものを優先
                 .Take(1) // 候補を最大 1 つまで絞り込む
                 .ToArray();
 
@@ -89,11 +89,11 @@ namespace ZipUtility.Headers.Parser
             foreach (var eocdr in ZipFileEOCDR.EnumerateEOCDR(buffer, possibleFirstHeaderPosition))
             {
                 var zip64EOCDL = (ZipFileZip64EOCDL?)null;
-                if (eocdr.EOCDRPosition.OffsetOnTheDisk >= ZipFileZip64EOCDL.FixedHeaderSize)
+                if (eocdr.HeaderPosition.OffsetOnTheDisk >= ZipFileZip64EOCDL.FixedHeaderSize)
                 {
                     // EOCDR の前に ZIP64 EOCDL のサイズ以上の余白がある場合
 
-                    var positionWhereZip64EOCDLMayBe = checked(eocdr.EOCDRPosition - ZipFileZip64EOCDL.FixedHeaderSize);
+                    var positionWhereZip64EOCDLMayBe = checked(eocdr.HeaderPosition - ZipFileZip64EOCDL.FixedHeaderSize);
                     var eocdlBuffer = buffer.Slice(checked((Int32)(positionWhereZip64EOCDLMayBe - possibleFirstHeaderPosition)), checked((Int32)ZipFileZip64EOCDL.FixedHeaderSize));
 
                     // ZIP64 EOCDL を解析する
@@ -148,8 +148,8 @@ namespace ZipUtility.Headers.Parser
                             continue;
                         }
 
-                        if ((parameter.ValidationStringency >= ValidationStringency.Normal || eocdr.NumberOfCentralDirectoryRecordsOnThisDisk != 1)
-                            && eocdr.NumberOfCentralDirectoryRecordsOnThisDisk > eocdr.TotalNumberOfCentralDirectoryRecords)
+                        if ((parameter.ValidationStringency >= ValidationStringency.Normal || eocdr.NumberOfCentralDirectoryHeadersOnThisDisk != 1)
+                            && eocdr.NumberOfCentralDirectoryHeadersOnThisDisk > eocdr.TotalNumberOfCentralDirectoryHeaders)
                         {
                             // 最後のディスクに存在するセントラルディレクトリの個数が 1 でなく、かつ、合計のセントラルディレクトリの数より大きいならば、これは正しい EOCDR ではない。
                             // ※最後のディスクに存在するセントラルディレクトリの個数と 1 を比較しているのは、このフィールドが常に 1 となる ZIP アーカイバの実装が存在するため。
@@ -158,7 +158,7 @@ namespace ZipUtility.Headers.Parser
                             continue;
                         }
 
-                        if (eocdr.SizeOfCentralDirectory > checked(parameter.TotalVolumeSize - parameter.LastDiskSize + eocdr.EOCDRPosition.OffsetOnTheDisk))
+                        if (eocdr.SizeOfCentralDirectory > checked(parameter.TotalVolumeSize - parameter.LastDiskSize + eocdr.HeaderPosition.OffsetOnTheDisk))
                         {
                             // セントラルディレクトリの合計サイズが、現在調べているヘッダを除く全ボリュームのサイズより大きい場合
 
@@ -174,7 +174,7 @@ namespace ZipUtility.Headers.Parser
                             continue;
                         }
 
-                        if (checked(eocdr.EOCDRPosition.OffsetOnTheDisk + ZipFileEOCDR.MinimumHeaderSize + (UInt32)eocdr.CommentBytes.Length) != parameter.LastDiskSize)
+                        if (checked(eocdr.HeaderPosition.OffsetOnTheDisk + ZipFileEOCDR.MinimumHeaderSize + (UInt32)eocdr.CommentBytes.Length) != parameter.LastDiskSize)
                         {
                             // コメントを含めた EOCDR の末尾が最後のディスクの末尾と一致しない場合
 

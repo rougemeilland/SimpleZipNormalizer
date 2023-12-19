@@ -17,35 +17,36 @@ namespace ZipUtility.Headers.Parser
         }
 
         private ZipFileEOCDR(
-            ZipStreamPosition eocdrPosition,
+            ZipStreamPosition headerPosition,
+            UInt64 headerSize,
             UInt16 numberOfThisDisk,
             UInt16 diskWhereCentralDirectoryStarts,
-            UInt16 numberOfCentralDirectoryRecordsOnThisDisk,
-            UInt16 totalNumberOfCentralDirectoryRecords,
+            UInt16 numberOfCentralDirectoryHeadersOnThisDisk,
+            UInt16 totalNumberOfCentralDirectoryHeaders,
             UInt32 sizeOfCentralDirectory,
             UInt32 offsetOfStartOfCentralDirectory,
-            ReadOnlyMemory<Byte> commentBytes,
-            UInt64 headerSize)
+            ReadOnlyMemory<Byte> commentBytes)
         {
-            EOCDRPosition = eocdrPosition;
+            HeaderPosition = headerPosition;
+            HeaderSize = headerSize;
             NumberOfThisDisk = numberOfThisDisk;
             DiskWhereCentralDirectoryStarts = diskWhereCentralDirectoryStarts;
-            NumberOfCentralDirectoryRecordsOnThisDisk = numberOfCentralDirectoryRecordsOnThisDisk;
-            TotalNumberOfCentralDirectoryRecords = totalNumberOfCentralDirectoryRecords;
+            NumberOfCentralDirectoryHeadersOnThisDisk = numberOfCentralDirectoryHeadersOnThisDisk;
+            TotalNumberOfCentralDirectoryHeaders = totalNumberOfCentralDirectoryHeaders;
             SizeOfCentralDirectory = sizeOfCentralDirectory;
             OffsetOfStartOfCentralDirectory = offsetOfStartOfCentralDirectory;
             CommentBytes = commentBytes;
-            HeaderSize = headerSize;
             IsRequiresZip64 =
                 numberOfThisDisk == UInt16.MaxValue ||
                 diskWhereCentralDirectoryStarts == UInt16.MaxValue ||
-                numberOfCentralDirectoryRecordsOnThisDisk == UInt16.MaxValue ||
-                totalNumberOfCentralDirectoryRecords == UInt16.MaxValue ||
+                numberOfCentralDirectoryHeadersOnThisDisk == UInt16.MaxValue ||
+                totalNumberOfCentralDirectoryHeaders == UInt16.MaxValue ||
                 sizeOfCentralDirectory == UInt32.MaxValue ||
                 offsetOfStartOfCentralDirectory == UInt32.MaxValue;
         }
 
-        public ZipStreamPosition EOCDRPosition { get; }
+        public ZipStreamPosition HeaderPosition { get; }
+        public UInt64 HeaderSize { get; }
         public UInt16 NumberOfThisDisk { get; }
         public UInt16 DiskWhereCentralDirectoryStarts { get; }
 
@@ -67,17 +68,16 @@ namespace ZipUtility.Headers.Parser
         /// </item>
         /// </list>
         /// </remarks>
-        public UInt16 NumberOfCentralDirectoryRecordsOnThisDisk { get; }
+        public UInt16 NumberOfCentralDirectoryHeadersOnThisDisk { get; }
 
-        public UInt16 TotalNumberOfCentralDirectoryRecords { get; }
+        public UInt16 TotalNumberOfCentralDirectoryHeaders { get; }
         public UInt32 SizeOfCentralDirectory { get; }
         public UInt32 OffsetOfStartOfCentralDirectory { get; }
         public ReadOnlyMemory<Byte> CommentBytes { get; }
-        public UInt64 HeaderSize { get; }
         public Boolean IsRequiresZip64 { get; }
 
         public Boolean CheckDiskNumber(UInt32 diskNumber)
-            => EOCDRPosition.DiskNumber == diskNumber
+            => HeaderPosition.DiskNumber == diskNumber
                 && (diskNumber >= UInt16.MaxValue
                     ? NumberOfThisDisk == UInt16.MaxValue
                     : NumberOfThisDisk == diskNumber
@@ -89,11 +89,11 @@ namespace ZipUtility.Headers.Parser
             foreach (var offset in EnumerateIndexOfSignature(buffer))
             {
                 var header = buffer[offset..];
-                var eocdrPosition = checked(bufferStartPosition + (UInt32)offset);
+                var headerPosition = checked(bufferStartPosition + (UInt32)offset);
                 var numberOfThisDisk = header.Slice(4, 2).ToUInt16LE();
                 var diskWhereCentralDirectoryStarts = header.Slice(6, 2).ToUInt16LE();
-                var numberOfCentralDirectoryRecordsOnThisDisk = header.Slice(8, 2).ToUInt16LE();
-                var totalNumberOfCentralDirectoryRecords = header.Slice(10, 2).ToUInt16LE();
+                var numberOfCentralDirectoryHeadersOnThisDisk = header.Slice(8, 2).ToUInt16LE();
+                var totalNumberOfCentralDirectoryHeaders = header.Slice(10, 2).ToUInt16LE();
                 var sizeOfCentralDirectory = header.Slice(12, 4).ToUInt32LE();
                 var offsetOfStartOfCentralDirectory = header.Slice(16, 4).ToUInt32LE();
                 var commentLength = header.Slice(20, 2).ToUInt16LE();
@@ -102,15 +102,15 @@ namespace ZipUtility.Headers.Parser
                     var commentBytes = header.Slice(checked((Int32)MinimumHeaderSize), commentLength);
                     yield return
                         new ZipFileEOCDR(
-                            eocdrPosition,
+                            headerPosition,
+                            checked(MinimumHeaderSize + commentLength),
                             numberOfThisDisk,
                             diskWhereCentralDirectoryStarts,
-                            numberOfCentralDirectoryRecordsOnThisDisk,
-                            totalNumberOfCentralDirectoryRecords,
+                            numberOfCentralDirectoryHeadersOnThisDisk,
+                            totalNumberOfCentralDirectoryHeaders,
                             sizeOfCentralDirectory,
                             offsetOfStartOfCentralDirectory,
-                            commentBytes,
-                            checked(MinimumHeaderSize + commentLength));
+                            commentBytes);
                 }
             }
         }

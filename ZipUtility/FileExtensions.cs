@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Utility;
 using Utility.IO;
 
@@ -130,6 +133,129 @@ namespace ZipUtility
                 throw new ArgumentNullException(nameof(zipEntryNameEncodingProvider));
 
             return InternalValidateZipFile(zipFile, zipEntryNameEncodingProvider, stringency, progress);
+        }
+
+        /// <summary>
+        /// ZIP アーカイブの内容を非同期的に検証します。
+        /// </summary>
+        /// <param name="zipFile">
+        /// 検証する ZIP アーカイブファイルです。
+        /// </param>
+        /// <param name="progress">
+        /// <para>
+        /// 処理の進行状況の通知を受け取るためのオブジェクトです。通知を受け取らない場合は null です。
+        /// </para>
+        /// <para>
+        /// 進行状況は、0 以上 1 以下の <see cref="Double"/> 値です。初期値は 0 で、作業が進行するごとに増加していき、作業が完了すると 1 になります。
+        /// </para>
+        /// </param>
+        /// <param name="cancellationToken">
+        /// キャンセル要求を監視するためのトークンです。既定値は <see cref="CancellationToken.None"/> です。
+        /// </param>
+        /// <returns>
+        /// ZIP アーカイブを読み込むためのオブジェクトです。
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="zipFile"/>  が null です。
+        /// </exception>
+        public static Task<ZipArchiveValidationResult> ValidateAsZipFileAsync(this FilePath zipFile, IProgress<Double>? progress = null, CancellationToken cancellationToken = default)
+            => zipFile.ValidateAsZipFileAsync(ZipEntryNameEncodingProvider.CreateInstance(), ValidationStringency.Normal, progress, cancellationToken);
+
+        /// <summary>
+        /// ZIP アーカイブの内容を非同期的に検証します。
+        /// </summary>
+        /// <param name="zipFile">
+        /// 検証する ZIP アーカイブファイルです。
+        /// </param>
+        /// <param name="stringency">
+        /// 読み込む ZIP アーカイブに対する検証の厳格性を示す値です。
+        /// </param>
+        /// <param name="progress">
+        /// <para>
+        /// 処理の進行状況の通知を受け取るためのオブジェクトです。通知を受け取らない場合は null です。
+        /// </para>
+        /// <para>
+        /// 進行状況は、0 以上 1 以下の <see cref="Double"/> 値です。初期値は 0 で、作業が進行するごとに増加していき、作業が完了すると 1 になります。
+        /// </para>
+        /// </param>
+        /// <param name="cancellationToken">
+        /// キャンセル要求を監視するためのトークンです。既定値は <see cref="CancellationToken.None"/> です。
+        /// </param>
+        /// <returns>
+        /// ZIP アーカイブを読み込むためのオブジェクトです。
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="zipFile"/>  が null です。
+        /// </exception>
+        public static Task<ZipArchiveValidationResult> ValidateAsZipFileAsync(this FilePath zipFile, ValidationStringency stringency, IProgress<Double>? progress = null, CancellationToken cancellationToken = default)
+            => zipFile.ValidateAsZipFileAsync(ZipEntryNameEncodingProvider.CreateInstance(), stringency, progress, cancellationToken);
+
+        /// <summary>
+        /// ZIP アーカイブの内容を非同期的に検証します。
+        /// </summary>
+        /// <param name="zipFile">
+        /// 検証する ZIP アーカイブファイルです。
+        /// </param>
+        /// <param name="zipEntryNameEncodingProvider">
+        /// ZIP アーカイブのエントリのエンコーディングを解決するプロバイダです。
+        /// </param>
+        /// <param name="progress">
+        /// <para>
+        /// 処理の進行状況の通知を受け取るためのオブジェクトです。通知を受け取らない場合は null です。
+        /// </para>
+        /// <para>
+        /// 進行状況は、0 以上 1 以下の <see cref="Double"/> 値です。初期値は 0 で、作業が進行するごとに増加していき、作業が完了すると 1 になります。
+        /// </para>
+        /// </param>
+        /// <param name="cancellationToken">
+        /// キャンセル要求を監視するためのトークンです。既定値は <see cref="CancellationToken.None"/> です。
+        /// </param>
+        /// <returns>
+        /// ZIP アーカイブを読み込むためのオブジェクトです。
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="zipFile"/> または <paramref name="zipEntryNameEncodingProvider"/> が null です。
+        /// </exception>
+        public static Task<ZipArchiveValidationResult> ValidateAsZipFileAsync(this FilePath zipFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider, IProgress<Double>? progress = null, CancellationToken cancellationToken = default)
+            => zipFile.ValidateAsZipFileAsync(zipEntryNameEncodingProvider, ValidationStringency.Normal, progress, cancellationToken);
+
+        /// <summary>
+        /// ZIP アーカイブの内容を非同期的に検証します。
+        /// </summary>
+        /// <param name="zipFile">
+        /// 検証する ZIP アーカイブファイルです。
+        /// </param>
+        /// <param name="zipEntryNameEncodingProvider">
+        /// ZIP アーカイブのエントリのエンコーディングを解決するプロバイダです。
+        /// </param>
+        /// <param name="stringency">
+        /// 読み込む ZIP アーカイブに対する検証の厳格性を示す値です。
+        /// </param>
+        /// <param name="progress">
+        /// <para>
+        /// 処理の進行状況の通知を受け取るためのオブジェクトです。通知を受け取らない場合は null です。
+        /// </para>
+        /// <para>
+        /// 進行状況は、0 以上 1 以下の <see cref="Double"/> 値です。初期値は 0 で、作業が進行するごとに増加していき、作業が完了すると 1 になります。
+        /// </para>
+        /// </param>
+        /// <param name="cancellationToken">
+        /// キャンセル要求を監視するためのトークンです。既定値は <see cref="CancellationToken.None"/> です。
+        /// </param>
+        /// <returns>
+        /// ZIP アーカイブを読み込むためのオブジェクトです。
+        /// </returns>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="zipFile"/> または <paramref name="zipEntryNameEncodingProvider"/> が null です。
+        /// </exception>
+        public static Task<ZipArchiveValidationResult> ValidateAsZipFileAsync(this FilePath zipFile, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider, ValidationStringency stringency, IProgress<Double>? progress = null, CancellationToken cancellationToken = default)
+        {
+            if (zipFile is null)
+                throw new ArgumentNullException(nameof(zipFile));
+            if (zipEntryNameEncodingProvider is null)
+                throw new ArgumentNullException(nameof(zipEntryNameEncodingProvider));
+
+            return InternalValidateZipFileAsync(zipFile, zipEntryNameEncodingProvider, stringency, progress, cancellationToken);
         }
 
         /// <summary>
@@ -265,13 +391,7 @@ namespace ZipUtility
                 if (file.Length <= 0)
                     throw new BadZipFileFormatException($"ZIP archive file size is zero.: \"{file.FullName}\"");
 
-                try
-                {
-                    progress?.Report(0);
-                }
-                catch (Exception)
-                {
-                }
+                ReportDoubleProgress(progress, () => 0.0);
 
                 var entryCount = 0UL;
                 var zipArchiveSize = (UInt64)file.Length;
@@ -283,14 +403,14 @@ namespace ZipUtility
                 {
                     // 進捗率の配分は、GetEntries() が 10% で、データの比較が 90% とする。
 
-                    var entries = zipFile.GetEntries(
+                    var entries = zipFile.EnumerateEntries(
                         SafetyProgress.CreateIncreasingProgress<Double, Double>(
                             progress,
                             value => value * 0.1,
                             0,
                             1));
                     totalProcessedRate += 0.1;
-                    progress?.Report(totalProcessedRate);
+                    ReportDoubleProgress(progress, () => totalProcessedRate);
                     foreach (var entry in entries)
                     {
                         try
@@ -306,25 +426,96 @@ namespace ZipUtility
                         }
                         finally
                         {
+                            ReportDoubleProgress(progress, () => totalProcessedRate);
+                        }
+                    }
+                }
+
+                ReportDoubleProgress(progress, () => 1.0);
+                return new ZipArchiveValidationResult(ZipArchiveValidationResultId.Ok, $"entries = {entryCount}, total entry size = {processedUnpackedSize:N0} bytes, total compressed entry size = {processedPackedSize:N0} bytes", null);
+            }
+            catch (EncryptedZipFileNotSupportedException ex)
+            {
+                return new ZipArchiveValidationResult(ZipArchiveValidationResultId.Encrypted, ex.Message, ex);
+            }
+            catch (CompressionMethodNotSupportedException ex)
+            {
+                return new ZipArchiveValidationResult(ZipArchiveValidationResultId.UnsupportedCompressionMethod, ex.Message, ex);
+            }
+            catch (NotSupportedSpecificationException ex)
+            {
+                return new ZipArchiveValidationResult(ZipArchiveValidationResultId.UnsupportedFunction, ex.Message, ex);
+            }
+            catch (BadZipFileFormatException ex)
+            {
+                return new ZipArchiveValidationResult(ZipArchiveValidationResultId.Corrupted, ex.Message, ex);
+            }
+            catch (Exception ex)
+            {
+                return new ZipArchiveValidationResult(ZipArchiveValidationResultId.InternalError, ex.Message, ex);
+            }
+        }
+
+        private static async Task<ZipArchiveValidationResult> InternalValidateZipFileAsync(FilePath file, IZipEntryNameEncodingProvider zipEntryNameEncodingProvider, ValidationStringency stringency, IProgress<Double>? progress, CancellationToken cancellationToken = default)
+        {
+            // progress 値は以下のように定義される
+            //   処理できたエントリの非圧縮サイズ の合計 / ZIP ファイルのサイズ
+            // ヘッダ部分のサイズもあるので、この定義では最後まで終了しても100%にはならないが、ヘッダだけを読むだけではエントリのサイズが事前にわからないこともあるので致し方なし。
+            try
+            {
+                if (!file.Exists)
+                    throw new FileNotFoundException($"ZIP archive file does not exist.: \"{file.FullName}\"");
+                if (file.Length <= 0)
+                    throw new BadZipFileFormatException($"ZIP archive file size is zero.: \"{file.FullName}\"");
+
+                ReportDoubleProgress(progress, () => 0.0);
+
+                var entryCount = 0UL;
+                var zipArchiveSize = (UInt64)file.Length;
+                var processedUnpackedSize = 0UL;
+                var processedPackedSize = 0UL;
+                var totalProcessedRate = 0.0;
+
+                using (var zipFile = file.OpenAsZipFile(zipEntryNameEncodingProvider, stringency))
+                {
+                    // 進捗率の配分は、GetEntries() が 10% で、データの比較が 90% とする。
+
+                    var entries = zipFile.EnumerateEntriesAsync(
+                        SafetyProgress.CreateIncreasingProgress<Double, Double>(
+                            progress,
+                            value => value * 0.1,
+                            0,
+                            1),
+                        cancellationToken);
+                    totalProcessedRate += 0.1;
+                    ReportDoubleProgress(progress, () => totalProcessedRate);
+                    var enumerator = entries.GetAsyncEnumerator(cancellationToken);
+                    await using (enumerator.ConfigureAwait(false))
+                    {
+                        while (await enumerator.MoveNextAsync().ConfigureAwait(false))
+                        {
+                            var entry = enumerator.Current;
                             try
                             {
-                                progress?.Report((Double)totalProcessedRate);
+                                await entry.ValidateDataAsync(
+                                    SafetyProgress.CreateProgress<(UInt64 unpackedCount, UInt64 packedCount), Double>(
+                                        progress,
+                                        value => totalProcessedRate + (Double)value.packedCount / zipArchiveSize * 0.9),
+                                    cancellationToken).ConfigureAwait(false);
+                                ++entryCount;
+                                processedUnpackedSize += entry.Size;
+                                processedPackedSize += entry.PackedSize;
+                                totalProcessedRate += (Double)entry.PackedSize / zipArchiveSize * 0.9;
                             }
-                            catch (Exception)
+                            finally
                             {
+                                ReportDoubleProgress(progress, () => totalProcessedRate);
                             }
                         }
                     }
                 }
 
-                try
-                {
-                    progress?.Report(1);
-                }
-                catch (Exception)
-                {
-                }
-
+                ReportDoubleProgress(progress, () => 1.0);
                 return new ZipArchiveValidationResult(ZipArchiveValidationResultId.Ok, $"entries = {entryCount}, total entry size = {processedUnpackedSize:N0} bytes, total compressed entry size = {processedPackedSize:N0} bytes", null);
             }
             catch (EncryptedZipFileNotSupportedException ex)
@@ -389,6 +580,20 @@ namespace ZipUtility
 
             volumeFiles.Add(sourceFile);
             return MultiVolumeZipInputStream.CreateInstance(volumeFiles.ToArray(), stringency);
+        }
+
+        private static void ReportDoubleProgress(IProgress<Double>? progress, Func<Double> valueGetter)
+        {
+            if (progress is not null)
+            {
+                try
+                {
+                    progress.Report(valueGetter());
+                }
+                catch (Exception)
+                {
+                }
+            }
         }
     }
 }

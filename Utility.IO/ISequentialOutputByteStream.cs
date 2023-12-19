@@ -40,7 +40,7 @@ namespace Utility.IO
         /// 書き込むデータを示す <see cref="ReadOnlyMemory{Byte}">ReadOnlyMemory&lt;<see cref="Byte"/>&gt;</see> です。
         /// </param>
         /// <param name="cancellationToken">
-        /// 書き込みの中断を検出するための <see cref="CancellationToken"/> です。
+        /// キャンセル要求を監視するためのトークンです。既定値は <see cref="CancellationToken.None"/> です。
         /// </param>
         /// <returns>
         /// 実際に書き込むことができたバイト数を示す <see cref="Int32"/> です。
@@ -86,7 +86,7 @@ namespace Utility.IO
         /// もしデータがキャッシュされている場合は、可能な限り出力先に非同期的に書き出します。
         /// </summary>
         /// <param name="cancellationToken">
-        /// 書き込みの中断を検出するための <see cref="CancellationToken"/> です。
+        /// キャンセル要求を監視するためのトークンです。既定値は <see cref="CancellationToken.None"/> です。
         /// </param>
         /// <remarks>
         /// <para>

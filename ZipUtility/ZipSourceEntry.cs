@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Utility;
 using Utility.IO;
 using Utility.Linq;
@@ -23,14 +25,13 @@ namespace ZipUtility
         internal ZipSourceEntry(
             ZipArchiveFileReader.IZipReaderEnvironment zipReader,
             ZipArchiveFileReader.IZipReaderStream zipStream,
-            ZipEntryHeader internalHeader,
-            Int32 localHeaderOrder)
+            ZipEntryHeader internalHeader)
         {
             _zipReader = zipReader;
             _zipStream = zipStream;
 
-            Index = internalHeader.CentralDirectoryHeader.Index;
-            Order = localHeaderOrder;
+            ID = internalHeader.ID;
+            LocationOrder = internalHeader.LocationOrder;
             IsDirectory = internalHeader.CentralDirectoryHeader.IsDirectory;
             LocalHeaderPosition = internalHeader.CentralDirectoryHeader.LocalHeaderPosition;
             HostSystem = internalHeader.CentralDirectoryHeader.HostSystem;
@@ -95,28 +96,29 @@ namespace ZipUtility
         }
 
         /// <summary>
-        /// エントリを識別する整数を取得します。
+        /// エントリを識別する値を取得します。
         /// </summary>
-        public Int32 Index { get; } // ZIPの仕様上はエントリ数の最大値は UInt64.MaxValue であるが、.NETで扱える配列のインデックスの制限から Int32 にしている
+        public ZipEntryId ID { get; }
 
         /// <summary>
-        /// エントリのデータが ZIP アーカイブ上に格納されている順番を示す整数を取得します。
+        /// ZIP アーカイブ上で エントリのデータが配置されている順序を示す値を取得します。
         /// </summary>
-        /// <remarks>
-        /// <list type="bullet">
-        /// <item>この順番は <see cref="Index"/> プロパティの値の順番とは必ずしも一致しないことに注意してください。</item>
-        /// </list>
-        /// </remarks>
-        public Int32 Order { get; } // ZIPの仕様上はエントリ数の最大値は UInt64.MaxValue であるが、.NETで扱える配列のインデックスの制限から Int32 にしている
+        public ZipEntryLocationOrder LocationOrder { get; }
 
         /// <summary>
-        /// エントリがファイルであるかどうかを示す <see cref="Boolean"/> 値を取得します。ファイルである場合は true、そうではない場合は false が返ります。
+        /// エントリがファイルであるかどうかを示す <see cref="Boolean"/> 値を取得します。
         /// </summary>
+        /// <value>
+        /// エントリがファイルである場合は true、そうではない場合は false です。
+        /// </value>
         public Boolean IsFile => !IsDirectory;
 
         /// <summary>
-        /// エントリがディレクトリであるかどうかを示す <see cref="Boolean"/> 値を取得します。ディレクトリである場合は true、そうではない場合は false が返ります。
+        /// エントリがディレクトリであるかどうかを示す <see cref="Boolean"/> 値を取得します。
         /// </summary>
+        /// <value>
+        /// エントリがディレクトリである場合は true、そうではない場合は false です。
+        /// </value>
         public Boolean IsDirectory { get; }
 
         /// <summary>
@@ -395,9 +397,8 @@ namespace ZipUtility
         /// </returns>
         public ISequentialInputByteStream GetContentStream(IProgress<(UInt64 unpackedCount, UInt64 packedCount)>? progress = null)
         {
-            return
-                CompressionMethodId
-                .GetCompressionMethod(_generalPurposeBitFlag)
+            var stream =
+                CompressionMethodId.GetCompressionMethod(_generalPurposeBitFlag)
                 .GetDecodingStream(
                     _zipStream.Stream.WithPartial(DataPosition, PackedSize, true),
                     Size,
@@ -405,8 +406,13 @@ namespace ZipUtility
                     progress)
                 .WithCrc32Calculation(EndOfReadingStream);
 
+            _zipStream.LockZipStream();
+
+            return stream;
+
             void EndOfReadingStream(UInt32 actualCrc, UInt64 actualSize)
             {
+                _zipStream.UnlockZipStream();
                 if (actualCrc != Crc)
                     throw new BadZipFileFormatException($"CRC of entry data does not match. Perhaps the entry's data is corrupted.: \"{_zipReader.ZipArchiveFile.FullName}/{FullName}\"");
                 if (actualSize != Size)
@@ -415,7 +421,7 @@ namespace ZipUtility
         }
 
         /// <summary>
-        /// エントリのデータが正しいかの検証をします。
+        /// エントリのデータが正しいか検証します。
         /// </summary>
         /// <param name="progress">
         /// <para>
@@ -432,21 +438,67 @@ namespace ZipUtility
         {
             if (!IsFile)
                 return;
-            var actualCrc =
-                CompressionMethodId
-                .GetCompressionMethod(_generalPurposeBitFlag)
-                .CalculateCrc32(
-                    _zipStream.Stream,
-                    DataPosition,
-                    Size,
-                    PackedSize,
-                    progress);
 
-            if (actualCrc != Crc)
+            _zipStream.LockZipStream();
+            try
             {
-                throw
-                    new BadZipFileFormatException(
-                        $"Bad entry data: index={Index}, name=\"{FullName}\", desired crc=0x{Crc:x8}, actual crc=0x{actualCrc:x8}");
+                var actualCrc =
+                    CompressionMethodId.GetCompressionMethod(_generalPurposeBitFlag)
+                    .GetDecodingStream(
+                        _zipStream.Stream.WithPartial(DataPosition, PackedSize, true),
+                        Size,
+                        PackedSize,
+                        progress)
+                    .CalculateCrc32().Crc;
+                if (actualCrc != Crc)
+                    throw new BadZipFileFormatException($"Bad entry data: position=\"{LocalHeaderPosition}\", name=\"{FullName}\", desired crc=0x{Crc:x8}, actual crc=0x{actualCrc:x8}");
+            }
+            finally
+            {
+                _zipStream.UnlockZipStream();
+            }
+        }
+
+        /// <summary>
+        /// エントリのデータが正しいか非同期的に検証します。
+        /// </summary>
+        /// <param name="progress">
+        /// <para>
+        /// 処理の進行状況の通知を受け取るためのオブジェクトです。通知を受け取らない場合は null です。
+        /// </para>
+        /// <para>
+        /// 進行状況は、読み込みが完了したデータの長さを示すタプル値です。このタプル値は、解凍されたデータの長さと圧縮されたデータの長さのペアです。
+        /// </para>
+        /// </param>
+        /// <param name="cancellationToken">
+        /// キャンセル要求を監視するためのトークンです。既定値は <see cref="CancellationToken.None"/> です。
+        /// </param>
+        /// <exception cref="BadZipFileFormatException">
+        /// エントリの CRC が一致しません。おそらく、エントリのデータが破損しています。
+        /// </exception>
+        public async Task ValidateDataAsync(IProgress<(UInt64 unpackedCount, UInt64 packedCount)>? progress = null, CancellationToken cancellationToken = default)
+        {
+            if (!IsFile)
+                return;
+
+            await _zipStream.LockZipStreamAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var result =
+                    await CompressionMethodId.GetCompressionMethod(_generalPurposeBitFlag)
+                    .GetDecodingStream(
+                        _zipStream.Stream.WithPartial(DataPosition, PackedSize, true),
+                        Size,
+                        PackedSize,
+                        progress)
+                    .CalculateCrc32Async(cancellationToken)
+                    .ConfigureAwait(false);
+                if (result.Crc != Crc)
+                    throw new BadZipFileFormatException($"Bad entry data: position=\"{LocalHeaderPosition}\", name=\"{FullName}\", desired crc=0x{Crc:x8}, actual crc=0x{result:x8}");
+            }
+            finally
+            {
+                _zipStream?.UnlockZipStream();
             }
         }
 

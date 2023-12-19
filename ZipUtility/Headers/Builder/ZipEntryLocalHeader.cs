@@ -98,7 +98,7 @@ namespace ZipUtility.Headers.Builder
         }
 
         public static ZipEntryLocalHeader Build(
-            ZipArchiveFileWriter.IZipFileWriterEnvironment zipWriter,
+            IZipFileWriterParameter zipWriterParameter,
             ZipEntryGeneralPurposeBitFlag generalPurposeBitFlag,
             ZipEntryCompressionMethodId compressionMethodId,
             UInt64 size,
@@ -117,7 +117,7 @@ namespace ZipUtility.Headers.Builder
 
             return
                 new ZipEntryLocalHeader(
-                    zipWriter.GetVersionNeededToExtract(compressionMethodId, isDirectory, extraFields.Contains(Zip64ExtendedInformationExtraField.ExtraFieldId)),
+                    zipWriterParameter.GetVersionNeededToExtract(compressionMethodId, isDirectory, extraFields.Contains(Zip64ExtendedInformationExtraField.ExtraFieldId)),
                     generalPurposeBitFlag,
                     compressionMethodId,
                     dosDate,
@@ -130,7 +130,7 @@ namespace ZipUtility.Headers.Builder
         }
 
         public static ZipEntryLocalHeader Build(
-            ZipArchiveFileWriter.IZipFileWriterEnvironment zipWriter,
+            IZipFileWriterParameter zipWriterParameter,
             ZipEntryGeneralPurposeBitFlag generalPurposeBitFlag,
             ZipEntryCompressionMethodId compressionMethodId,
             ExtraFieldCollection extraFields,
@@ -144,7 +144,7 @@ namespace ZipUtility.Headers.Builder
 
             return
                 new ZipEntryLocalHeader(
-                    zipWriter.GetVersionNeededToExtract(compressionMethodId, isDirectory, extraFields.Contains(Zip64ExtendedInformationExtraField.ExtraFieldId)),
+                    zipWriterParameter.GetVersionNeededToExtract(compressionMethodId, isDirectory, extraFields.Contains(Zip64ExtendedInformationExtraField.ExtraFieldId)),
                     generalPurposeBitFlag,
                     compressionMethodId,
                     dosDate,
