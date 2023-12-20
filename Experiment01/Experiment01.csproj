@@ -27,6 +27,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Utility.IO\Utility.IO.csproj" />
     <ProjectReference Include="..\Utility\Utility.csproj" />
+    <ProjectReference Include="..\ZipUtility\ZipUtility.csproj" />
   </ItemGroup>
 
 </Project>

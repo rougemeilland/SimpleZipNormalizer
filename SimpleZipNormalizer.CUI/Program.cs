@@ -124,7 +124,7 @@ namespace SimpleZipNormalizer.CUI
 
                     if (mode == CommandMode.Normalize)
                     {
-                        var totalSize = zipFiles.Sum(zipFile => zipFile.Length);
+                        var totalSize = zipFiles.Aggregate(0UL, (value, file) => checked(value + file.Length));
                         var completedRate = 0.0;
                         ReportProgress(completedRate);
 
@@ -457,7 +457,7 @@ namespace SimpleZipNormalizer.CUI
         private static void CreateNormalizedZipArchive(
             FilePath destinationZipFile,
             IZipEntryNameEncodingProvider entryNameEncodingProvider,
-            long sourceZipFileLength,
+            ulong sourceZipFileLength,
             IEnumerable<(string destinationFullName, bool isDirectory, string sourceFullName, int newOrder, ZipSourceEntry? sourceEntry, DateTime? lastWriteTime, DateTime? lastAccessTime, DateTime? creationTime)> normalizedEntries,
             IProgress<double>? progress)
         {

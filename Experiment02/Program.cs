@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
-using Utility.IO;
 using Utility;
+using Utility.IO;
 using ZipUtility;
 
 namespace Experiment02
@@ -17,8 +17,8 @@ namespace Experiment02
         static void Main(string[] args)
         {
             var fileList = args.EnumerateFilesFromArgument(true);
-            var totalSize = fileList.Aggregate(0L, (length, file) => checked(length + file.Length));
-            var completed = 0L;
+            var totalSize = fileList.Aggregate(0UL, (length, file) => checked(length + file.Length));
+            var completed = 0UL;
             foreach (var file in fileList)
             {
                 if (string.Equals(file.Extension, ".zip", StringComparison.OrdinalIgnoreCase)
@@ -35,7 +35,7 @@ namespace Experiment02
                             completed += file.Length;
                         }
 
-                        Console.WriteLine($"\"{(double) completed * 100 / totalSize:F2}% {file.FullName}\": {result.ResultId}, \"{result.Message}\"");
+                        Console.WriteLine($"\"{(double)completed * 100 / totalSize:F2}% {file.FullName}\": {result.ResultId}, \"{result.Message}\"");
                     }
                     finally
                     {

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -394,7 +393,7 @@ namespace ZipUtility
                 ReportDoubleProgress(progress, () => 0.0);
 
                 var entryCount = 0UL;
-                var zipArchiveSize = (UInt64)file.Length;
+                var zipArchiveSize = file.Length;
                 var processedUnpackedSize = 0UL;
                 var processedPackedSize = 0UL;
                 var totalProcessedRate = 0.0;
@@ -471,7 +470,7 @@ namespace ZipUtility
                 ReportDoubleProgress(progress, () => 0.0);
 
                 var entryCount = 0UL;
-                var zipArchiveSize = (UInt64)file.Length;
+                var zipArchiveSize = file.Length;
                 var processedUnpackedSize = 0UL;
                 var processedPackedSize = 0UL;
                 var totalProcessedRate = 0.0;
@@ -545,17 +544,13 @@ namespace ZipUtility
             var match = _sevenZipMultiVolumeZipFileNamePattern.Match(sourceFile.Name);
             if (match.Success)
             {
-                var body = match.Groups["body"].Value;
-                var volumeFiles = new List<FilePath>();
-                for (var diskNumber = 0U; diskNumber <= UInt32.MaxValue; ++diskNumber)
-                {
-                    var file = baseDirectory.GetFile($"{body}.{diskNumber + 1:D3}");
-                    if (!file.Exists)
-                        break;
-                    volumeFiles.Add(file);
-                }
-
-                return SevenZipStyleMultiVolumeZipInputStream.CreateInstance(volumeFiles.ToArray());
+                var fileNameWithoutExtension = match.Groups["body"].Value;
+                return
+                    SevenZipStyleMultiVolumeZipInputStream.CreateInstance(
+                        EnumerateVolumeDiskFilesForFileNamePattern(
+                            baseDirectory,
+                            fileNameWithoutExtension),
+                        diskNumber => GetSevenZipStyleVolumeDiskFile(baseDirectory, fileNameWithoutExtension, diskNumber));
             }
             else
             {
@@ -563,24 +558,81 @@ namespace ZipUtility
             }
         }
 
-        private static ZipInputStream GetSourceStreamByLastDiskNumber(DirectoryPath baseDirectory, FilePath sourceFile, UInt32 lastDiskNumber, ValidationStringency stringency)
+        private static IZipInputStream GetSourceStreamByLastDiskNumber(
+            DirectoryPath baseDirectory,
+            FilePath sourceFile,
+            UInt32 lastDiskNumber,
+            ValidationStringency stringency)
         {
             var match = _generalMultiVolumeZipFileNamePattern.Match(sourceFile.Name);
             if (!match.Success)
                 throw new NotSupportedSpecificationException("Unknown format as multi-volume ZIP file.");
-            var body = match.Groups["body"].Value;
-            var volumeFiles = new List<FilePath>();
+
+            var fileNameWithoutExtension = match.Groups["body"].Value;
+            var selfExtract = CheckIfSelfExtractingZipArchive(baseDirectory, fileNameWithoutExtension);
+            return
+                MultiVolumeZipInputStream.CreateInstance(
+                    EnumerateVolumeDiskSizes(
+                        baseDirectory,
+                        sourceFile,
+                        lastDiskNumber,
+                        fileNameWithoutExtension,
+                        selfExtract),
+                    diskNumber => GetGenericStyleVolumeDiskFile(baseDirectory, fileNameWithoutExtension, sourceFile, lastDiskNumber, diskNumber, selfExtract),
+                    stringency);
+        }
+
+        private static IEnumerable<UInt64> EnumerateVolumeDiskFilesForFileNamePattern(DirectoryPath baseDirectory, String zipFileNameWithoutExtension)
+        {
+            for (var diskNumber = 0U; diskNumber <= UInt32.MaxValue; ++diskNumber)
+            {
+                var file = GetSevenZipStyleVolumeDiskFile(baseDirectory, zipFileNameWithoutExtension, diskNumber);
+                if (!file.Exists)
+                    break;
+                yield return file.Length;
+            }
+        }
+
+        private static FilePath GetSevenZipStyleVolumeDiskFile(
+            DirectoryPath baseDirectory,
+            String fileNameWithoutExtension,
+            UInt32 diskNumber)
+            => baseDirectory.GetFile($"{fileNameWithoutExtension}.{diskNumber + 1:D3}");
+
+        private static IEnumerable<UInt64> EnumerateVolumeDiskSizes(
+            DirectoryPath baseDirectory,
+            FilePath baseFile,
+            UInt32 lastDiskNumber,
+            String zipFileNameWithoutExtension,
+            Boolean selfExtract)
+        {
             for (var diskNumber = 0U; diskNumber < lastDiskNumber; ++diskNumber)
             {
-                var file = baseDirectory.GetFile($"{body}.z{diskNumber + 1:D2}");
+                var file = GetGenericStyleVolumeDiskFile(baseDirectory, zipFileNameWithoutExtension, baseFile, lastDiskNumber, diskNumber, selfExtract);
                 if (!file.Exists)
                     throw new BadZipFileFormatException($"There is a missing disk in a multi-volume ZIP file.: volume-file=\"{file.FullName}\"");
-                volumeFiles.Add(file);
+                yield return file.Length;
             }
 
-            volumeFiles.Add(sourceFile);
-            return MultiVolumeZipInputStream.CreateInstance(volumeFiles.ToArray(), stringency);
+            yield return baseFile.Length;
         }
+
+        private static Boolean CheckIfSelfExtractingZipArchive(DirectoryPath baseDirectory, String fileNameWithoutExtension)
+            => !baseDirectory.GetFile($"{fileNameWithoutExtension}.z01").Exists
+                && baseDirectory.GetFile($"{fileNameWithoutExtension}.exe").Exists;
+
+        private static FilePath GetGenericStyleVolumeDiskFile(
+            DirectoryPath baseDirectory,
+            String fileNameWithoutExtension,
+            FilePath baseFile,
+            UInt32 lastDiskNumber,
+            UInt32 diskNumber,
+            Boolean selfExtract)
+            => diskNumber <= 0
+                ? baseDirectory.GetFile($"{fileNameWithoutExtension}.{(selfExtract ? "exe" : "z01")}")
+                : diskNumber < lastDiskNumber
+                ? baseDirectory.GetFile($"{fileNameWithoutExtension}.z{diskNumber + 1:D2}")
+                : baseFile;
 
         private static void ReportDoubleProgress(IProgress<Double>? progress, Func<Double> valueGetter)
         {

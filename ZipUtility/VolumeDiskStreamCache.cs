@@ -9,22 +9,22 @@ namespace ZipUtility
         where STREAM_T : IDisposable, IAsyncDisposable
     {
         private readonly Int32 _capacity;
-        private readonly Func<Int32, STREAM_T> _newStreamGetter;
-        private readonly LinkedList<(Int32 diskNumber, STREAM_T stream)> _streams;
+        private readonly Func<UInt32, STREAM_T> _newStreamGetter;
+        private readonly LinkedList<(UInt32 diskNumber, STREAM_T stream)> _streams;
         private Boolean _isDisposed;
 
-        public VolumeDiskStreamCache(Int32 capacity, Func<Int32, STREAM_T> newStreamGetter)
+        public VolumeDiskStreamCache(Int32 capacity, Func<UInt32, STREAM_T> newStreamGetter)
         {
             if (capacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(capacity));
 
             _capacity = capacity;
             _newStreamGetter = newStreamGetter ?? throw new ArgumentNullException(nameof(newStreamGetter));
-            _streams = new LinkedList<(Int32 diskNumber, STREAM_T stream)>();
+            _streams = new LinkedList<(UInt32 diskNumber, STREAM_T stream)>();
             _isDisposed = false;
         }
 
-        public STREAM_T GetStream(Int32 diskNumber)
+        public STREAM_T GetStream(UInt32 diskNumber)
         {
             var node = _streams.First;
             while (node != null)

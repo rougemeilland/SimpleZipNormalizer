@@ -33,12 +33,12 @@ namespace Utility.IO
             }
         }
 
-        public Int64 Length
+        public UInt64 Length
         {
             get
             {
                 _file.Refresh();
-                return _file.Length;
+                return checked((UInt64)_file.Length);
             }
         }
 

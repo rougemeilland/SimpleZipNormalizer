@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Utility;
+using Utility.Collections;
+using Utility.IO;
 
 namespace Experiment01
 {
@@ -16,15 +16,15 @@ namespace Experiment01
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:未使用のパラメーターを削除します", Justification = "<保留中>")]
         private static void Main(string[] args)
         {
-            var fragments = new FragmentSet<int, int>();
-            fragments.AddFragment(new FragmentSetElement<int, int>(0, 100));
-            fragments.RemoveFragment(new FragmentSetElement<int, int>(10, 10));
-            fragments.RemoveFragment(new FragmentSetElement<int, int>(30, 10));
-            fragments.RemoveFragment(new FragmentSetElement<int, int>(20, 10));
-            fragments.RemoveFragment(new FragmentSetElement<int, int>(40, 60));
-            fragments.RemoveFragment(new FragmentSetElement<int, int>(0, 10));
-
-            Console.WriteLine(fragments);
+            var baseDirectory = new DirectoryPath(args[0]);
+            var file = baseDirectory.GetFile("text.txt");
+            using (var writer = file.CreateText())
+            {
+                for (var count = 0; count < 1024; ++count)
+                {
+                    writer.Write(new string(RandomSequence.GetAsciiCharSequence().Take(1024).ToArray()));
+                }
+            }
 
             Console.WriteLine("Completed.");
             Console.Beep();
