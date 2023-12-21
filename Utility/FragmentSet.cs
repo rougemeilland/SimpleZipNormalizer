@@ -27,6 +27,8 @@ namespace Utility
             _ = _fragments.AddFirst(new FragmentSetElement<POSITION_T, SIZE_T>(initialStartPosition, initialSize));
         }
 
+        public bool IsEmpty => _fragments.First is null;
+
         public void AddFragment(FragmentSetElement<POSITION_T, SIZE_T> fragment)
         {
             if (fragment is null)

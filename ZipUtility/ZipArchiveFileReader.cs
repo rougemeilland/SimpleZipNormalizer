@@ -677,13 +677,16 @@ namespace ZipUtility
 
         private static void MarkAsKnownPayload(FragmentSet<ZipStreamPosition, UInt64> unknownPayloads, ZipStreamPosition position, UInt64 size)
         {
-            try
+            if (!unknownPayloads.IsEmpty)
             {
-                unknownPayloads.RemoveFragment(new FragmentSetElement<ZipStreamPosition, UInt64>(position, size));
-            }
-            catch (Exception ex)
-            {
-                throw new InternalLogicalErrorException("Unknown payload location update failed.", ex);
+                try
+                {
+                    unknownPayloads.RemoveFragment(new FragmentSetElement<ZipStreamPosition, UInt64>(position, size));
+                }
+                catch (Exception ex)
+                {
+                    throw new InternalLogicalErrorException("Unknown payload location update failed.", ex);
+                }
             }
         }
 
