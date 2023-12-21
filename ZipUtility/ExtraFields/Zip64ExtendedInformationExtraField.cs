@@ -43,11 +43,25 @@ namespace ZipUtility.ExtraFields
             if (_headerType != ZipEntryHeaderType.LocalHeader)
                 throw new InternalLogicalErrorException();
 
-            var builder = new ByteArrayBuilder(sizeof(UInt64) + sizeof(UInt64));
-            var rawSize = SetUInt64Value(size, value => builder.AppendUInt64LE(size));
-            var rawPackedSize = SetUInt64Value(packedSize, value => builder.AppendUInt64LE(packedSize));
-            _buffer = builder.ToByteArray();
-            return (rawSize, rawPackedSize);
+            // 4.5.3 -Zip64 Extended Information Extra Field (0x0001) in APPNOTE:
+            //   This entry in the Local header MUST include BOTH original and compressed file size fields.
+            //   ローカルヘッダでのこのエントリは、 original および compressed file size を両方とも含まねばならない。
+
+            if (size >= UInt32.MaxValue || packedSize >= UInt32.MaxValue)
+            {
+                // size または packedSize のどちらかが UInt32.MaxValue 以上であれば、両方とも拡張フィールドに含める。
+                var builder = new ByteArrayBuilder(sizeof(UInt64) + sizeof(UInt64));
+                builder.AppendUInt64LE(size);
+                builder.AppendUInt64LE(packedSize);
+                _buffer = builder.ToByteArray();
+                return (UInt32.MaxValue, UInt32.MaxValue);
+            }
+            else
+            {
+                // size および packedSize の何れも UInt32.MaxValue 未満であれば、拡張フィールドは設定しない。
+                _buffer = ReadOnlyMemory<Byte>.Empty; // _buffer は空であり、拡張フィールドは設定されない。
+                return (checked((UInt32)size), checked((UInt32)packedSize));
+            }
         }
 
         protected (UInt32 rawSize, UInt32 rawPackedSize, UInt32 rawRelatiiveHeaderOffset, UInt16 rawDiskStartNumber) InternalSetValues(UInt64 size, UInt64 packedSize, UInt64 relatiiveHeaderOffset, UInt32 diskStartNumber)

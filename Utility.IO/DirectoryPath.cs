@@ -42,12 +42,14 @@ namespace Utility.IO
             }
         }
 
-        public void Create()
+        public DirectoryPath Create()
         {
             _directory.Refresh();
             try
             {
-                _directory.Create();
+                if (!_directory.Exists)
+                    _directory.Create();
+                return this;
             }
             finally
             {
