@@ -21,13 +21,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Palmtree.Core" Version="1.0.0-alpha" />
+    <PackageReference Include="Palmtree.IO" Version="1.0.0-alpha" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Utility.IO\Utility.IO.csproj" />
-    <ProjectReference Include="..\Utility\Utility.csproj" />
-    <ProjectReference Include="..\ZipUtility\ZipUtility.csproj" />
   </ItemGroup>
 
 </Project>

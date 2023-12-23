@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using ZipUtility;
+using Palmtree.IO.Compression.Archive.Zip;
 
 namespace SimpleZipNormalizer.CUI
 {
@@ -43,7 +43,7 @@ namespace SimpleZipNormalizer.CUI
                 if (ParentNode is null)
                     throw new InvalidOperationException();
 
-                    return $"{(ParentNode.ParentNode is null ? "" : ParentNode.CurrentFullName)}{Name}{(this is DirectoryPathNode ? "/" : "")}";
+                return $"{(ParentNode.ParentNode is null ? "" : ParentNode.CurrentFullName)}{Name}{(this is DirectoryPathNode ? "/" : "")}";
             }
         }
 

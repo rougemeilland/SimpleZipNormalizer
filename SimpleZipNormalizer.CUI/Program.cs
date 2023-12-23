@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Utility;
-using Utility.IO;
-using Utility.Linq;
-using ZipUtility;
+using Palmtree;
+using Palmtree.IO;
+using Palmtree.IO.Compression.Archive.Zip;
+using Palmtree.Linq;
 
 namespace SimpleZipNormalizer.CUI
 {

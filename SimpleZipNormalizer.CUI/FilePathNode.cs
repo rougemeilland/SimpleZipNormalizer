@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using ZipUtility;
+using Palmtree.IO.Compression.Archive.Zip;
 
 namespace SimpleZipNormalizer.CUI
 {

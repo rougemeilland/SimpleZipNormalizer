@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using Utility;
-using Utility.Collections;
-using Utility.IO;
-using ZipUtility;
+using Palmtree;
+using Palmtree.Collections;
+using Palmtree.IO;
+using Palmtree.IO.Compression.Archive.Zip;
 
 namespace Test.ZipUtility.SingleVolume
 {

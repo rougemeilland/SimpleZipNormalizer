@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Utility;
-using ZipUtility;
+using Palmtree;
+using Palmtree.IO.Compression.Archive.Zip;
 
 namespace SimpleZipNormalizer.CUI
 {

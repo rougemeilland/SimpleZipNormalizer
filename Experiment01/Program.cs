@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
-using Utility.Collections;
-using Utility.IO;
+using Palmtree.Collections;
+using Palmtree.IO;
 
 namespace Experiment01
 {
@@ -13,7 +13,6 @@ namespace Experiment01
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:未使用のパラメーターを削除します", Justification = "<保留中>")]
         private static void Main(string[] args)
         {
             var baseDirectory = new DirectoryPath(args[0]);
