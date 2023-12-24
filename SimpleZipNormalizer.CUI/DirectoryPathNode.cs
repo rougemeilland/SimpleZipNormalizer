@@ -142,14 +142,11 @@ namespace SimpleZipNormalizer.CUI
                     .Select(node =>
                     {
                         var lastWriteTimeUtc = node.SourceEntry?.LastWriteTimeUtc;
-                        if (lastWriteTimeUtc is not null && lastWriteTimeUtc.Value.Kind == DateTimeKind.Unspecified)
-                            throw new InternalLogicalErrorException();
+                        Validation.Assert(lastWriteTimeUtc is null || lastWriteTimeUtc.Value.Kind != DateTimeKind.Unspecified, "lastWriteTimeUtc is null || lastWriteTimeUtc.Value.Kind != DateTimeKind.Unspecified");
                         var lastAccessTimeUtc = node.SourceEntry?.LastAccessTimeUtc;
-                        if (lastAccessTimeUtc is not null && lastAccessTimeUtc.Value.Kind == DateTimeKind.Unspecified)
-                            throw new InternalLogicalErrorException();
+                        Validation.Assert(lastAccessTimeUtc is null || lastAccessTimeUtc.Value.Kind != DateTimeKind.Unspecified, "lastAccessTimeUtc is null || lastAccessTimeUtc.Value.Kind != DateTimeKind.Unspecified");
                         var creationTimeUtc = node.SourceEntry?.CreationTimeUtc;
-                        if (creationTimeUtc is not null && creationTimeUtc.Value.Kind == DateTimeKind.Unspecified)
-                            throw new InternalLogicalErrorException();
+                        Validation.Assert(creationTimeUtc is null || creationTimeUtc.Value.Kind != DateTimeKind.Unspecified, "creationTimeUtc is null || creationTimeUtc.Value.Kind != DateTimeKind.Unspecified");
                         return (lastWriteTimeUtc, lastAccessTimeUtc, creationTimeUtc);
                     })
                     .ToList();

@@ -572,8 +572,7 @@ namespace SimpleZipNormalizer.CUI
                     throw new Exception($"正規化に失敗しました。 (CRCおよび長さが一致するエントリの個数が異なっています): {sourceZipFile.FullName}");
                 if (normalizedEntriesGroup.Count != sourceEntriesGroup.Count)
                     throw new Exception($"正規化に失敗しました。 (CRCおよび長さが一致するエントリの個数が異なっています): {sourceZipFile.FullName}");
-                if (sourceEntriesGroup.Count <= 0)
-                    throw new InternalLogicalErrorException();
+                Validation.Assert(sourceEntriesGroup.Count > 0, "sourceEntriesGroup.Count > 0");
                 if (sourceEntriesGroup.Count == 1)
                 {
                     // CRC とサイズが一致するエントリの組み合わせが一組しかない場合
