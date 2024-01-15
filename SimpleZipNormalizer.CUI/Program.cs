@@ -25,7 +25,7 @@ namespace SimpleZipNormalizer.CUI
 
         static Program()
         {
-            _thisProgramName = Path.GetFileNameWithoutExtension(typeof(Program).Assembly.Location);
+            _thisProgramName = typeof(Program).Assembly.GetAssemblyFileNameWithoutExtension();
             _currentProgressMessage = "";
             Bzip2CoderPlugin.EnablePlugin();
             DeflateCoderPlugin.EnablePlugin();
