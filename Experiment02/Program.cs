@@ -16,7 +16,7 @@ namespace Experiment02
 
         static void Main(string[] args)
         {
-            var fileList = args.EnumerateFilesFromArgument(true);
+            var fileList = args.EnumerateFilesFromArgument(true).ToList();
             var totalSize = fileList.Aggregate(0UL, (length, file) => checked(length + file.Length));
             var completed = 0UL;
             foreach (var file in fileList)
@@ -27,7 +27,7 @@ namespace Experiment02
                 {
                     try
                     {
-                        var result = file.ValidateAsZipFile(ValidationStringency.Strict, SafetyProgress.CreateIncreasingProgress<double>(value => Console.Write($"  {(completed + value * file.Length) * 100.0 / totalSize:F2}%\r")));
+                        var result = file.ValidateAsZipFile(ValidationStringency.Strict,new SimpleProgress<double>(value => Console.Write($"  {(completed + value * file.Length) * 100.0 / totalSize:F2}%\r")));
                         if (result.ResultId != ZipArchiveValidationResultId.Ok)
                             Console.ForegroundColor = ConsoleColor.Red;
                         checked

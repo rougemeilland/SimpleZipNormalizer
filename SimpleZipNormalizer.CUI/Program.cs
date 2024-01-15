@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using Palmtree;
 using Palmtree.IO;
 using Palmtree.IO.Compression.Archive.Zip;
+using Palmtree.IO.Compression.Stream.Plugin.SevenZip;
+using Palmtree.IO.Console;
 using Palmtree.Linq;
 
 namespace SimpleZipNormalizer.CUI
@@ -19,44 +20,30 @@ namespace SimpleZipNormalizer.CUI
             ListZipEntries,
         }
 
-        private static readonly uint ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004;
-        private static readonly uint STD_OUTPUT_HANDLE = unchecked((uint)-11);
-        private static readonly uint STD_ERROR_HANDLE = unchecked((uint)-12);
-        private static readonly IntPtr INVALID_HANDLE_VALUE = new(-1);
         private static readonly string _thisProgramName;
-        private static TextWriter? _consoleWriter;
         private static string _currentProgressMessage;
-
-        [DllImport("kernel32.dll")]
-        private extern static IntPtr GetStdHandle(uint nStdHandle);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private extern static bool GetConsoleMode(IntPtr hConsoleHandle, out uint mode);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private extern static bool SetConsoleMode(IntPtr hConsoleHandle, uint mode);
 
         static Program()
         {
             _thisProgramName = Path.GetFileNameWithoutExtension(typeof(Program).Assembly.Location);
-            _consoleWriter = null;
             _currentProgressMessage = "";
+            Bzip2CoderPlugin.EnablePlugin();
+            DeflateCoderPlugin.EnablePlugin();
+            Deflate64CoderPlugin.EnablePlugin();
+            LzmaCoderPlugin.EnablePlugin();
         }
 
         private static int Main(string[] args)
         {
+            // TODO: 指定した拡張子のファイルの除去をする機能を追加。
+            // TODO: 特定の長さとCRCのファイルを除去する機能を追加。
             var optionInteractive = false;
             var mode = CommandMode.ListZipEntries;
             var allowedEncodngNames = new List<string>();
             var excludedEncodngNames = new List<string>();
             try
             {
-                InitializeConsole();
-                _consoleWriter?.Write("\x1b[?12h"); // カーソルの非点滅
-                _consoleWriter?.Write("\x1b[?25l"); // カーソルの非表示
-
+                TinyConsole.CursorVisible = ConsoleCursorVisiblity.Invisible;
                 try
                 {
                     {
@@ -105,11 +92,11 @@ namespace SimpleZipNormalizer.CUI
                         var encodingList = encodingProvider.SupportedEncodings.ToList();
                         var maximumEncodingNameLength = encodingList.Select(encoding => encoding.WebName.Length).Append(0).Max();
                         foreach (var encoding in encodingList)
-                            Console.WriteLine($"Name: {encoding.WebName}\", {new string(' ', maximumEncodingNameLength - encoding.WebName.Length)}Description: {encoding.EncodingName}");
+                            TinyConsole.WriteLine($"Name: {encoding.WebName}\", {new string(' ', maximumEncodingNameLength - encoding.WebName.Length)}Description: {encoding.EncodingName}");
                         if (optionInteractive)
                         {
-                            Console.Beep();
-                            _ = Console.ReadLine();
+                            TinyConsole.Beep();
+                            _ = TinyConsole.ReadLine();
                         }
 
                         return 0;
@@ -126,6 +113,7 @@ namespace SimpleZipNormalizer.CUI
                     {
                         var totalSize = zipFiles.Aggregate(0UL, (value, file) => checked(value + file.Length));
                         var completedRate = 0.0;
+
                         ReportProgress(completedRate);
 
                         foreach (var zipFile in zipFiles)
@@ -149,15 +137,16 @@ namespace SimpleZipNormalizer.CUI
 
                             try
                             {
+                                var progressRateValue =
+                                    new ProgressValueHolder<double>(
+                                        value => ReportProgress(value, zipFile),
+                                        completedRate,
+                                        TimeSpan.FromMilliseconds(100));
                                 if (NormalizeZipFile(
                                     zipFile,
                                     temporaryFile,
                                     encodingProvider,
-                                    SafetyProgress.CreateIncreasingProgress<double>(
-                                        value =>
-                                            ReportProgress(
-                                                completedRate + value * originalZipFileSize / totalSize,
-                                                zipFile))))
+                                    new SimpleProgress<double>(value => progressRateValue.Value = completedRate + value * originalZipFileSize / totalSize)))
                                 {
                                     if (!trashBox.DisposeFile(zipFile))
                                         throw new Exception($"ファイルのごみ箱への移動に失敗しました。: \"{zipFile.FullName}\"");
@@ -183,36 +172,35 @@ namespace SimpleZipNormalizer.CUI
                     {
                         foreach (var zipFile in zipFiles)
                         {
-                            Console.WriteLine($"file: {zipFile.FullName}");
+                            TinyConsole.WriteLine($"file: {zipFile.FullName}");
                             ListZipFile(zipFile, encodingProvider);
-                            Console.WriteLine(new string('-', 20));
+                            TinyConsole.WriteLine(new string('-', 20));
                         }
                     }
                 }
                 finally
                 {
-                    _consoleWriter?.Write("\x1b[?12h"); // カーソルの点滅
-                    _consoleWriter?.Write("\x1b[?25h"); // カーソルの表示
+                    TinyConsole.CursorVisible = ConsoleCursorVisiblity.NormalMode;
                 }
 
-                Console.WriteLine();
-                Console.WriteLine("終了しました。");
+                TinyConsole.WriteLine();
+                TinyConsole.WriteLine("終了しました。");
                 if (optionInteractive)
                 {
-                    Console.Beep();
-                    _ = Console.ReadLine();
+                    TinyConsole.Beep();
+                    _ = TinyConsole.ReadLine();
                 }
 
                 return 0;
             }
             catch (Exception ex)
             {
-                Console.WriteLine();
+                TinyConsole.WriteLine();
                 ReportException(ex);
                 if (optionInteractive)
                 {
-                    Console.Beep();
-                    _ = Console.ReadLine();
+                    TinyConsole.Beep();
+                    _ = TinyConsole.ReadLine();
                 }
 
                 return 1;
@@ -299,7 +287,7 @@ namespace SimpleZipNormalizer.CUI
                     var exactEncodingText = entry.ExactEntryEncoding?.WebName ?? "???";
                     var possibleEncodings = entry.PossibleEntryEncodings.Select(encoding => encoding.WebName).Take(3).ToList();
                     var possibleEncodingsText = $"{string.Join(",", possibleEncodings)}{(possibleEncodings.Count > 2 ? ", ..." : "")}";
-                    Console.WriteLine($"  {entry.FullName}, local:[{localExtraIdsText}], central:[{centralExtraIdsText}], exact={exactEncodingText}, possible=[{possibleEncodingsText}], size={entry.Size:N0}, packedSize={entry.PackedSize:N0}, compress={entry.CompressionMethodId}");
+                    TinyConsole.WriteLine($"  {entry.FullName}, local:[{localExtraIdsText}], central:[{centralExtraIdsText}], exact={exactEncodingText}, possible=[{possibleEncodingsText}], size={entry.Size:N0}, packedSize={entry.PackedSize:N0}, compress={entry.CompressionMethodId}");
                 }
             }
             catch (EncryptedZipFileNotSupportedException ex)
@@ -332,15 +320,12 @@ namespace SimpleZipNormalizer.CUI
                 if (badEntries.Count > 0)
                     throw new Exception($".NETで認識できない名前のエントリがZIPファイルに含まれています。: ZIP file name:\"{sourceZipFile.FullName}\", Entry name: \"{badEntries.First().FullName}\"");
 
-                progress?.Report(0);
+                var progressValue = new ProgressValueHolder<double>(progress, 0.0, TimeSpan.FromMilliseconds(100));
+                progressValue.Report();
                 var sourceEntries =
                     sourceArchiveReader.EnumerateEntries(
-                        SafetyProgress.CreateIncreasingProgress(
-                            progress,
-                            value => value * 0.05,
-                            0.0,
-                            1.0));
-                progress?.Report(0.05);
+                        new SimpleProgress<double>(value => progressValue.Value = value * 0.05));
+                progressValue.Report();
                 foreach (var entry in sourceEntries)
                     rootNode.AddChildNode(entry.FullName, entry);
 
@@ -376,11 +361,7 @@ namespace SimpleZipNormalizer.CUI
                         entryNameEncodingProvider,
                         sourceZipFileLength,
                         normalizedEntries,
-                        SafetyProgress.CreateIncreasingProgress(
-                            progress,
-                            value => 0.05 + value * 0.45,
-                            0.0,
-                            1.0));
+                        new SimpleProgress<double>(value => progressValue.Value = 0.05 + value * 0.45));
 
                     progress?.Report(0.5);
 
@@ -390,16 +371,8 @@ namespace SimpleZipNormalizer.CUI
                         sourceZipFile,
                         sourceEntries,
                         normalizedZipArchiveReader.EnumerateEntries(
-                            SafetyProgress.CreateIncreasingProgress(
-                                progress,
-                                value => 0.50 + value * 0.05,
-                                0.0,
-                                1.0)),
-                        SafetyProgress.CreateIncreasingProgress(
-                            progress,
-                            value => 0.55 + value * 0.45,
-                            0.0,
-                            1.0));
+                            new SimpleProgress<double>(value => progressValue.Value = 0.50 + value * 0.05)),
+                        new Progress<double>(value => progressValue.Value = 0.55 + value * 0.45));
                 }
 
                 progress?.Report(1);
@@ -467,6 +440,8 @@ namespace SimpleZipNormalizer.CUI
                 using (var zipArchiveWriter = destinationZipFile.CreateAsZipFile(entryNameEncodingProvider))
                 {
                     var currentProgressValue = 0.0;
+                    var progressValue = new ProgressValueHolder<double>(progress, currentProgressValue, TimeSpan.FromMilliseconds(100));
+                    progressValue.Report();
                     foreach (var item in normalizedEntries)
                     {
                         var destinationEntry = zipArchiveWriter.CreateEntry(item.destinationFullName, item.sourceEntry?.Comment ?? "");
@@ -492,14 +467,13 @@ namespace SimpleZipNormalizer.CUI
                                     destinationEntry.CompressionLevel = ZipEntryCompressionLevel.Normal;
                                 }
 
-                                using var destinationStream = destinationEntry.GetContentStream();
-                                using var sourceStream = sourceEntry.GetContentStream();
+                                using var destinationStream = destinationEntry.CreateContentStream();
+                                using var sourceStream = sourceEntry.OpenContentStream();
                                 sourceStream.CopyTo(
                                     destinationStream,
-                                    SafetyProgress.CreateIncreasingProgress<ulong, double>(
-                                        progress,
+                                    new SimpleProgress<ulong>(
                                         value =>
-                                            currentProgressValue
+                                            progressValue.Value = currentProgressValue
                                             + (
                                                 sourceEntry.Size <= 0
                                                 ? 0.0
@@ -577,15 +551,14 @@ namespace SimpleZipNormalizer.CUI
                 {
                     // CRC とサイズが一致するエントリの組み合わせが一組しかない場合
 
-                    using var stream1 = sourceEntriesGroup.First().GetContentStream();
-                    using var stream2 = normalizedEntriesGroup.First().GetContentStream();
+                    var progressValue = new ProgressValueHolder<double>(progress, 0, TimeSpan.FromMilliseconds(100));
+                    using var stream1 = sourceEntriesGroup.First().OpenContentStream();
+                    using var stream2 = normalizedEntriesGroup.First().OpenContentStream();
                     var dataMatch =
                         stream1
                         .StreamBytesEqual(
                             stream2,
-                            SafetyProgress.CreateIncreasingProgress<ulong, double>(
-                                progress,
-                                value => (completedSize + value) / totalSize));
+                            new SimpleProgress<ulong>(value => progressValue.Value = (completedSize + value) / totalSize));
                     if (!dataMatch)
                         throw new Exception($"正規化に失敗しました。 (データの内容が異なっています): {sourceZipFile.FullName}");
                 }
@@ -602,8 +575,8 @@ namespace SimpleZipNormalizer.CUI
                             entryPairs
                             .All(entryPair =>
                             {
-                                using var stream1 = entryPair.First.GetContentStream();
-                                using var stream2 = entryPair.Second.GetContentStream();
+                                using var stream1 = entryPair.First.OpenContentStream();
+                                using var stream2 = entryPair.Second.OpenContentStream();
                                 var result = stream1.StreamBytesEqual(stream2);
                                 return result;
                             }));
@@ -621,85 +594,37 @@ namespace SimpleZipNormalizer.CUI
             progress?.Report(1);
         }
 
-        private static void InitializeConsole()
-        {
-            if (OperatingSystem.IsWindows())
-            {
-                // Windows の場合
-
-                // 現在使用しているコンソールがエスケープコードを解釈しない場合、エスケープコードを解釈するように設定する。
-
-                // コンソールのハンドルを取得する
-
-                IntPtr consoleOutputHandle;
-                if (!Console.IsOutputRedirected)
-                {
-                    // 標準出力がリダイレクトされていない場合は、標準出力がコンソールに紐づけられているとみなす
-                    consoleOutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-                    _consoleWriter = Console.Out;
-                }
-                else if (!Console.IsErrorRedirected)
-                {
-                    // 標準エラー出力がリダイレクトされていない場合は、標準エラー出力がコンソールに紐づけられているとみなす
-                    consoleOutputHandle = GetStdHandle(STD_ERROR_HANDLE);
-                    _consoleWriter = Console.Error;
-                }
-                else
-                {
-                    // その他の場合はコンソールに紐づけられているハンドル/ストリームはない。
-                    consoleOutputHandle = INVALID_HANDLE_VALUE;
-                    _consoleWriter = null;
-                }
-
-                if (consoleOutputHandle != INVALID_HANDLE_VALUE)
-                {
-                    // 標準出力と標準エラー出力の少なくともどちらかがコンソールに紐づけられている場合
-
-                    // 現在のコンソールモード(フラグ)を取得する
-                    if (!GetConsoleMode(consoleOutputHandle, out var mode))
-                        throw new Exception("Failed to get console mode.", Marshal.GetExceptionForHR(Marshal.GetHRForLastWin32Error()));
-
-                    // コンソールモードに ENABLE_VIRTUAL_TERMINAL_PROCESSING がセットされていないのならセットする
-                    if ((mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0)
-                    {
-                        if (!SetConsoleMode(consoleOutputHandle, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
-                            throw new Exception("Failed to set console mode.", Marshal.GetExceptionForHR(Marshal.GetHRForLastWin32Error()));
-                    }
-                }
-            }
-        }
-
         private static void ReportProgress(double progressRate, FilePath? zipFile = null)
         {
-            if (_consoleWriter is not null)
+            var percentage = progressRate * 100.0;
+            var progressMessage =
+                zipFile is not null
+                ? $"{percentage:##0.00}%: \"{zipFile.FullName}\""
+                : $"{percentage:##0.00}%";
+
+            if (_currentProgressMessage != progressMessage)
             {
-                var percentage = progressRate * 100.0;
-                var progressMessage =
-                    zipFile is not null
-                    ? $"{percentage:##0.00}%: \"{zipFile.FullName}\""
-                    : $"{percentage:##0.00}%";
+                // progressMessageを表示するために予想し得る最大の表示桁数を計算する。
+                var maximumToralColumns = progressMessage.Length * 2;
 
-                if (_currentProgressMessage != progressMessage)
-                {
-                    // progressMessageを表示するために予想し得る最大の表示桁数を計算する。
-                    var maximumToralColumns = progressMessage.Length * 2;
+                // progressMessageを表示するために予想し得る最大の行数を計算する。
+                var rows = (maximumToralColumns + TinyConsole.WindowWidth - 1) / TinyConsole.WindowWidth;
 
-                    // progressMessageを表示するために予想し得る最大の行数を計算する。
-                    var rows = (maximumToralColumns + Console.WindowWidth - 1) / Console.WindowWidth;
+                // rows 行だけ改行して、rows 行だけカーソルを上に移動する。
+                TinyConsole.Write($"{new string('\n', rows)}");
+                TinyConsole.CursorUp(rows);
 
-                    // rows 行だけ改行して、rows 行だけカーソルを上に移動する。
-                    _consoleWriter.Write($"{new string('\n', rows)}\x1b[{rows}A");
+                // これ以降、progressMessage を表示してもスクロールは発生しないはず。
 
-                    // これ以降、progressMessage を表示してもスクロールは発生しないはず。
+                // 現在のカーソル位置を取得する。
+                var (cursorLeft, cursorTop) = TinyConsole.GetCursorPosition();
 
-                    // 現在のカーソル位置を取得する。
-                    var (cursorLeft, cursorTop) = Console.GetCursorPosition();
+                // メッセージを表示して、その後の文字列を消去し、カーソル位置を元に戻す。
+                TinyConsole.Write($"  {progressMessage}");
+                TinyConsole.Erase(ConsoleEraseMode.FromCursorToEndOfScreen);
+                TinyConsole.SetCursorPosition(cursorLeft, cursorTop);
 
-                    // メッセージを表示して、その後の文字列を消去し、カーソル位置を元に戻す。
-                    _consoleWriter.Write($"  {progressMessage}\x1b[0J\x1b[{cursorTop + 1};{cursorLeft + 1}H");
-
-                    _currentProgressMessage = progressMessage;
-                }
+                _currentProgressMessage = progressMessage;
             }
         }
 
@@ -719,14 +644,14 @@ namespace SimpleZipNormalizer.CUI
         {
             try
             {
-                _consoleWriter?.Write($"\x1b[0J");
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.BackgroundColor = ConsoleColor.Black;
-                Console.Error.WriteLine($"{new string(' ', indent)}{_thisProgramName}:ERROR:{message}");
+                TinyConsole.Erase(ConsoleEraseMode.FromCursorToEndOfScreen);
+                TinyConsole.ForegroundColor = ConsoleColor.Red;
+                TinyConsole.BackgroundColor = ConsoleColor.Black;
+                TinyConsole.Error.WriteLine($"{new string(' ', indent)}{_thisProgramName}:ERROR:{message}");
             }
             finally
             {
-                Console.ResetColor();
+                TinyConsole.ResetColor();
             }
         }
     }
