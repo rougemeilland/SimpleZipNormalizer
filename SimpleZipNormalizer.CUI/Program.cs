@@ -209,69 +209,26 @@ namespace SimpleZipNormalizer.CUI
 
         private static IEnumerable<FilePath> EnumerateZipFiles(IEnumerable<string> args)
         {
-            foreach (var arg in args)
+            return
+                args.EnumerateFilesFromArgument(true)
+                    .Where(file => string.Equals(file.Extension, ".zip", StringComparison.OrdinalIgnoreCase) && CheckIfValidFilePath(file));
+
+            static bool CheckIfValidFilePath(FilePath file)
             {
-                var success = false;
-                var directory = TryGetDirectoryInfo(arg);
-                if (directory is not null)
+                return
+                    !file.Name.StartsWith('.')
+                    && CheckIfValidDirectoryPath(file.Directory);
+            }
+
+            static bool CheckIfValidDirectoryPath(DirectoryPath directory)
+            {
+                for (var dir = directory; dir is not null; dir = dir.Parent)
                 {
-                    success = true;
-                    foreach (var childFile in EnumerateZipFiles(directory))
-                        yield return childFile;
-                }
-                else
-                {
-                    var file = TryGetFileInfo(arg);
-                    if (file is not null)
-                    {
-                        success = true;
-                        yield return file;
-                    }
+                    if (dir.Name.StartsWith('.'))
+                        return false;
                 }
 
-                if (!success)
-                    throw new Exception($"コマンド引数がファイルまたはディレクトリのパス名ではありません。: \"{arg}\"");
-            }
-        }
-
-        private static IEnumerable<FilePath> EnumerateZipFiles(DirectoryPath directory)
-        {
-            foreach (var childFile in directory.EnumerateFiles(true))
-            {
-                if (string.Equals(childFile.Extension, ".zip", StringComparison.OrdinalIgnoreCase))
-                    yield return childFile;
-            }
-
-            foreach (var chilDirectory in directory.EnumerateDirectories(true))
-            {
-                foreach (var childFile in EnumerateZipFiles(chilDirectory))
-                    yield return childFile;
-            }
-        }
-
-        private static DirectoryPath? TryGetDirectoryInfo(string path)
-        {
-            try
-            {
-                var dir = new DirectoryPath(path);
-                return dir.Exists ? dir : null;
-            }
-            catch (IOException)
-            {
-                return null;
-            }
-        }
-
-        private static FilePath? TryGetFileInfo(string path)
-        {
-            try
-            {
-                var file = new FilePath(path);
-                return file.Exists && string.Equals(file.Extension, ".zip", StringComparison.OrdinalIgnoreCase) ? file : null;
-            }
-            catch (IOException)
-            {
-                return null;
+                return true;
             }
         }
 
