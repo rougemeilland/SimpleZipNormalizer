@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Palmtree;
 using Palmtree.IO;
 using Palmtree.IO.Compression.Archive.Zip;
@@ -20,13 +22,14 @@ namespace SimpleZipNormalizer.CUI
             ListZipEntries,
         }
 
-        private static readonly string _thisProgramName;
-        private static string _currentProgressMessage;
+        private static readonly string _thisProgramName = typeof(Program).Assembly.GetAssemblyFileNameWithoutExtension();
+        private static readonly Regex _archivePathNamePattern = new(@"\.(zip|rar|cab|7z|tar|z|xz)$", RegexOptions.Compiled);
+        private static readonly Regex _blackListParameterPattern = new(@"^(?<length>\d+):(?<crc>[a-fA-F0-9]{8})$", RegexOptions.Compiled);
+
+        private static string _currentProgressMessage = "";
 
         static Program()
         {
-            _thisProgramName = typeof(Program).Assembly.GetAssemblyFileNameWithoutExtension();
-            _currentProgressMessage = "";
             Bzip2CoderPlugin.EnablePlugin();
             DeflateCoderPlugin.EnablePlugin();
             Deflate64CoderPlugin.EnablePlugin();
@@ -35,12 +38,12 @@ namespace SimpleZipNormalizer.CUI
 
         private static int Main(string[] args)
         {
-            // TODO: 指定した拡張子のファイルの除去をする機能を追加。
-            // TODO: 特定の長さとCRCのファイルを除去する機能を追加。
             var optionInteractive = false;
             var mode = CommandMode.ListZipEntries;
             var allowedEncodngNames = new List<string>();
             var excludedEncodngNames = new List<string>();
+            var excludedFilePattern = new Regex("^$", RegexOptions.Compiled);
+            var blackList = new List<(ulong length, uint crc)>();
             try
             {
                 TinyConsole.CursorVisible = ConsoleCursorVisiblity.Invisible;
@@ -66,13 +69,41 @@ namespace SimpleZipNormalizer.CUI
                             {
                                 mode = CommandMode.ShowCodePages;
                             }
-                            else if ((arg == "-ci" || arg == "--allowed_code_page") && index + 1 < arg.Length)
+                            else if ((arg == "-ci" || arg == "--allowed_code_page") && index + 1 < args.Length)
                             {
                                 allowedEncodngNames.AddRange(args[index + 1].Split(','));
+                                ++index;
                             }
-                            else if ((arg == "-ce" || arg == "--excluded_code_page") && index + 1 < arg.Length)
+                            else if ((arg == "-ce" || arg == "--excluded_code_page") && index + 1 < args.Length)
                             {
                                 excludedEncodngNames.AddRange(args[index + 1].Split(','));
+                                ++index;
+                            }
+                            else if ((arg == "-ef" || arg == "--excluded_file") && index + 1 < args.Length)
+                            {
+                                try
+                                {
+                                    excludedFilePattern = new Regex(args[index + 1], RegexOptions.Compiled);
+                                    ++index;
+                                }
+                                catch (Exception ex)
+                                {
+                                    throw new Exception($"--excluded_file オプションで与えられた正規表現に誤りがあります。", ex);
+                                }
+                            }
+                            else if ((arg == "-bl" || arg == "--black_list") && index + 1 < args.Length)
+                            {
+                                foreach (var element in args[index + 1].Split(','))
+                                {
+                                    var match = _blackListParameterPattern.Match(element);
+                                    if (!match.Success)
+                                        throw new Exception($"--black_list オプションの形式に誤りがあります。");
+                                    var length = ulong.Parse(match.Groups["length"].Value, NumberStyles.None, CultureInfo.InvariantCulture.NumberFormat);
+                                    var crc = uint.Parse(match.Groups["crc"].Value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture.NumberFormat);
+                                    blackList.Add((length, crc));
+                                }
+
+                                ++index;
                             }
                             else if (arg.StartsWith('-'))
                             {
@@ -146,6 +177,10 @@ namespace SimpleZipNormalizer.CUI
                                     zipFile,
                                     temporaryFile,
                                     encodingProvider,
+                                    entry =>
+                                        !string.Equals(zipFile.Extension, ".epub", StringComparison.OrdinalIgnoreCase)
+                                        && (excludedFilePattern.IsMatch(Path.GetFileName(entry.FullName))
+                                            || blackList.Contains((entry.Size, entry.Crc))),
                                     new SimpleProgress<double>(value => progressRateValue.Value = completedRate + value * originalZipFileSize / totalSize)))
                                 {
                                     if (!trashBox.DisposeFile(zipFile))
@@ -265,7 +300,12 @@ namespace SimpleZipNormalizer.CUI
             }
         }
 
-        private static bool NormalizeZipFile(FilePath sourceZipFile, FilePath destinationZipFile, IZipEntryNameEncodingProvider entryNameEncodingProvider, IProgress<double> progress)
+        private static bool NormalizeZipFile(
+            FilePath sourceZipFile,
+            FilePath destinationZipFile,
+            IZipEntryNameEncodingProvider entryNameEncodingProvider,
+            Func<ZipSourceEntry, bool> excludedFileChecker,
+            IProgress<double> progress)
         {
             try
             {
@@ -281,9 +321,22 @@ namespace SimpleZipNormalizer.CUI
                 progressValue.Report();
                 var sourceEntries =
                     sourceArchiveReader.EnumerateEntries(
-                        new SimpleProgress<double>(value => progressValue.Value = value * 0.05));
+                        new SimpleProgress<double>(value => progressValue.Value = value * 0.05))
+                    .ToList();
+                var trimmedSourceEntries =
+                    sourceEntries
+                    .Where(entry =>
+                    {
+                        if (_archivePathNamePattern.IsMatch(entry.FullName))
+                            ReportWarningMessage($"書庫ファイルが含まれています。: \"{sourceZipFile.Name}\"/\"{entry.FullName}\"");
+                        var excluded = excludedFileChecker(entry);
+                        if (excluded)
+                            ReportWarningMessage($"削除対象のファイルが見つかったので削除します。: \"{sourceZipFile.Name}\"/\"{entry.FullName}\"");
+                        return !excluded;
+                    })
+                    .ToList();
                 progressValue.Report();
-                foreach (var entry in sourceEntries)
+                foreach (var entry in trimmedSourceEntries)
                     rootNode.AddChildNode(entry.FullName, entry);
 
                 // ノードのディレクトリ構成を正規化する (空ディレクトリの削除、無駄なディレクトリ階層の短縮)
@@ -307,7 +360,9 @@ namespace SimpleZipNormalizer.CUI
                     .ToList();
 
                 // 正規化前後でエントリが変更する見込みがあるかどうかを調べる
-                var modified = ExistModifiedEntries(normalizedEntries);
+                var modified =
+                    sourceEntries.Count != trimmedSourceEntries.Count
+                    || ExistModifiedEntries(normalizedEntries);
                 if (modified)
                 {
                     // 正規化の前後でパス名および順序が一致しないエントリが一つでもある場合
@@ -326,7 +381,7 @@ namespace SimpleZipNormalizer.CUI
                     using var normalizedZipArchiveReader = destinationZipFile.OpenAsZipFile(entryNameEncodingProvider);
                     VerifyNormalizedEntries(
                         sourceZipFile,
-                        sourceEntries,
+                        trimmedSourceEntries,
                         normalizedZipArchiveReader.EnumerateEntries(
                             new SimpleProgress<double>(value => progressValue.Value = 0.50 + value * 0.05)),
                         new Progress<double>(value => progressValue.Value = 0.55 + value * 0.45));
@@ -594,6 +649,21 @@ namespace SimpleZipNormalizer.CUI
             {
                 foreach (var ex in aggregateException.InnerExceptions)
                     ReportException(ex, indent + 2);
+            }
+        }
+
+        private static void ReportWarningMessage(string message)
+        {
+            try
+            {
+                TinyConsole.Erase(ConsoleEraseMode.FromCursorToEndOfScreen);
+                TinyConsole.ForegroundColor = ConsoleColor.Yellow;
+                TinyConsole.BackgroundColor = ConsoleColor.Black;
+                TinyConsole.Error.WriteLine($"{_thisProgramName}:WARNING:{message}");
+            }
+            finally
+            {
+                TinyConsole.ResetColor();
             }
         }
 
