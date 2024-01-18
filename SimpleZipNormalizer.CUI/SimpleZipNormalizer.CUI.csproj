@@ -8,6 +8,7 @@
     <AssemblyName>zipnorm</AssemblyName>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net7.0:net60|AnyCPU'">
