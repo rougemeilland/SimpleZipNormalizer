@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net7.0</TargetFrameworks>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>zipnorm</AssemblyName>
+    <RootNamespace>SimpleZipNormalizer.CUI</RootNamespace>
+    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
+    <Trimming>full</Trimming>
+    <PublishAot>True</PublishAot>
+    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
+    <Trimming>full</Trimming>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\SimpleZipNormalizer.CUI\DirectoryPathNode.cs" Link="DirectoryPathNode.cs" />
+    <Compile Include="..\SimpleZipNormalizer.CUI\FilePathNode.cs" Link="FilePathNode.cs" />
+    <Compile Include="..\SimpleZipNormalizer.CUI\PathNode.cs" Link="PathNode.cs" />
+    <Compile Include="..\SimpleZipNormalizer.CUI\Program.cs" Link="Program.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Palmtree.Core" Version="1.8.1-alpha" />
+    <PackageReference Include="Palmtree.IO.Compression.Archive.Zip" Version="1.4.13-alpha" />
+    <PackageReference Include="Palmtree.IO.Compression.Stream.Plugin.SevenZip.Bzip2" Version="1.0.5-alpha" />
+    <PackageReference Include="Palmtree.IO.Compression.Stream.Plugin.SevenZip.Deflate" Version="1.0.5-alpha" />
+    <PackageReference Include="Palmtree.IO.Compression.Stream.Plugin.SevenZip.Deflate64" Version="1.0.5-alpha" />
+    <PackageReference Include="Palmtree.IO.Compression.Stream.Plugin.SevenZip.Lzma" Version="1.0.5-alpha" />
+    <PackageReference Include="Palmtree.IO.Console" Version="1.1.12-alpha" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

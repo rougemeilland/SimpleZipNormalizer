@@ -10,6 +10,9 @@
     <VersionPrefix>1.0.0</VersionPrefix>
     <VersionSuffix>alpha</VersionSuffix>
     <Authors>Palmtree Software</Authors>
+    <TieredCompilationQuickJit>false</TieredCompilationQuickJit>
+    <Trimming>full</Trimming>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -21,8 +24,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Palmtree.Core" Version="1.7.3-alpha" />
-    <PackageReference Include="Palmtree.IO" Version="1.4.7-alpha" />
+    <PackageReference Include="Palmtree.Core" Version="1.8.1-alpha" />
+    <PackageReference Include="Palmtree.IO" Version="1.5.1-alpha" />
     <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
   </ItemGroup>
 
