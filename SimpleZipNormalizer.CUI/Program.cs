@@ -1,10 +1,13 @@
-﻿namespace SimpleZipNormalizer.CUI
+﻿using System.Text;
+using Palmtree;
+
+namespace SimpleZipNormalizer.CUI
 {
     public partial class Program
     {
         private static int Main(string[] args)
         {
-            using var application = new NormalizerApplication(null, null);
+            var application = new NormalizerApplication(typeof(Program).Assembly.GetAssemblyFileNameWithoutExtension(), Encoding.UTF8);
             return application.Run(args);
         }
     }

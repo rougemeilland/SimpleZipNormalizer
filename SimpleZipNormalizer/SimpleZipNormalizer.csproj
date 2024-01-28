@@ -27,7 +27,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Palmtree.Application" Version="1.0.2-alpha" />
+    <PackageReference Include="Palmtree.Application" Version="1.0.3-alpha" />
     <PackageReference Include="Palmtree.Core" Version="1.8.3-alpha" />
     <PackageReference Include="Palmtree.IO.Compression.Archive.Zip" Version="1.5.2-alpha" />
     <PackageReference Include="Palmtree.IO.Compression.Stream.Plugin.SevenZip.Bzip2" Version="1.0.5-alpha" />

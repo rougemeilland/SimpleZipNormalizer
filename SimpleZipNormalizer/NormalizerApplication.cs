@@ -150,6 +150,9 @@ namespace SimpleZipNormalizer
 
                         foreach (var zipFile in zipFiles)
                         {
+                            if (IsPressedBreak)
+                                return ResultCode.Cancelled;
+
                             ReportProgress(completedRate, zipFile.FullName, (progressRate, content) => $"{progressRate} processing \"{content}\"");
 
                             var parentDirectory = zipFile.Directory ?? throw new Exception();
@@ -190,6 +193,10 @@ namespace SimpleZipNormalizer
                                     temporaryFile.MoveTo(zipFile, false);
                                 }
                             }
+                            catch (OperationCanceledException)
+                            {
+                                return ResultCode.Cancelled;
+                            }
                             catch (Exception ex)
                             {
                                 ReportException(ex);
@@ -203,23 +210,36 @@ namespace SimpleZipNormalizer
                         }
 
                         ReportProgress(completedRate);
+
+                        return ResultCode.Success;
                     }
                     else
                     {
                         foreach (var zipFile in zipFiles)
                         {
+                            if (IsPressedBreak)
+                                return ResultCode.Cancelled;
+
                             TinyConsole.WriteLine($"file: {zipFile.FullName}");
-                            ListZipFile(zipFile, encodingProvider);
+                            try
+                            {
+                                ListZipFile(zipFile, encodingProvider);
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                return ResultCode.Cancelled;
+                            }
+
                             TinyConsole.WriteLine(new string('-', 20));
                         }
+
+                        return ResultCode.Success;
                     }
                 }
                 finally
                 {
                     TinyConsole.CursorVisible = ConsoleCursorVisiblity.NormalMode;
                 }
-
-                return ResultCode.Success;
             }
             catch (Exception ex)
             {
@@ -270,6 +290,9 @@ namespace SimpleZipNormalizer
                 using var sourceArchiveReader = sourceZipFile.OpenAsZipFile(entryNameEncodingProvider);
                 foreach (var entry in sourceArchiveReader.EnumerateEntries(progress))
                 {
+                    if (IsPressedBreak)
+                        throw new OperationCanceledException();
+
                     var localExtraIdsText = string.Join(",", entry.LocalHeaderExtraFields.EnumerateExtraFieldIds().Select(id => $"0x{id:x4}"));
                     var centralExtraIdsText = string.Join(",", entry.CentralDirectoryHeaderExtraFields.EnumerateExtraFieldIds().Select(id => $"0x{id:x4}"));
                     var exactEncodingText = entry.ExactEntryEncoding?.WebName ?? "???";
@@ -305,6 +328,9 @@ namespace SimpleZipNormalizer
         {
             try
             {
+                if (IsPressedBreak)
+                    throw new OperationCanceledException();
+
                 ValidateIfWritableFile(sourceZipFile);
                 using var sourceArchiveReader = sourceZipFile.OpenAsZipFile(entryNameEncodingProvider);
                 var sourceZipFileLength = sourceZipFile.Length;
@@ -319,6 +345,10 @@ namespace SimpleZipNormalizer
                     sourceArchiveReader.EnumerateEntries(
                         new SimpleProgress<double>(value => progressValue.Value = value * 0.05))
                     .ToList();
+
+                if (IsPressedBreak)
+                    throw new OperationCanceledException();
+
                 var trimmedSourceEntries =
                     sourceEntries
                     .Where(entry =>
@@ -435,7 +465,7 @@ namespace SimpleZipNormalizer
                                 otherItem.newOrder > item.newOrder && otherItem.sourceEntry.LocationOrder < item.sourceEntry.LocationOrder
                                 || otherItem.newOrder < item.newOrder && otherItem.sourceEntry.LocationOrder > item.sourceEntry.LocationOrder)));
 
-        private static void CreateNormalizedZipArchive(
+        private void CreateNormalizedZipArchive(
             FilePath destinationZipFile,
             IZipEntryNameEncodingProvider entryNameEncodingProvider,
             ulong sourceZipFileLength,
@@ -452,6 +482,9 @@ namespace SimpleZipNormalizer
                     progressValue.Report();
                     foreach (var item in normalizedEntries)
                     {
+                        if (IsPressedBreak)
+                            throw new OperationCanceledException();
+
                         var destinationEntry = zipArchiveWriter.CreateEntry(item.destinationFullName, item.sourceEntry?.Comment ?? "");
                         var sourceEntry = item.sourceEntry;
                         if (sourceEntry is not null)
@@ -524,7 +557,7 @@ namespace SimpleZipNormalizer
             }
         }
 
-        private static void VerifyNormalizedEntries(
+        private void VerifyNormalizedEntries(
             FilePath sourceZipFile,
             IEnumerable<ZipSourceEntry> sourceEntries,
             IEnumerable<ZipSourceEntry> normalizedEntries,
@@ -549,6 +582,9 @@ namespace SimpleZipNormalizer
             var completedSize = 0UL;
             foreach (var key in indexedNormalizedEntries.Keys)
             {
+                if (IsPressedBreak)
+                    throw new OperationCanceledException();
+
                 var normalizedEntriesGroup = indexedNormalizedEntries[key];
                 if (!indexedSourceEntries.TryGetValue(key, out var sourceEntriesGroup))
                     throw new Exception($"正規化に失敗しました。 (CRCおよび長さが一致するエントリの個数が異なっています): {sourceZipFile.FullName}");

@@ -32,10 +32,9 @@ namespace SimpleZipNormalizer.WindowsDesktop
         [STAThread]
         static void Main(string[] args)
         {
-            using var application = new NormalizerApplication("Zipnorm for Desktop", Encoding.UTF8);
+            var application = new NormalizerApplication("Zipnorm for Desktop", Encoding.UTF8);
             var desktopApplication = new DesctopApplication(() => _ = application.Run(args));
-
-            desktopApplication.Run();
+            _ = desktopApplication.Run();
         }
     }
 }
