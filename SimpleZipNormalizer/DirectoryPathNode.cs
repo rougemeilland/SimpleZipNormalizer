@@ -1,24 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Palmtree;
 using Palmtree.IO.Compression.Archive.Zip;
 
-namespace SimpleZipNormalizer.CUI
+namespace SimpleZipNormalizer
 {
-    internal class DirectoryPathNode
+    internal partial class DirectoryPathNode
         : PathNode
     {
-        private static readonly Regex _filePathPattern;
-        private static readonly Regex _directoryPathPattern;
         private readonly IDictionary<string, PathNode> _indexedChildNodes;
-
-        static DirectoryPathNode()
-        {
-            _filePathPattern = new Regex(@"^(?<name>[^\\/]+)$", RegexOptions.Compiled);
-            _directoryPathPattern = new Regex(@"^(?<name>[^\\/]+)(?<delimiter>[\\/])(?<child_path>.*)$", RegexOptions.Compiled);
-        }
 
         public DirectoryPathNode(string name, string sourceFullName, DirectoryPathNode? parentNode, ZipSourceEntry? sourceEntry)
             : base(name, sourceFullName, parentNode, sourceEntry)
@@ -37,7 +30,7 @@ namespace SimpleZipNormalizer.CUI
 
         public void AddChildNode(string childNodePath, ZipSourceEntry sourceEntry)
         {
-            var filePathNodeMatch = _filePathPattern.Match(childNodePath);
+            var filePathNodeMatch = GetFilePathPattern().Match(childNodePath);
             if (filePathNodeMatch.Success)
             {
                 var name = filePathNodeMatch.Groups["name"].Value;
@@ -56,7 +49,7 @@ namespace SimpleZipNormalizer.CUI
                 return;
             }
 
-            var directoryPathNodeMatch = _directoryPathPattern.Match(childNodePath);
+            var directoryPathNodeMatch = GetDirectoryPathPattern().Match(childNodePath);
             if (directoryPathNodeMatch.Success)
             {
                 var name = directoryPathNodeMatch.Groups["name"].Value;
@@ -175,7 +168,7 @@ namespace SimpleZipNormalizer.CUI
             {
                 foreach (var childNode in _indexedChildNodes.Values)
                 {
-                    foreach (var line in PathNode.EnumerateDescriptionTextLines(childNode, "", ""))
+                    foreach (var line in EnumerateDescriptionTextLines(childNode, "", ""))
                         yield return line;
                 }
             }
@@ -187,19 +180,19 @@ namespace SimpleZipNormalizer.CUI
                     yield return $"{prefix}{Name}/ : {SourceFullName}";
 
                 // 子ノードのリストのうち最後のノードとそれ以外を分割する。
-                var childNodeListExceptLast = DirectoryPathNode.SplitLastPathNode(_indexedChildNodes.Values, out var lastChildNode);
+                var childNodeListExceptLast = SplitLastPathNode(_indexedChildNodes.Values, out var lastChildNode);
 
                 // 最後以外のノードのテキストを列挙する。
                 foreach (var childNode in childNodeListExceptLast)
                 {
-                    foreach (var line in PathNode.EnumerateDescriptionTextLines(childNode, $"{childPrefix}  +- ", $"{childPrefix}  |"))
+                    foreach (var line in EnumerateDescriptionTextLines(childNode, $"{childPrefix}  +- ", $"{childPrefix}  |"))
                         yield return line;
                 }
 
                 // 最後のノードがもし存在すればそのノードのテキストを列挙する (子ノードのリストが空ではない限り最後のノードは存在する)
                 if (lastChildNode is not null)
                 {
-                    foreach (var line in PathNode.EnumerateDescriptionTextLines(lastChildNode, $"{childPrefix}  +- ", $"{childPrefix}   "))
+                    foreach (var line in EnumerateDescriptionTextLines(lastChildNode, $"{childPrefix}  +- ", $"{childPrefix}   "))
                         yield return line;
                 }
             }
@@ -252,5 +245,13 @@ namespace SimpleZipNormalizer.CUI
                 ? null
                 : result;
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [GeneratedRegex("^(?<name>[^\\\\/]+)$", RegexOptions.Compiled)]
+        private static partial Regex GetFilePathPattern();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [GeneratedRegex("^(?<name>[^\\\\/]+)(?<delimiter>[\\\\/])(?<child_path>.*)$", RegexOptions.Compiled)]
+        private static partial Regex GetDirectoryPathPattern();
     }
 }

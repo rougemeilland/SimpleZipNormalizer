@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Palmtree.IO.Compression.Archive.Zip;
 
-namespace SimpleZipNormalizer.CUI
+namespace SimpleZipNormalizer
 {
     internal abstract class PathNode
     {
