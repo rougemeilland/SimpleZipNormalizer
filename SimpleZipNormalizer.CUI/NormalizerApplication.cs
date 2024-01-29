@@ -14,7 +14,7 @@ using Palmtree.IO.Compression.Stream.Plugin.SevenZip;
 using Palmtree.IO.Console;
 using Palmtree.Linq;
 
-namespace SimpleZipNormalizer
+namespace SimpleZipNormalizer.CUI
 {
     public partial class NormalizerApplication
         : BatchApplication
@@ -248,14 +248,19 @@ namespace SimpleZipNormalizer
             }
         }
 
-        protected override void Finish(ResultCode result)
+        protected override void Finish(ResultCode result, bool isLaunchedByConsoleApplicationLauncher)
         {
             if (result == ResultCode.Success)
                 TinyConsole.WriteLine("終了しました。");
             else if (result == ResultCode.Cancelled)
                 TinyConsole.WriteLine("中断されました。");
 
-            base.Finish(result);
+            if (isLaunchedByConsoleApplicationLauncher)
+            {
+                TinyConsole.Beep();
+                TinyConsole.WriteLine("ENTER キーを押すとウィンドウが閉じます。");
+                _ = TinyConsole.ReadLine();
+            }
         }
 
         private static IEnumerable<FilePath> EnumerateZipFiles(IEnumerable<string> args)
@@ -638,15 +643,15 @@ namespace SimpleZipNormalizer
             progress?.Report(1);
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [GeneratedRegex(@"\.(zip|rar|cab|7z|tar|z|xz)$", RegexOptions.Compiled)]
         private static partial Regex GetArchivePathNamePattern();
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [GeneratedRegex(@"^(?<length>\d+):(?<crc>[a-fA-F0-9]{8})$", RegexOptions.Compiled)]
         private static partial Regex GetBlackListParameterPattern();
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [GeneratedRegex("^$", RegexOptions.Compiled)]
         private static partial Regex GetEmptyExcludedFilePattern();
     }

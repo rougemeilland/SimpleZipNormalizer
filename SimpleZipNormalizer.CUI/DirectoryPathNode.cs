@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 using Palmtree;
 using Palmtree.IO.Compression.Archive.Zip;
 
-namespace SimpleZipNormalizer
+namespace SimpleZipNormalizer.CUI
 {
     internal partial class DirectoryPathNode
         : PathNode

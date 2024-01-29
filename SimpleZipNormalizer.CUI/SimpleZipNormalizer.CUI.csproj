@@ -22,7 +22,7 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net7.0|AnyCPU'">
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <NoWarn>1701;1702;IDE0290;CA1859</NoWarn>
+    <NoWarn>1701;1702;IDE0290;CA1859;CA1510</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net60|AnyCPU'">
@@ -32,7 +32,7 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net7.0|AnyCPU'">
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
-    <NoWarn>1701;1702;IDE0290;CA1859</NoWarn>
+    <NoWarn>1701;1702;IDE0290;CA1859;CA1510</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net60|AnyCPU'">
@@ -41,21 +41,25 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0|AnyCPU'">
-    <NoWarn>1701;1702;IDE0290;CA1859</NoWarn>
+    <NoWarn>1701;1702;IDE0290;CA1859;CA1510</NoWarn>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0|AnyCPU'">
-    <NoWarn>1701;1702;IDE0290;CA1859</NoWarn>
+    <NoWarn>1701;1702;IDE0290;CA1859;CA1510</NoWarn>
     <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Palmtree.Application" Version="1.0.3-alpha" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\SimpleZipNormalizer\SimpleZipNormalizer.csproj" />
+    <PackageReference Include="Palmtree.Application" Version="1.1.0-alpha" />
+    <PackageReference Include="Palmtree.Core" Version="1.9.0-alpha" />
+    <PackageReference Include="Palmtree.IO" Version="1.5.4-alpha" />
+    <PackageReference Include="Palmtree.IO.Compression.Archive.Zip" Version="1.5.3-alpha" />
+    <PackageReference Include="Palmtree.IO.Compression.Stream.Plugin.SevenZip.Bzip2" Version="1.0.6-alpha" />
+    <PackageReference Include="Palmtree.IO.Compression.Stream.Plugin.SevenZip.Deflate" Version="1.0.6-alpha" />
+    <PackageReference Include="Palmtree.IO.Compression.Stream.Plugin.SevenZip.Deflate64" Version="1.0.6-alpha" />
+    <PackageReference Include="Palmtree.IO.Compression.Stream.Plugin.SevenZip.Lzma" Version="1.0.6-alpha" />
+    <PackageReference Include="Palmtree.IO.Console" Version="1.3.3-alpha" />
   </ItemGroup>
 
 </Project>
