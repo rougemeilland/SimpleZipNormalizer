@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Palmtree;
 using Palmtree.Application;
@@ -13,6 +15,7 @@ using Palmtree.IO.Compression.Archive.Zip;
 using Palmtree.IO.Compression.Stream.Plugin.SevenZip;
 using Palmtree.IO.Console;
 using Palmtree.Linq;
+using SimpleZipNormalizer.CUI.Models;
 
 namespace SimpleZipNormalizer.CUI
 {
@@ -26,11 +29,20 @@ namespace SimpleZipNormalizer.CUI
             ListZipEntries,
         }
 
+        private const string _defaultSettingsJsonUrl = "https://github.com/rougemeilland/SimpleZipNormalizer/blob/main/content/zipnorm.settings.json";
+        private const string _settingsFileName = "zipnorm.settings.json";
+
+        private static readonly FilePath _settingsFile;
+
         private readonly string? _title;
         private readonly Encoding? _encoding;
 
         static NormalizerApplication()
         {
+            _settingsFile =
+                new DirectoryPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+                .GetSubDirectory(".palmtree").Create()
+                .GetFile(_settingsFileName);
             Bzip2CoderPlugin.EnablePlugin();
             DeflateCoderPlugin.EnablePlugin();
             Deflate64CoderPlugin.EnablePlugin();
@@ -48,197 +60,212 @@ namespace SimpleZipNormalizer.CUI
 
         protected override ResultCode Main(string[] args)
         {
+            var settings = ReadSettings();
+
             var mode = CommandMode.ListZipEntries;
             var allowedEncodngNames = new List<string>();
             var excludedEncodngNames = new List<string>();
-            var excludedFilePattern = GetEmptyExcludedFilePattern();
-            var blackList = new List<(ulong length, uint crc)>();
-            try
-            {
-                TinyConsole.CursorVisible = ConsoleCursorVisiblity.Invisible;
-                try
+            var excludedFilePatterns =
+                (settings?.ExcludedFilePatterns ?? Array.Empty<string>())
+                .Select(patternText => new Regex(patternText, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                .ToList();
+            var blackList = new HashSet<(ulong length, uint crc)>();
+            var blackListSource =
+                (settings?.BlackList ?? Array.Empty<string>())
+                .Select(element =>
                 {
+                    var match = GetBlackListParameterPattern().Match(element);
+                    if (!match.Success)
                     {
-                        for (var index = 0; index < args.Length; ++index)
-                        {
-                            var arg = args[index];
-                            if (arg is "-n" or "--normalize")
-                            {
-                                mode = CommandMode.Normalize;
-                            }
-                            else if (arg is "-l" or "--list_entries")
-                            {
-                                mode = CommandMode.ListZipEntries;
-                            }
-                            else if (arg is "-cl" or "--show_code_page_list")
-                            {
-                                mode = CommandMode.ShowCodePages;
-                            }
-                            else if ((arg == "-ci" || arg == "--allowed_code_page") && index + 1 < args.Length)
-                            {
-                                allowedEncodngNames.AddRange(args[index + 1].Split(','));
-                                ++index;
-                            }
-                            else if ((arg == "-ce" || arg == "--excluded_code_page") && index + 1 < args.Length)
-                            {
-                                excludedEncodngNames.AddRange(args[index + 1].Split(','));
-                                ++index;
-                            }
-                            else if ((arg == "-ef" || arg == "--excluded_file") && index + 1 < args.Length)
-                            {
-                                try
-                                {
-                                    excludedFilePattern = new Regex(args[index + 1], RegexOptions.Compiled);
-                                    ++index;
-                                }
-                                catch (Exception ex)
-                                {
-                                    throw new Exception($"--excluded_file オプションで与えられた正規表現に誤りがあります。", ex);
-                                }
-                            }
-                            else if ((arg == "-bl" || arg == "--black_list") && index + 1 < args.Length)
-                            {
-                                foreach (var element in args[index + 1].Split(','))
-                                {
-                                    var match = GetBlackListParameterPattern().Match(element);
-                                    if (!match.Success)
-                                        throw new Exception($"--black_list オプションの形式に誤りがあります。");
-                                    var length = ulong.Parse(match.Groups["length"].Value, NumberStyles.None, CultureInfo.InvariantCulture.NumberFormat);
-                                    var crc = uint.Parse(match.Groups["crc"].Value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture.NumberFormat);
-                                    blackList.Add((length, crc));
-                                }
-
-                                ++index;
-                            }
-                            else if (arg.StartsWith('-'))
-                            {
-                                throw new Exception($"サポートされていないオプションがコマンド引数に指定されました。: \"{arg}\"");
-                            }
-                            else
-                            {
-                                // OK
-                            }
-                        }
-                    }
-
-                    var encodingProvider = ZipEntryNameEncodingProvider.CreateInstance(allowedEncodngNames.ToArray(), excludedEncodngNames.ToArray(), "##");
-
-                    if (mode == CommandMode.ShowCodePages)
-                    {
-                        var encodingList = encodingProvider.SupportedEncodings.ToList();
-                        var maximumEncodingNameLength = encodingList.Select(encoding => encoding.WebName.Length).Append(0).Max();
-                        foreach (var encoding in encodingList)
-                            TinyConsole.WriteLine($"Name: {encoding.WebName}\", {new string(' ', maximumEncodingNameLength - encoding.WebName.Length)}Description: {encoding.EncodingName}");
-                        return ResultCode.Success;
-                    }
-
-                    if (encodingProvider.SupportedEncodings.None())
-                        throw new Exception($"エントリ名およびコメントに適用できるコードページがありません。オプションでコードページを指定している場合は指定内容を確認してください。サポートされているコードページのリストは \"--show_code_page_list\" オプションを指定して起動することにより確認できます。");
-
-                    var trashBox = TrashBox.OpenTrashBox();
-
-                    ReportProgress("Searching files...");
-
-                    var zipFiles = EnumerateZipFiles(args.Where(arg => !arg.StartsWith('-'))).ToList();
-
-                    if (mode == CommandMode.Normalize)
-                    {
-                        var totalSize = zipFiles.Aggregate(0UL, (value, file) => checked(value + file.Length));
-                        var completedRate = 0.0;
-
-                        ReportProgress(completedRate);
-
-                        foreach (var zipFile in zipFiles)
-                        {
-                            if (IsPressedBreak)
-                                return ResultCode.Cancelled;
-
-                            ReportProgress(completedRate, zipFile.FullName, (progressRate, content) => $"{progressRate} processing \"{content}\"");
-
-                            var parentDirectory = zipFile.Directory ?? throw new Exception();
-                            var originalZipFileSize = zipFile.Length;
-                            var temporaryFileName = $".{zipFile.Name}.0.zip";
-                            var temporaryFile = parentDirectory.GetFile(temporaryFileName);
-                            if (temporaryFile.Exists)
-                            {
-                                for (var index = 1; ; ++index)
-                                {
-                                    temporaryFileName = $".{zipFile.Name}.{index}.zip";
-                                    temporaryFile = parentDirectory.GetFile(temporaryFileName);
-                                    if (!temporaryFile.Exists)
-                                        break;
-                                }
-                            }
-
-                            try
-                            {
-                                var progressRateValue =
-                                    new ProgressValueHolder<double>(
-                                        value => ReportProgress(value, zipFile.FullName, (progressRate, content) => $"{progressRate} processing \"{content}\""),
-                                        completedRate,
-                                        TimeSpan.FromMilliseconds(100));
-                                if (NormalizeZipFile(
-                                    zipFile,
-                                    temporaryFile,
-                                    encodingProvider,
-                                    entry =>
-                                        !string.Equals(zipFile.Extension, ".epub", StringComparison.OrdinalIgnoreCase)
-                                        && (excludedFilePattern.IsMatch(Path.GetFileName(entry.FullName))
-                                            || blackList.Contains((entry.Size, entry.Crc))),
-                                    new SimpleProgress<double>(value => progressRateValue.Value = completedRate + value * originalZipFileSize / totalSize)))
-                                {
-                                    if (!trashBox.DisposeFile(zipFile))
-                                        throw new Exception($"ファイルのごみ箱への移動に失敗しました。: \"{zipFile.FullName}\"");
-
-                                    temporaryFile.MoveTo(zipFile, false);
-                                }
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                return ResultCode.Cancelled;
-                            }
-                            catch (Exception ex)
-                            {
-                                ReportException(ex);
-                            }
-                            finally
-                            {
-                                temporaryFile.SafetyDelete();
-                                completedRate += (double)originalZipFileSize / totalSize;
-                                ReportProgress(completedRate);
-                            }
-                        }
-
-                        ReportProgress(completedRate);
-
-                        return ResultCode.Success;
+                        ReportWarningMessage($"\"{_settingsFile.FullName}\" ファイルの内容に誤りがあります。\"black_list\" のプロパティの要素 \"{element}\" の形式に誤りがあります。");
+                        return ((ulong length, uint crc)?)null;
                     }
                     else
                     {
-                        foreach (var zipFile in zipFiles)
+                        var length = ulong.Parse(match.Groups["length"].Value, NumberStyles.None, CultureInfo.InvariantCulture.NumberFormat);
+                        var crc = uint.Parse(match.Groups["crc"].Value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture.NumberFormat);
+                        return (length, crc);
+                    }
+                })
+                .WhereNotNull()
+                .ToHashSet();
+
+            try
+            {
+                for (var index = 0; index < args.Length; ++index)
+                {
+                    var arg = args[index];
+                    if (arg is "-n" or "--normalize")
+                    {
+                        mode = CommandMode.Normalize;
+                    }
+                    else if (arg is "-l" or "--list_entries")
+                    {
+                        mode = CommandMode.ListZipEntries;
+                    }
+                    else if (arg is "-cl" or "--show_code_page_list")
+                    {
+                        mode = CommandMode.ShowCodePages;
+                    }
+                    else if ((arg == "-ci" || arg == "--allowed_code_page") && index + 1 < args.Length)
+                    {
+                        allowedEncodngNames.AddRange(args[index + 1].Split(','));
+                        ++index;
+                    }
+                    else if ((arg == "-ce" || arg == "--excluded_code_page") && index + 1 < args.Length)
+                    {
+                        excludedEncodngNames.AddRange(args[index + 1].Split(','));
+                        ++index;
+                    }
+                    else if ((arg == "-ef" || arg == "--excluded_file") && index + 1 < args.Length)
+                    {
+                        try
                         {
-                            if (IsPressedBreak)
-                                return ResultCode.Cancelled;
-
-                            TinyConsole.WriteLine($"file: {zipFile.FullName}");
-                            try
-                            {
-                                ListZipFile(zipFile, encodingProvider);
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                return ResultCode.Cancelled;
-                            }
-
-                            TinyConsole.WriteLine(new string('-', 20));
+                            excludedFilePatterns.Add(new Regex(args[index + 1], RegexOptions.Compiled));
+                            ++index;
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new Exception($"--excluded_file オプションで与えられた正規表現に誤りがあります。", ex);
+                        }
+                    }
+                    else if ((arg == "-bl" || arg == "--black_list") && index + 1 < args.Length)
+                    {
+                        foreach (var element in args[index + 1].Split(','))
+                        {
+                            var match = GetBlackListParameterPattern().Match(element);
+                            if (!match.Success)
+                                throw new Exception($"--black_list オプションの形式に誤りがあります。");
+                            var length = ulong.Parse(match.Groups["length"].Value, NumberStyles.None, CultureInfo.InvariantCulture.NumberFormat);
+                            var crc = uint.Parse(match.Groups["crc"].Value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture.NumberFormat);
+                            _ = blackList.Add((length, crc));
                         }
 
-                        return ResultCode.Success;
+                        ++index;
+                    }
+                    else if (arg.StartsWith('-'))
+                    {
+                        throw new Exception($"サポートされていないオプションがコマンド引数に指定されました。: \"{arg}\"");
+                    }
+                    else
+                    {
+                        // OK
                     }
                 }
-                finally
+
+                var encodingProvider = ZipEntryNameEncodingProvider.CreateInstance(allowedEncodngNames.ToArray(), excludedEncodngNames.ToArray(), "##");
+
+                if (mode == CommandMode.ShowCodePages)
                 {
-                    TinyConsole.CursorVisible = ConsoleCursorVisiblity.NormalMode;
+                    var encodingList = encodingProvider.SupportedEncodings.ToList();
+                    var maximumEncodingNameLength = encodingList.Select(encoding => encoding.WebName.Length).Append(0).Max();
+                    foreach (var encoding in encodingList)
+                        TinyConsole.WriteLine($"Name: {encoding.WebName}\", {new string(' ', maximumEncodingNameLength - encoding.WebName.Length)}Description: {encoding.EncodingName}");
+                    return ResultCode.Success;
+                }
+
+                if (encodingProvider.SupportedEncodings.None())
+                    throw new Exception($"エントリ名およびコメントに適用できるコードページがありません。オプションでコードページを指定している場合は指定内容を確認してください。サポートされているコードページのリストは \"--show_code_page_list\" オプションを指定して起動することにより確認できます。");
+
+                var trashBox = TrashBox.OpenTrashBox();
+
+                ReportProgress("Searching files...");
+
+                var zipFiles = EnumerateZipFiles(args.Where(arg => !arg.StartsWith('-'))).ToList();
+
+                if (mode == CommandMode.Normalize)
+                {
+                    var totalSize = zipFiles.Aggregate(0UL, (value, file) => checked(value + file.Length));
+                    var completedRate = 0.0;
+
+                    ReportProgress(completedRate);
+
+                    foreach (var zipFile in zipFiles)
+                    {
+                        if (IsPressedBreak)
+                            return ResultCode.Cancelled;
+
+                        ReportProgress(completedRate, zipFile.FullName, (progressRate, content) => $"{progressRate} processing \"{content}\"");
+
+                        var parentDirectory = zipFile.Directory ?? throw new Exception();
+                        var originalZipFileSize = zipFile.Length;
+                        var temporaryFileName = $".{zipFile.Name}.0.zip";
+                        var temporaryFile = parentDirectory.GetFile(temporaryFileName);
+                        if (temporaryFile.Exists)
+                        {
+                            for (var index = 1; ; ++index)
+                            {
+                                temporaryFileName = $".{zipFile.Name}.{index}.zip";
+                                temporaryFile = parentDirectory.GetFile(temporaryFileName);
+                                if (!temporaryFile.Exists)
+                                    break;
+                            }
+                        }
+
+                        try
+                        {
+                            var progressRateValue =
+                                new ProgressValueHolder<double>(
+                                    value => ReportProgress(value, zipFile.FullName, (progressRate, content) => $"{progressRate} processing \"{content}\""),
+                                    completedRate,
+                                    TimeSpan.FromMilliseconds(100));
+                            if (NormalizeZipFile(
+                                zipFile,
+                                temporaryFile,
+                                encodingProvider,
+                                entry =>
+                                    !string.Equals(zipFile.Extension, ".epub", StringComparison.OrdinalIgnoreCase)
+                                    && (excludedFilePatterns.Any(pattern => pattern.IsMatch(Path.GetFileName(entry.FullName)))
+                                        || blackList.Contains((entry.Size, entry.Crc))),
+                                new SimpleProgress<double>(value => progressRateValue.Value = completedRate + value * originalZipFileSize / totalSize)))
+                            {
+                                if (!trashBox.DisposeFile(zipFile))
+                                    throw new Exception($"ファイルのごみ箱への移動に失敗しました。: \"{zipFile.FullName}\"");
+
+                                temporaryFile.MoveTo(zipFile, false);
+                            }
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            return ResultCode.Cancelled;
+                        }
+                        catch (Exception ex)
+                        {
+                            ReportException(ex);
+                        }
+                        finally
+                        {
+                            temporaryFile.SafetyDelete();
+                            completedRate += (double)originalZipFileSize / totalSize;
+                            ReportProgress(completedRate);
+                        }
+                    }
+
+                    ReportProgress(completedRate);
+
+                    return ResultCode.Success;
+                }
+                else
+                {
+                    foreach (var zipFile in zipFiles)
+                    {
+                        if (IsPressedBreak)
+                            return ResultCode.Cancelled;
+
+                        TinyConsole.WriteLine($"file: {zipFile.FullName}");
+                        try
+                        {
+                            ListZipFile(zipFile, encodingProvider);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            return ResultCode.Cancelled;
+                        }
+
+                        TinyConsole.WriteLine(new string('-', 20));
+                    }
+
+                    return ResultCode.Success;
                 }
             }
             catch (Exception ex)
@@ -261,6 +288,23 @@ namespace SimpleZipNormalizer.CUI
                 TinyConsole.WriteLine("ENTER キーを押すとウィンドウが閉じます。");
                 _ = TinyConsole.ReadLine();
             }
+        }
+
+        private static SettingsModel? ReadSettings()
+        {
+            if (!_settingsFile.Exists || _settingsFile.Length <= 0)
+            {
+                using var client = new HttpClient();
+                using var inStream = client.GetStreamAsync(_defaultSettingsJsonUrl).Result.AsInputByteStream();
+                using var outStream = _settingsFile.Create();
+                inStream.CopyTo(outStream);
+            }
+
+            if (!_settingsFile.Exists || _settingsFile.Length == 0)
+                return null;
+
+            var jsonText = Encoding.UTF8.GetString(_settingsFile.ReadAllBytes());
+            return JsonSerializer.Deserialize<SettingsModel>(jsonText);
         }
 
         private static IEnumerable<FilePath> EnumerateZipFiles(IEnumerable<string> args)
@@ -650,9 +694,5 @@ namespace SimpleZipNormalizer.CUI
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [GeneratedRegex(@"^(?<length>\d+):(?<crc>[a-fA-F0-9]{8})$", RegexOptions.Compiled)]
         private static partial Regex GetBlackListParameterPattern();
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [GeneratedRegex("^$", RegexOptions.Compiled)]
-        private static partial Regex GetEmptyExcludedFilePattern();
     }
 }

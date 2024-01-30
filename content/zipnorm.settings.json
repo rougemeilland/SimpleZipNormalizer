@@ -1,17 +1,15 @@
 {
-  "settings": {
-    "excluded_file_patterns": [
-      "\\\\.(url|json|txt|db|exe|com|scr)$",
-      "^\\.DS_Store$"
-    ],
-    "black_list": [
-      "51177:cbdf183b",
-      "86056:e4b2e57a",
-      "69983:bb1f2487",
-      "124758:5db95a6a",
-      "890088:e159561f",
-      "580315:93cc82b7",
-      "435867:ac5dbfc8"
-    ]
-  }
+  "excluded_file_patterns": [
+    "\\\\.(url|json|txt|db|exe|com|scr)$",
+    "^\\.DS_Store$"
+  ],
+  "black_list": [
+    "51177:cbdf183b",
+    "86056:e4b2e57a",
+    "69983:bb1f2487",
+    "124758:5db95a6a",
+    "890088:e159561f",
+    "580315:93cc82b7",
+    "435867:ac5dbfc8"
+  ]
 }
