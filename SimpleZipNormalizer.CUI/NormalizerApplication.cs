@@ -303,7 +303,7 @@ namespace SimpleZipNormalizer.CUI
                 return null;
 
             var jsonText = Encoding.UTF8.GetString(_settingsFile.ReadAllBytes());
-            return JsonSerializer.Deserialize<SettingsModel>(jsonText);
+            return JsonSerializer.Deserialize(jsonText, SettingsModelSourceGenerationContext.Default.SettingsModel);
         }
 
         private static IEnumerable<FilePath> EnumerateZipFiles(IEnumerable<string> args)
