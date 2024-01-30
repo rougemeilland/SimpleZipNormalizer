@@ -7,9 +7,13 @@ namespace SimpleZipNormalizer.CUI.Models
     {
         public SettingsModel()
         {
+            WarnedFilePatterns = Array.Empty<string>();
             ExcludedFilePatterns = Array.Empty<string>();
             BlackList = Array.Empty<string>();
         }
+
+        [JsonPropertyName("warned_file_patterns")]
+        public string[] WarnedFilePatterns { get; set; }
 
         [JsonPropertyName("excluded_file_patterns")]
         public string[] ExcludedFilePatterns { get; set; }

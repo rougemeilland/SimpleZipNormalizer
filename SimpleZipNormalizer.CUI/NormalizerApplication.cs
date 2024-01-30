@@ -65,11 +65,15 @@ namespace SimpleZipNormalizer.CUI
             var mode = CommandMode.ListZipEntries;
             var allowedEncodngNames = new List<string>();
             var excludedEncodngNames = new List<string>();
+            var warnedFilePatterns =
+                (settings?.WarnedFilePatterns ?? Array.Empty<string>())
+                .Select(patternText => new Regex(patternText, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                .ToList();
             var excludedFilePatterns =
                 (settings?.ExcludedFilePatterns ?? Array.Empty<string>())
                 .Select(patternText => new Regex(patternText, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                 .ToList();
-            var blackList = 
+            var blackList =
                 (settings?.BlackList ?? Array.Empty<string>())
                 .Select(element =>
                 {
@@ -115,6 +119,18 @@ namespace SimpleZipNormalizer.CUI
                     {
                         excludedEncodngNames.AddRange(args[index + 1].Split(','));
                         ++index;
+                    }
+                    else if ((arg == "-wf" || arg == "--warned_file") && index + 1 < args.Length)
+                    {
+                        try
+                        {
+                            warnedFilePatterns.Add(new Regex(args[index + 1], RegexOptions.Compiled));
+                            ++index;
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new Exception($"--warned_file オプションで与えられた正規表現に誤りがあります。", ex);
+                        }
                     }
                     else if ((arg == "-ef" || arg == "--excluded_file") && index + 1 < args.Length)
                     {
@@ -216,6 +232,9 @@ namespace SimpleZipNormalizer.CUI
                                     !string.Equals(zipFile.Extension, ".epub", StringComparison.OrdinalIgnoreCase)
                                     && (excludedFilePatterns.Any(pattern => pattern.IsMatch(Path.GetFileName(entry.FullName)))
                                         || blackList.Contains((entry.Size, entry.Crc))),
+                                entry =>
+                                    !string.Equals(zipFile.Extension, ".epub", StringComparison.OrdinalIgnoreCase)
+                                    && warnedFilePatterns.Any(pattern => pattern.IsMatch(Path.GetFileName(entry.FullName))),
                                 new SimpleProgress<double>(value => progressRateValue.Value = completedRate + value * originalZipFileSize / totalSize)))
                             {
                                 if (!trashBox.DisposeFile(zipFile))
@@ -372,6 +391,7 @@ namespace SimpleZipNormalizer.CUI
             FilePath destinationZipFile,
             IZipEntryNameEncodingProvider entryNameEncodingProvider,
             Func<ZipSourceEntry, bool> excludedFileChecker,
+            Func<ZipSourceEntry, bool> warnedFileChecker,
             IProgress<double> progress)
         {
             try
@@ -419,15 +439,21 @@ namespace SimpleZipNormalizer.CUI
                 // 正規化されたノードを列挙する
                 var normalizedEntries =
                     rootNode.EnumerateTerminalNodes()
-                    .Select(node => new
+                    .Select(node =>
                     {
-                        destinationFullName = node.CurrentFullName,
-                        isDirectory = node is DirectoryPathNode,
-                        sourceFullName = node.SourceFullName,
-                        sourceEntry = node.SourceEntry,
-                        lastWriteTime = node.LastWriteTime,
-                        lastAccessTime = node.LastAccessTime,
-                        creationTime = node.CreationTime,
+                        var sourceEntry = node.SourceEntry;
+                        if (sourceEntry is not null && warnedFileChecker(sourceEntry))
+                            ReportWarningMessage($"\"{sourceZipFile.FullName}/{node.CurrentFullName}\" は適切なファイルではありません。");
+                        return new
+                        {
+                            destinationFullName = node.CurrentFullName,
+                            isDirectory = node is DirectoryPathNode,
+                            sourceFullName = node.SourceFullName,
+                            sourceEntry,
+                            lastWriteTime = node.LastWriteTime,
+                            lastAccessTime = node.LastAccessTime,
+                            creationTime = node.CreationTime,
+                        };
                     })
                     .OrderBy(item => item.destinationFullName, StringComparer.OrdinalIgnoreCase)
                     .Select((item, newOrder) => (item.destinationFullName, item.isDirectory, item.sourceFullName, newOrder, item.sourceEntry, item.lastWriteTime, item.lastAccessTime, item.creationTime))

@@ -1,4 +1,7 @@
 {
+  "warned_file_patterns": [
+    "\\\\.(bmp)$"
+  ],
   "excluded_file_patterns": [
     "\\\\.(url|json|txt|db|exe|com|scr)$",
     "^\\.DS_Store$"
