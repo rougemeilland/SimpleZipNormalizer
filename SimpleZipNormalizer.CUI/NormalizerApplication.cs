@@ -69,6 +69,10 @@ namespace SimpleZipNormalizer.CUI
                 (settings?.WarnedFilePatterns ?? Array.Empty<string>())
                 .Select(patternText => new Regex(patternText, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                 .ToList();
+#if DEBUG
+            Validation.Assert(warnedFilePatterns[0].IsMatch("000.bmp"), "warnedFilePatterns[0].IsMatch(\"000.bmp\")");
+#endif
+
             var excludedFilePatterns =
                 (settings?.ExcludedFilePatterns ?? Array.Empty<string>())
                 .Select(patternText => new Regex(patternText, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))

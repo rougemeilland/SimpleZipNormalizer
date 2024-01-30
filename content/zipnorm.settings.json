@@ -1,9 +1,9 @@
 {
   "warned_file_patterns": [
-    "\\\\.(bmp)$"
+    "\\.(bmp)$"
   ],
   "excluded_file_patterns": [
-    "\\\\.(url|json|txt|db|exe|com|scr)$",
+    "\\.(url|json|txt|db|exe|com|scr)$",
     "^\\.DS_Store$"
   ],
   "black_list": [
