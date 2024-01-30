@@ -29,7 +29,7 @@ namespace SimpleZipNormalizer.CUI
             ListZipEntries,
         }
 
-        private const string _defaultSettingsJsonUrl = "https://github.com/rougemeilland/SimpleZipNormalizer/blob/main/content/zipnorm.settings.json";
+        private const string _defaultSettingsJsonUrl = "https://raw.githubusercontent.com/rougemeilland/SimpleZipNormalizer/main/content/zipnorm.settings.json";
         private const string _settingsFileName = "zipnorm.settings.json";
 
         private static readonly FilePath _settingsFile;
@@ -69,8 +69,7 @@ namespace SimpleZipNormalizer.CUI
                 (settings?.ExcludedFilePatterns ?? Array.Empty<string>())
                 .Select(patternText => new Regex(patternText, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                 .ToList();
-            var blackList = new HashSet<(ulong length, uint crc)>();
-            var blackListSource =
+            var blackList = 
                 (settings?.BlackList ?? Array.Empty<string>())
                 .Select(element =>
                 {
