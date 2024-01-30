@@ -1,6 +1,6 @@
 using System;
 using System.Text;
-using Palmtree;
+using Palmtree.Application;
 using Palmtree.IO;
 
 namespace SimpleZipNormalizer.WindowsDesktop
