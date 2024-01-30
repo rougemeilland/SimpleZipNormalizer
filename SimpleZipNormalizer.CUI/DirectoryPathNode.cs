@@ -134,11 +134,11 @@ namespace SimpleZipNormalizer.CUI
                     _indexedChildNodes.Values
                     .Select(node =>
                     {
-                        var lastWriteTimeUtc = node.SourceEntry?.LastWriteTimeUtc;
+                        var lastWriteTimeUtc = node.LastWriteTime ?? node.SourceEntry?.LastWriteTimeUtc;
                         Validation.Assert(lastWriteTimeUtc is null || lastWriteTimeUtc.Value.Kind != DateTimeKind.Unspecified, "lastWriteTimeUtc is null || lastWriteTimeUtc.Value.Kind != DateTimeKind.Unspecified");
-                        var lastAccessTimeUtc = node.SourceEntry?.LastAccessTimeUtc;
+                        var lastAccessTimeUtc = node.LastAccessTime ?? node.SourceEntry?.LastAccessTimeUtc;
                         Validation.Assert(lastAccessTimeUtc is null || lastAccessTimeUtc.Value.Kind != DateTimeKind.Unspecified, "lastAccessTimeUtc is null || lastAccessTimeUtc.Value.Kind != DateTimeKind.Unspecified");
-                        var creationTimeUtc = node.SourceEntry?.CreationTimeUtc;
+                        var creationTimeUtc = node.CreationTime ?? node.SourceEntry?.CreationTimeUtc;
                         Validation.Assert(creationTimeUtc is null || creationTimeUtc.Value.Kind != DateTimeKind.Unspecified, "creationTimeUtc is null || creationTimeUtc.Value.Kind != DateTimeKind.Unspecified");
                         return (lastWriteTimeUtc, lastAccessTimeUtc, creationTimeUtc);
                     })
@@ -148,6 +148,7 @@ namespace SimpleZipNormalizer.CUI
                 CreationTime = GetNewestTimeStamp(timestampList, item => item.creationTimeUtc);
             }
         }
+
         public override PathNode Clone(DirectoryPathNode? parent, ZipSourceEntry? sourceEntry)
             => new DirectoryPathNode(Name, SourceFullName, parent, sourceEntry, _indexedChildNodes.Values);
 
