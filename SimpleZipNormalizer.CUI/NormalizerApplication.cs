@@ -39,8 +39,11 @@ namespace SimpleZipNormalizer.CUI
 
         static NormalizerApplication()
         {
+            var homeDirectory =
+                DirectoryPath.UserHomeDirectory
+                ?? throw new NotSupportedException();
             _settingsFile =
-                new DirectoryPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+                homeDirectory
                 .GetSubDirectory(".palmtree").Create()
                 .GetFile(_settingsFileName);
             Bzip2CoderPlugin.EnablePlugin();
