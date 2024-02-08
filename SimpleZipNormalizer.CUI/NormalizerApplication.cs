@@ -209,20 +209,8 @@ namespace SimpleZipNormalizer.CUI
 
                         ReportProgress(completedRate, zipFile.FullName, (progressRate, content) => $"{progressRate} processing \"{content}\"");
 
-                        var parentDirectory = zipFile.Directory ?? throw new Exception();
                         var originalZipFileSize = zipFile.Length;
-                        var temporaryFileName = $".{zipFile.Name}.0.zip";
-                        var temporaryFile = parentDirectory.GetFile(temporaryFileName);
-                        if (temporaryFile.Exists)
-                        {
-                            for (var index = 1; ; ++index)
-                            {
-                                temporaryFileName = $".{zipFile.Name}.{index}.zip";
-                                temporaryFile = parentDirectory.GetFile(temporaryFileName);
-                                if (!temporaryFile.Exists)
-                                    break;
-                            }
-                        }
+                        var temporaryFile = GetTemporaryFile(zipFile);
 
                         try
                         {
@@ -244,10 +232,7 @@ namespace SimpleZipNormalizer.CUI
                                     && warnedFilePatterns.Any(pattern => pattern.IsMatch(Path.GetFileName(entry.FullName))),
                                 new SimpleProgress<double>(value => progressRateValue.Value = completedRate + value * originalZipFileSize / totalSize)))
                             {
-                                if (!trashBox.DisposeFile(zipFile))
-                                    throw new Exception($"ファイルのごみ箱への移動に失敗しました。: \"{zipFile.FullName}\"");
-
-                                temporaryFile.MoveTo(zipFile, false);
+                                CleanUp(zipFile, GetBackupFile(zipFile), temporaryFile, trashBox);
                             }
                         }
                         catch (OperationCanceledException)
@@ -297,6 +282,47 @@ namespace SimpleZipNormalizer.CUI
             {
                 ReportException(ex);
                 return ResultCode.Failed;
+            }
+
+            static void CleanUp(FilePath zipFile, FilePath backupFile, FilePath normalizedFile, ITrashBox trashBox)
+            {
+                // オリジナルの ".zip" ファイルを ".zip.bak" に変名する。
+                try
+                {
+                    zipFile.MoveTo(backupFile);
+                }
+                catch (Exception ex)
+                {
+                    // 変名に失敗した場合はそのまま例外を通知する。
+                    throw new Exception($"ファイルの変名に失敗しました。: \"{zipFile.FullName}\" => \"{backupFile.Name}\"", ex);
+                }
+
+                // 正規化されたファイルをオリジナルの ".zip" ファイルの名前に変名する。
+                try
+                {
+                    normalizedFile.MoveTo(zipFile);
+                }
+                catch (Exception ex)
+                {
+                    // 変名に失敗した場合、復旧のために、 ".zip.bak" ファイルの ".zip" への変名を試みる。
+                    try
+                    {
+                        backupFile.MoveTo(zipFile);
+                    }
+                    catch (Exception ex2)
+                    {
+                        // 変名に失敗した場合、もうどうしようもないので、そのまま例外を通知する。
+                        // この場合、オリジナルの ".zip" ファイルは残らず、".zip.bak" ファイルが残る。
+                        throw new Exception($"ファイルの変名に失敗しました。: \"{backupFile.FullName}\" => \"{zipFile.Name}\"", ex2);
+                    }
+
+                    // 復旧に成功した場合、変名に失敗したことを例外で通知する。
+                    throw new Exception($"ファイルの変名に失敗しました。: \"{normalizedFile.FullName}\" => \"{zipFile.Name}\"", ex);
+                }
+
+                // 不要になった ".zip.bak" ファイルをごみ箱へ移動する。
+                if (!trashBox.DisposeFile(backupFile))
+                    throw new Exception($"ファイルのごみ箱への移動に失敗しました。: \"{backupFile.FullName}\"");
             }
         }
 
@@ -390,6 +416,30 @@ namespace SimpleZipNormalizer.CUI
             catch (BadZipFileFormatException ex)
             {
                 ReportException(ex);
+            }
+        }
+
+        private static FilePath GetTemporaryFile(FilePath originalFile)
+        {
+            var parentDirectory = originalFile.Directory;
+            for (var count = 0; ; ++count)
+            {
+                var temporaryFileName = $".{originalFile.Name}.{count}.zip";
+                var temporaryFile = parentDirectory.GetFile(temporaryFileName);
+                if (!temporaryFile.Exists)
+                    return temporaryFile;
+            }
+        }
+
+        private static FilePath GetBackupFile(FilePath originalFile)
+        {
+            var parentDirectory = originalFile.Directory;
+            for (var count = 0; ; ++count)
+            {
+                var temporaryFileName = $"{originalFile.Name}{(count <= 0 ? ".zip.bak" : $".zip ({count + 1}).bak")}";
+                var temporaryFile = parentDirectory.GetFile(temporaryFileName);
+                if (!temporaryFile.Exists)
+                    return temporaryFile;
             }
         }
 
