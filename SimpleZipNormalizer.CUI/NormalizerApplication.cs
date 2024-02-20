@@ -535,6 +535,7 @@ namespace SimpleZipNormalizer.CUI
 
                     // ZIPアーカイブの正規化を実行する
                     CreateNormalizedZipArchive(
+                        sourceZipFile,
                         destinationZipFile,
                         entryNameEncodingProvider,
                         sourceZipFileLength,
@@ -576,6 +577,10 @@ namespace SimpleZipNormalizer.CUI
             {
                 throw new Exception($"ZIPアーカイブを解凍するための機能が不足しているため正規化できません。: path=\"{sourceZipFile.FullName}\"", ex);
             }
+            catch (Exception ex)
+            {
+                throw new Exception($"正規化に失敗しました。: path=\"{sourceZipFile.FullName}\"", ex);
+            }
         }
 
         private static void ValidateIfWritableFile(FilePath sourceZipFile)
@@ -606,6 +611,7 @@ namespace SimpleZipNormalizer.CUI
                                 || otherItem.newOrder < item.newOrder && otherItem.sourceEntry.LocationOrder > item.sourceEntry.LocationOrder)));
 
         private void CreateNormalizedZipArchive(
+            FilePath sourceZipFile,
             FilePath destinationZipFile,
             IZipEntryNameEncodingProvider entryNameEncodingProvider,
             ulong sourceZipFileLength,
@@ -625,44 +631,51 @@ namespace SimpleZipNormalizer.CUI
                         if (IsPressedBreak)
                             throw new OperationCanceledException();
 
-                        var destinationEntry = zipArchiveWriter.CreateEntry(item.destinationFullName, item.sourceEntry?.Comment ?? "");
-                        var sourceEntry = item.sourceEntry;
-                        if (sourceEntry is not null)
+                        try
                         {
-                            var now = DateTime.UtcNow;
-                            destinationEntry.IsFile = sourceEntry.IsFile;
-                            destinationEntry.ExternalAttributes = sourceEntry.ExternalFileAttributes;
-                            destinationEntry.LastWriteTimeUtc = item.lastWriteTime ?? item.creationTime ?? now;
-                            destinationEntry.LastAccessTimeUtc = item.lastAccessTime ?? item.lastWriteTime ?? item.creationTime ?? now;
-                            destinationEntry.CreationTimeUtc = item.creationTime ?? item.lastWriteTime ?? now;
-                            if (sourceEntry.IsFile)
+                            var destinationEntry = zipArchiveWriter.CreateEntry(item.destinationFullName, item.sourceEntry?.Comment ?? "");
+                            var sourceEntry = item.sourceEntry;
+                            if (sourceEntry is not null)
                             {
-                                if (sourceEntry.Size > 0)
+                                var now = DateTime.UtcNow;
+                                destinationEntry.IsFile = sourceEntry.IsFile;
+                                destinationEntry.ExternalAttributes = sourceEntry.ExternalFileAttributes;
+                                destinationEntry.LastWriteTimeUtc = item.lastWriteTime ?? item.creationTime ?? now;
+                                destinationEntry.LastAccessTimeUtc = item.lastAccessTime ?? item.lastWriteTime ?? item.creationTime ?? now;
+                                destinationEntry.CreationTimeUtc = item.creationTime ?? item.lastWriteTime ?? now;
+                                if (sourceEntry.IsFile)
                                 {
-                                    destinationEntry.CompressionMethodId = ZipEntryCompressionMethodId.Deflate;
-                                    destinationEntry.CompressionLevel = ZipEntryCompressionLevel.Maximum;
-                                }
-                                else
-                                {
-                                    destinationEntry.CompressionMethodId = ZipEntryCompressionMethodId.Stored;
-                                    destinationEntry.CompressionLevel = ZipEntryCompressionLevel.Normal;
+                                    if (sourceEntry.Size > 0)
+                                    {
+                                        destinationEntry.CompressionMethodId = ZipEntryCompressionMethodId.Deflate;
+                                        destinationEntry.CompressionLevel = ZipEntryCompressionLevel.Maximum;
+                                    }
+                                    else
+                                    {
+                                        destinationEntry.CompressionMethodId = ZipEntryCompressionMethodId.Stored;
+                                        destinationEntry.CompressionLevel = ZipEntryCompressionLevel.Normal;
+                                    }
+
+                                    using var destinationStream = destinationEntry.CreateContentStream();
+                                    using var sourceStream = sourceEntry.OpenContentStream();
+                                    sourceStream.CopyTo(
+                                        destinationStream,
+                                        new SimpleProgress<ulong>(
+                                            value =>
+                                                progressValue.Value = currentProgressValue
+                                                + (
+                                                    sourceEntry.Size <= 0
+                                                    ? 0.0
+                                                    : (double)value / sourceEntry.Size * sourceEntry.PackedSize / sourceZipFileLength
+                                                )));
                                 }
 
-                                using var destinationStream = destinationEntry.CreateContentStream();
-                                using var sourceStream = sourceEntry.OpenContentStream();
-                                sourceStream.CopyTo(
-                                    destinationStream,
-                                    new SimpleProgress<ulong>(
-                                        value =>
-                                            progressValue.Value = currentProgressValue
-                                            + (
-                                                sourceEntry.Size <= 0
-                                                ? 0.0
-                                                : (double)value / sourceEntry.Size * sourceEntry.PackedSize / sourceZipFileLength
-                                            )));
+                                currentProgressValue += (double)sourceEntry.PackedSize / sourceZipFileLength;
                             }
-
-                            currentProgressValue += (double)sourceEntry.PackedSize / sourceZipFileLength;
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new Exception($"エントリのコピー中に例外が発生しました。: zipFile=\"{sourceZipFile.FullName}\", entry=\"{item.sourceEntry?.FullName ?? "???"}\"", ex);
                         }
 
                         progress?.Report(currentProgressValue);
