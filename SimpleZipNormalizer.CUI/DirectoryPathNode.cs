@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
-using Palmtree;
 using Palmtree.IO.Compression.Archive.Zip;
 
 namespace SimpleZipNormalizer.CUI
@@ -130,27 +129,19 @@ namespace SimpleZipNormalizer.CUI
             // ディレクトリのタイムスタンプの再設定 (子要素のうち最新の値にする)
             if (_indexedChildNodes.Count > 0)
             {
-                var timestampList =
-                    _indexedChildNodes.Values
-                    .Select(node =>
-                    {
-                        var lastWriteTimeUtc = node.LastWriteTime ?? node.SourceEntry?.LastWriteTimeUtc;
-                        Validation.Assert(lastWriteTimeUtc is null || lastWriteTimeUtc.Value.Kind != DateTimeKind.Unspecified, "lastWriteTimeUtc is null || lastWriteTimeUtc.Value.Kind != DateTimeKind.Unspecified");
-                        var lastAccessTimeUtc = node.LastAccessTime ?? node.SourceEntry?.LastAccessTimeUtc;
-                        Validation.Assert(lastAccessTimeUtc is null || lastAccessTimeUtc.Value.Kind != DateTimeKind.Unspecified, "lastAccessTimeUtc is null || lastAccessTimeUtc.Value.Kind != DateTimeKind.Unspecified");
-                        var creationTimeUtc = node.CreationTime ?? node.SourceEntry?.CreationTimeUtc;
-                        Validation.Assert(creationTimeUtc is null || creationTimeUtc.Value.Kind != DateTimeKind.Unspecified, "creationTimeUtc is null || creationTimeUtc.Value.Kind != DateTimeKind.Unspecified");
-                        return (lastWriteTimeUtc, lastAccessTimeUtc, creationTimeUtc);
-                    })
-                    .ToList();
-                LastWriteTime = GetNewestTimeStamp(timestampList, item => item.lastWriteTimeUtc);
-                LastAccessTime = GetNewestTimeStamp(timestampList, item => item.lastAccessTimeUtc);
-                CreationTime = GetNewestTimeStamp(timestampList, item => item.creationTimeUtc);
+                LastWriteTime = GetNewestTimeStamp(_indexedChildNodes.Values, node => node.LastWriteTime);
+                LastAccessTime = GetNewestTimeStamp(_indexedChildNodes.Values, node => node.LastAccessTime);
+                CreationTime = GetNewestTimeStamp(_indexedChildNodes.Values, node => node.CreationTime);
             }
         }
 
         public override PathNode Clone(DirectoryPathNode? parent, ZipSourceEntry? sourceEntry)
-            => new DirectoryPathNode(Name, SourceFullName, parent, sourceEntry, _indexedChildNodes.Values);
+            => new DirectoryPathNode(Name, SourceFullName, parent, sourceEntry, _indexedChildNodes.Values)
+                {
+                    LastWriteTime = LastWriteTime,
+                    LastAccessTime = LastAccessTime,
+                    CreationTime = CreationTime,
+                };
 
         public override IEnumerable<PathNode> EnumerateTerminalNodes()
         {
@@ -221,17 +212,17 @@ namespace SimpleZipNormalizer.CUI
         }
 
         private static DateTime? GetNewestTimeStamp(
-            IEnumerable<(DateTime? lastWriteTimeUtc, DateTime? lastAccessTimeUtc, DateTime? creationTimeUtc)> timestamps,
-            Func<(DateTime? lastWriteTimeUtc, DateTime? lastAccessTimeUtc, DateTime? creationTimeUtc), DateTime?> selector)
+            IEnumerable<PathNode> nodes,
+            Func<PathNode, DateTime?> timestampSelector)
         {
             var initialValue = (DateTime?)new DateTime(0, DateTimeKind.Utc);
             var result =
-                timestamps
+                nodes
                 .Aggregate(
                     initialValue,
                     (dateTime, element) =>
                     {
-                        var otherDateTime = selector(element);
+                        var otherDateTime = timestampSelector(element);
                         return
                             dateTime is null
                             ? otherDateTime
