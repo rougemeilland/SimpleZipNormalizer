@@ -32,6 +32,7 @@ namespace SimpleZipNormalizer.CUI
         private const string _defaultSettingsJsonUrl = "https://raw.githubusercontent.com/rougemeilland/SimpleZipNormalizer/main/content/zipnorm.settings.json";
         private const string _settingsFileName = "zipnorm.settings.json";
 
+        private static readonly TimeSpan _timestampTolerance;
         private static readonly FilePath _settingsFile;
 
         private readonly string? _title;
@@ -39,6 +40,7 @@ namespace SimpleZipNormalizer.CUI
 
         static NormalizerApplication()
         {
+            _timestampTolerance = TimeSpan.FromSeconds(5);
             var homeDirectory =
                 DirectoryPath.UserHomeDirectory
                 ?? throw new NotSupportedException();
@@ -516,11 +518,18 @@ namespace SimpleZipNormalizer.CUI
                     .Select((item, newOrder) => (item.destinationFullName, item.isDirectory, item.sourceFullName, newOrder, item.sourceEntry, item.lastWriteTime, item.lastAccessTime, item.creationTime))
                     .ToList();
 
+                var timestampOfNewestEntry =
+                    normalizedEntries
+                    .Aggregate(
+                        (DateTime?)null,
+                        (t, entry) => t is not null ? entry.lastWriteTime?.Maximum(t.Value) : entry.lastWriteTime);
+
                 // 正規化前後でエントリが変更する見込みがあるかどうかを調べる
-                var modified =
+                var needToModify =
                     sourceEntries.Count != trimmedSourceEntries.Count
-                    || ExistModifiedEntries(normalizedEntries);
-                if (modified)
+                    || timestampOfNewestEntry is not null && sourceZipFile.LastWriteTimeUtc - timestampOfNewestEntry.Value > _timestampTolerance
+                    || ExistEntriesToNeedToModify(normalizedEntries);
+                if (needToModify)
                 {
                     // 正規化の前後でパス名および順序が一致しないエントリが一つでもある場合
 
@@ -545,7 +554,7 @@ namespace SimpleZipNormalizer.CUI
                 }
 
                 progress?.Report(1);
-                return modified;
+                return needToModify;
             }
             catch (CompressionMethodNotSupportedException ex)
             {
@@ -581,7 +590,7 @@ namespace SimpleZipNormalizer.CUI
             }
         }
 
-        private static bool ExistModifiedEntries(IEnumerable<(string destinationFullName, bool isDirectory, string sourceFullName, int newOrder, ZipSourceEntry? sourceEntry, DateTime? lastWriteTime, DateTime? lastAccessTime, DateTime? creationTime)> normalizedEntries)
+        private static bool ExistEntriesToNeedToModify(IEnumerable<(string destinationFullName, bool isDirectory, string sourceFullName, int newOrder, ZipSourceEntry? sourceEntry, DateTime? lastWriteTime, DateTime? lastAccessTime, DateTime? creationTime)> normalizedEntries)
             => normalizedEntries
                 .Any(item =>
                     item.sourceEntry is null
