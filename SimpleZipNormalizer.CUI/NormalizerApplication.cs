@@ -32,7 +32,6 @@ namespace SimpleZipNormalizer.CUI
         private const string _defaultSettingsJsonUrl = "https://raw.githubusercontent.com/rougemeilland/SimpleZipNormalizer/main/content/zipnorm.settings.json";
         private const string _settingsFileName = "zipnorm.settings.json";
 
-        private static readonly TimeSpan _timestampTolerance;
         private static readonly FilePath _settingsFile;
 
         private readonly string? _title;
@@ -40,7 +39,6 @@ namespace SimpleZipNormalizer.CUI
 
         static NormalizerApplication()
         {
-            _timestampTolerance = TimeSpan.FromSeconds(5);
             var homeDirectory =
                 DirectoryPath.UserHomeDirectory
                 ?? throw new NotSupportedException();
@@ -518,16 +516,9 @@ namespace SimpleZipNormalizer.CUI
                     .Select((item, newOrder) => (item.destinationFullName, item.isDirectory, item.sourceFullName, newOrder, item.sourceEntry, item.lastWriteTime, item.lastAccessTime, item.creationTime))
                     .ToList();
 
-                var timestampOfNewestEntry =
-                    normalizedEntries
-                    .Aggregate(
-                        (DateTime?)null,
-                        (t, entry) => t is not null ? entry.lastWriteTime?.Maximum(t.Value) : entry.lastWriteTime);
-
                 // 正規化前後でエントリが変更する見込みがあるかどうかを調べる
                 var needToModify =
                     sourceEntries.Count != trimmedSourceEntries.Count
-                    || timestampOfNewestEntry is not null && sourceZipFile.LastWriteTimeUtc - timestampOfNewestEntry.Value > _timestampTolerance
                     || ExistEntriesToNeedToModify(normalizedEntries);
                 if (needToModify)
                 {
