@@ -129,19 +129,19 @@ namespace SimpleZipNormalizer.CUI
             // ディレクトリのタイムスタンプの再設定 (子要素のうち最新の値にする)
             if (_indexedChildNodes.Count > 0)
             {
-                LastWriteTime = GetNewestTimeStamp(_indexedChildNodes.Values, node => node.LastWriteTime);
-                LastAccessTime = GetNewestTimeStamp(_indexedChildNodes.Values, node => node.LastAccessTime);
-                CreationTime = GetNewestTimeStamp(_indexedChildNodes.Values, node => node.CreationTime);
+                LastWriteTimeOffset = GetNewestTimeStamp(_indexedChildNodes.Values, node => node.LastWriteTimeOffset);
+                LastAccessTimeOffset = GetNewestTimeStamp(_indexedChildNodes.Values, node => node.LastAccessTimeOffset);
+                CreationTimeOffset = GetNewestTimeStamp(_indexedChildNodes.Values, node => node.CreationTimeOffset);
             }
         }
 
         public override PathNode Clone(DirectoryPathNode? parent, ZipSourceEntry? sourceEntry)
             => new DirectoryPathNode(Name, SourceFullName, parent, sourceEntry, _indexedChildNodes.Values)
-                {
-                    LastWriteTime = LastWriteTime,
-                    LastAccessTime = LastAccessTime,
-                    CreationTime = CreationTime,
-                };
+            {
+                LastWriteTimeOffset = LastWriteTimeOffset,
+                LastAccessTimeOffset = LastAccessTimeOffset,
+                CreationTimeOffset = CreationTimeOffset,
+            };
 
         public override IEnumerable<PathNode> EnumerateTerminalNodes()
         {
@@ -211,11 +211,11 @@ namespace SimpleZipNormalizer.CUI
             return result;
         }
 
-        private static DateTime? GetNewestTimeStamp(
+        private static DateTimeOffset? GetNewestTimeStamp(
             IEnumerable<PathNode> nodes,
-            Func<PathNode, DateTime?> timestampSelector)
+            Func<PathNode, DateTimeOffset?> timestampSelector)
         {
-            var initialValue = (DateTime?)new DateTime(0, DateTimeKind.Utc);
+            var initialValue = (DateTimeOffset?)DateTimeOffset.MinValue;
             var result =
                 nodes
                 .Aggregate(
@@ -233,7 +233,7 @@ namespace SimpleZipNormalizer.CUI
                             : otherDateTime;
                     });
             return
-                result is null || result.Value.Ticks <= 0
+                result is null || result.Value <= DateTimeOffset.MinValue
                 ? null
                 : result;
         }

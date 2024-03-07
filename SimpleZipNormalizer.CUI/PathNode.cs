@@ -6,9 +6,9 @@ namespace SimpleZipNormalizer.CUI
 {
     internal abstract class PathNode
     {
-        private DateTime? _lastWriteTime;
-        private DateTime? _lastAccessTime;
-        private DateTime? _creationTime;
+        private DateTimeOffset? _lastWriteTimeOffset;
+        private DateTimeOffset? _lastAccessTimeOffset;
+        private DateTimeOffset? _creationTimeOffset;
 
         protected PathNode(string name, string sourceFullName, DirectoryPathNode? parentNode, ZipSourceEntry? sourceEntry)
         {
@@ -31,9 +31,9 @@ namespace SimpleZipNormalizer.CUI
             SourceFullName = sourceFullName;
             ParentNode = parentNode;
             SourceEntry = sourceEntry;
-            _lastWriteTime = null;
-            _lastAccessTime = null;
-            _creationTime = null;
+            _lastWriteTimeOffset = null;
+            _lastAccessTimeOffset = null;
+            _creationTimeOffset = null;
         }
 
         public string Name { get; }
@@ -53,43 +53,22 @@ namespace SimpleZipNormalizer.CUI
 
         public ZipSourceEntry? SourceEntry { get; }
 
-        public DateTime? LastWriteTime
+        public DateTimeOffset? LastWriteTimeOffset
         {
-            get => _lastWriteTime ?? SourceEntry?.LastWriteTimeUtc;
-            
-            protected set
-            {
-                if (value is not null && value.Value.Kind == DateTimeKind.Unspecified)
-                    throw new ArgumentException($"The value of the {nameof(DateTime.Kind)} property of the {nameof(DateTime)} object being set must not be {nameof(DateTimeKind.Unspecified)}.", nameof(value));
-
-                _lastWriteTime = value;
-            }
+            get => _lastWriteTimeOffset ?? SourceEntry?.LastWriteTimeUtc;
+            protected set => _lastWriteTimeOffset = value?.ToUniversalTime();
         }
 
-        public DateTime? LastAccessTime
+        public DateTimeOffset? LastAccessTimeOffset
         {
-            get => _lastAccessTime ?? SourceEntry?.LastAccessTimeUtc;
-            
-            protected set
-            {
-                if (value is not null && value.Value.Kind == DateTimeKind.Unspecified)
-                    throw new ArgumentException($"The value of the {nameof(DateTime.Kind)} property of the {nameof(DateTime)} object being set must not be {nameof(DateTimeKind.Unspecified)}.", nameof(value));
-
-                _lastAccessTime = value;
-            }
+            get => _lastAccessTimeOffset ?? SourceEntry?.LastAccessTimeUtc;
+            protected set => _lastAccessTimeOffset = value?.ToUniversalTime();
         }
 
-        public DateTime? CreationTime
+        public DateTimeOffset? CreationTimeOffset
         {
-            get => _creationTime ?? SourceEntry?.CreationTimeUtc;
-            
-            protected set
-            {
-                if (value is not null && value.Value.Kind == DateTimeKind.Unspecified)
-                    throw new ArgumentException($"The value of the {nameof(DateTime.Kind)} property of the {nameof(DateTime)} object being set must not be {nameof(DateTimeKind.Unspecified)}.", nameof(value));
-
-                _creationTime = value;
-            }
+            get => _creationTimeOffset ?? SourceEntry?.CreationTimeUtc;
+            protected set => _creationTimeOffset = value?.ToUniversalTime();
         }
 
         public abstract PathNode Clone(DirectoryPathNode? parent, ZipSourceEntry? sourceEntry);

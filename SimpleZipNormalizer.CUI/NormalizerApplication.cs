@@ -507,13 +507,13 @@ namespace SimpleZipNormalizer.CUI
                             isDirectory = node is DirectoryPathNode,
                             sourceFullName = node.SourceFullName,
                             sourceEntry,
-                            lastWriteTime = node.LastWriteTime,
-                            lastAccessTime = node.LastAccessTime,
-                            creationTime = node.CreationTime,
+                            lastWriteTimeOffset = node.LastWriteTimeOffset,
+                            lastAccessTimeOffset = node.LastAccessTimeOffset,
+                            creationTimeOffset = node.CreationTimeOffset,
                         };
                     })
                     .OrderBy(item => item.destinationFullName, StringComparer.OrdinalIgnoreCase)
-                    .Select((item, newOrder) => (item.destinationFullName, item.isDirectory, item.sourceFullName, newOrder, item.sourceEntry, item.lastWriteTime, item.lastAccessTime, item.creationTime))
+                    .Select((item, newOrder) => (item.destinationFullName, item.isDirectory, item.sourceFullName, newOrder, item.sourceEntry, item.lastWriteTimeOffset, item.lastAccessTimeOffset, item.creationTimeOffset))
                     .ToList();
 
                 // 正規化前後でエントリが変更する見込みがあるかどうかを調べる
@@ -586,14 +586,14 @@ namespace SimpleZipNormalizer.CUI
             }
         }
 
-        private static bool ExistEntriesToNeedToModify(IEnumerable<(string destinationFullName, bool isDirectory, string sourceFullName, int newOrder, ZipSourceEntry? sourceEntry, DateTime? lastWriteTime, DateTime? lastAccessTime, DateTime? creationTime)> normalizedEntries)
+        private static bool ExistEntriesToNeedToModify(IEnumerable<(string destinationFullName, bool isDirectory, string sourceFullName, int newOrder, ZipSourceEntry? sourceEntry, DateTimeOffset? lastWriteTimeOffset, DateTimeOffset? lastAccessTimeOffset, DateTimeOffset? creationTimeOffset)> normalizedEntries)
             => normalizedEntries
                 .Any(item =>
                     item.sourceEntry is null
                     || item.destinationFullName != item.sourceEntry.FullName
-                    || item.sourceEntry.LastWriteTimeUtc != item.lastWriteTime
-                    || item.sourceEntry.LastAccessTimeUtc != item.lastAccessTime
-                    || item.sourceEntry.CreationTimeUtc != item.creationTime
+                    || item.sourceEntry.LastWriteTimeOffsetUtc != item.lastWriteTimeOffset
+                    || item.sourceEntry.LastAccessTimeOffsetUtc != item.lastAccessTimeOffset
+                    || item.sourceEntry.CreationTimeOffsetUtc != item.creationTimeOffset
                     || normalizedEntries
                         .Any(otherItem =>
                             otherItem.sourceEntry is not null
@@ -606,7 +606,7 @@ namespace SimpleZipNormalizer.CUI
             FilePath destinationZipFile,
             IZipEntryNameEncodingProvider entryNameEncodingProvider,
             ulong sourceZipFileLength,
-            IEnumerable<(string destinationFullName, bool isDirectory, string sourceFullName, int newOrder, ZipSourceEntry? sourceEntry, DateTime? lastWriteTime, DateTime? lastAccessTime, DateTime? creationTime)> normalizedEntries,
+            IEnumerable<(string destinationFullName, bool isDirectory, string sourceFullName, int newOrder, ZipSourceEntry? sourceEntry, DateTimeOffset? lastWriteTimeOffset, DateTimeOffset? lastAccessTimeOffset, DateTimeOffset? creationTimeOffset)> normalizedEntries,
             IProgress<double>? progress)
         {
             var success = false;
@@ -628,12 +628,12 @@ namespace SimpleZipNormalizer.CUI
                             var sourceEntry = item.sourceEntry;
                             if (sourceEntry is not null)
                             {
-                                var now = DateTime.UtcNow;
+                                var now = DateTimeOffset.UtcNow;
                                 destinationEntry.IsFile = sourceEntry.IsFile;
                                 destinationEntry.ExternalAttributes = sourceEntry.ExternalFileAttributes;
-                                destinationEntry.LastWriteTimeUtc = item.lastWriteTime ?? item.creationTime ?? now;
-                                destinationEntry.LastAccessTimeUtc = item.lastAccessTime ?? item.lastWriteTime ?? item.creationTime ?? now;
-                                destinationEntry.CreationTimeUtc = item.creationTime ?? item.lastWriteTime ?? now;
+                                destinationEntry.LastWriteTimeOffsetUtc = item.lastWriteTimeOffset ?? item.creationTimeOffset ?? now;
+                                destinationEntry.LastAccessTimeOffsetUtc = item.lastAccessTimeOffset ?? item.lastWriteTimeOffset ?? item.creationTimeOffset ?? now;
+                                destinationEntry.CreationTimeOffsetUtc = item.creationTimeOffset ?? item.lastWriteTimeOffset ?? now;
                                 if (sourceEntry.IsFile)
                                 {
                                     if (sourceEntry.Size > 0)
@@ -675,16 +675,16 @@ namespace SimpleZipNormalizer.CUI
 
                 // タイムスタンプの設定
 
-                var lastWriteTimeUtc =
+                var lastWriteTimeOffsetUtc =
                     normalizedEntries
-                    .Select(entry => entry.lastWriteTime)
-                    .Append((DateTime?)new DateTime(0, DateTimeKind.Utc))
+                    .Select(entry => entry.lastWriteTimeOffset)
+                    .Append((DateTimeOffset?)DateTimeOffset.MinValue)
                     .WhereNotNull()
                     .Max();
                 try
                 {
-                    if (lastWriteTimeUtc.Ticks > 0)
-                        File.SetLastWriteTimeUtc(destinationZipFile.FullName, lastWriteTimeUtc);
+                    if (lastWriteTimeOffsetUtc.Ticks > 0)
+                        File.SetLastWriteTimeUtc(destinationZipFile.FullName, lastWriteTimeOffsetUtc.UtcDateTime);
                 }
                 catch (Exception)
                 {
