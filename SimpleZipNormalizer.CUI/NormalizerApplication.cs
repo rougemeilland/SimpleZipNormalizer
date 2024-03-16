@@ -783,7 +783,7 @@ namespace SimpleZipNormalizer.CUI
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [GeneratedRegex(@"\.(zip|rar|cab|7z|tar|z|xz)$", RegexOptions.Compiled)]
+        [GeneratedRegex(@"\.(zip|zipx|rar|cab|7z|tar|z|xz|pdf)$", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
         private static partial Regex GetArchivePathNamePattern();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
