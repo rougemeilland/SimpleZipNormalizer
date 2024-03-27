@@ -10,7 +10,6 @@ namespace SimpleZipNormalizer.WindowsDesktop
         [STAThread]
         static void Main(string[] args)
         {
-            Environment.CurrentDirectory = typeof(Program).Assembly.GetBaseDirectory().FullName;
             var launcher = new ConsoleApplicationLauncher("zipnorm", Encoding.UTF8);
             launcher.Launch(args);
         }
