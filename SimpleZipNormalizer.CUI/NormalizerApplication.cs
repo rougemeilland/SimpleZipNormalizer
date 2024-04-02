@@ -479,10 +479,10 @@ namespace SimpleZipNormalizer.CUI
                     .Where(entry =>
                     {
                         if (GetArchivePathNamePattern().IsMatch(entry.FullName))
-                            ReportWarningMessage($"書庫ファイルが含まれています。: \"{sourceZipFile.Name}\"/\"{entry.FullName}\"");
+                            ReportWarningMessage($"書庫ファイルが含まれています。: \"{sourceZipFile.FullName}\"/\"{entry.FullName}\"");
                         var excluded = excludedFileChecker(entry);
                         if (excluded)
-                            ReportWarningMessage($"削除対象のファイルが見つかったので削除します。: \"{sourceZipFile.Name}\"/\"{entry.FullName}\"");
+                            ReportWarningMessage($"削除対象のファイルが見つかったので削除します。: \"{sourceZipFile.FullName}\"/\"{entry.FullName}\"");
                         return !excluded;
                     })
                     .ToList();
