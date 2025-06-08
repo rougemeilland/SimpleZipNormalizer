@@ -7,7 +7,7 @@ using Palmtree.IO.Compression.Archive.Zip;
 
 namespace SimpleZipNormalizer.CUI
 {
-    internal partial class DirectoryPathNode
+    internal sealed partial class DirectoryPathNode
         : PathNode
     {
         private readonly IDictionary<string, PathNode> _indexedChildNodes;
@@ -239,11 +239,11 @@ namespace SimpleZipNormalizer.CUI
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [GeneratedRegex("^(?<name>[^\\\\/]+)$", RegexOptions.Compiled)]
+        [GeneratedRegex("^(?<name>[^\\\\/]+)$", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture)]
         private static partial Regex GetFilePathPattern();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        [GeneratedRegex("^(?<name>[^\\\\/]+)(?<delimiter>[\\\\/])(?<child_path>.*)$", RegexOptions.Compiled)]
+        [GeneratedRegex("^(?<name>[^\\\\/]+)(?<delimiter>[\\\\/])(?<child_path>.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture)]
         private static partial Regex GetDirectoryPathPattern();
     }
 }

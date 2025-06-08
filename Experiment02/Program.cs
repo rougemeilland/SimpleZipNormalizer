@@ -7,14 +7,14 @@ using Palmtree.IO.Compression.Archive.Zip;
 
 namespace Experiment02
 {
-    internal class Program
+    internal sealed class Program
     {
         static Program()
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             var fileList = args.EnumerateFilesFromArgument(true).ToList();
             var totalSize = fileList.Aggregate(0UL, (length, file) => checked(length + file.Length));
@@ -27,7 +27,7 @@ namespace Experiment02
                 {
                     try
                     {
-                        var result = file.ValidateAsZipFile(ValidationStringency.Strict,new SimpleProgress<double>(value => Console.Write($"  {(completed + value * file.Length) * 100.0 / totalSize:F2}%\r")));
+                        var result = file.ValidateAsZipFile(ValidationStringency.Strict, new SimpleProgress<double>(value => Console.Write($"  {(completed + value * file.Length) * 100.0 / totalSize:F2}%\r")));
                         if (result.ResultId != ZipArchiveValidationResultId.Ok)
                             Console.ForegroundColor = ConsoleColor.Red;
                         checked

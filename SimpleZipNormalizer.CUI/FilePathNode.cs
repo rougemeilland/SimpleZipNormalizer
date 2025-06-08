@@ -4,7 +4,7 @@ using Palmtree.IO.Compression.Archive.Zip;
 
 namespace SimpleZipNormalizer.CUI
 {
-    internal class FilePathNode
+    internal sealed class FilePathNode
         : PathNode
     {
         public FilePathNode(string name, string sourceFullName, DirectoryPathNode? parentNode, ZipSourceEntry? sourceEntry)

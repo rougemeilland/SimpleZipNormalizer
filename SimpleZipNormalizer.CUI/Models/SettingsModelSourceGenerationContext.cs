@@ -4,7 +4,7 @@ namespace SimpleZipNormalizer.CUI.Models
 {
     [JsonSourceGenerationOptions(WriteIndented = true)]
     [JsonSerializable(typeof(SettingsModel))]
-    internal partial class SettingsModelSourceGenerationContext
+    internal sealed partial class SettingsModelSourceGenerationContext
         : JsonSerializerContext
     {
     }

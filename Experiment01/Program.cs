@@ -6,7 +6,7 @@ using Palmtree.IO;
 
 namespace Experiment01
 {
-    internal class Program
+    internal sealed class Program
     {
         static Program()
         {
@@ -23,7 +23,7 @@ namespace Experiment01
                 {
                     var file = baseDirectory2.GetFile($"file-{count:N0}.txt");
                     using var writer = file.CreateText();
-                    writer.Write(new string(RandomSequence.GetAsciiCharSequence().Take(16).ToArray()));
+                    writer.Write(new string([.. RandomSequence.GetAsciiCharSequence().Take(16)]));
                 }
             }
 

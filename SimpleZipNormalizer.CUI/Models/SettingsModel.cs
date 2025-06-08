@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace SimpleZipNormalizer.CUI.Models
 {
-    internal class SettingsModel
+    internal sealed class SettingsModel
     {
         public SettingsModel()
         {
