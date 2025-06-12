@@ -20,9 +20,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Palmtree.Core" Version="1.17.1-alpha" />
-    <PackageReference Include="Palmtree.IO" Version="1.18.1-alpha" />
-    <PackageReference Include="Palmtree.IO.Compression.Archive.Zip" Version="1.9.16-alpha" />
+    <PackageReference Include="Palmtree.Core" Version="1.19.0-alpha" />
+    <PackageReference Include="Palmtree.IO" Version="1.19.1-alpha" />
+    <PackageReference Include="Palmtree.IO.Compression.Archive.Zip" Version="1.9.18-alpha" />
     <PackageReference Include="Palmtree.IO.Compression.Stream.Plugin.Deflate" Version="1.4.16-alpha" />
   </ItemGroup>
 

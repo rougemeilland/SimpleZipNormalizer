@@ -69,19 +69,19 @@ namespace SimpleZipNormalizer.CUI
             var allowedEncodngNames = new List<string>();
             var excludedEncodngNames = new List<string>();
             var warnedFilePatterns =
-                (settings?.WarnedFilePatterns ?? Array.Empty<string>())
+                (settings?.WarnedFilePatterns ?? [])
                 .Select(patternText => new Regex(patternText, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                 .ToList();
 #if DEBUG
-            Validation.Assert(warnedFilePatterns[0].IsMatch("000.bmp"), "warnedFilePatterns[0].IsMatch(\"000.bmp\")");
+            Validation.Assert(warnedFilePatterns[0].IsMatch("000.bmp"));
 #endif
 
             var excludedFilePatterns =
-                (settings?.ExcludedFilePatterns ?? Array.Empty<string>())
+                (settings?.ExcludedFilePatterns ?? [])
                 .Select(patternText => new Regex(patternText, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                 .ToList();
             var blackList =
-                (settings?.BlackList ?? Array.Empty<string>())
+                (settings?.BlackList ?? [])
                 .Select(element =>
                 {
                     var match = GetBlackListParameterPattern().Match(element);
@@ -136,7 +136,7 @@ namespace SimpleZipNormalizer.CUI
                         }
                         catch (Exception ex)
                         {
-                            throw new Exception($"--warned_file オプションで与えられた正規表現に誤りがあります。", ex);
+                            throw new ApplicationException($"--warned_file オプションで与えられた正規表現に誤りがあります。", ex);
                         }
                     }
                     else if ((arg == "-ef" || arg == "--excluded_file") && index + 1 < args.Length)
@@ -148,7 +148,7 @@ namespace SimpleZipNormalizer.CUI
                         }
                         catch (Exception ex)
                         {
-                            throw new Exception($"--excluded_file オプションで与えられた正規表現に誤りがあります。", ex);
+                            throw new ApplicationException($"--excluded_file オプションで与えられた正規表現に誤りがあります。", ex);
                         }
                     }
                     else if ((arg == "-bl" || arg == "--black_list") && index + 1 < args.Length)
@@ -157,7 +157,7 @@ namespace SimpleZipNormalizer.CUI
                         {
                             var match = GetBlackListParameterPattern().Match(element);
                             if (!match.Success)
-                                throw new Exception($"--black_list オプションの形式に誤りがあります。");
+                                throw new ApplicationException($"--black_list オプションの形式に誤りがあります。");
                             var length = ulong.Parse(match.Groups["length"].Value, NumberStyles.None, CultureInfo.InvariantCulture.NumberFormat);
                             var crc = uint.Parse(match.Groups["crc"].Value, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture.NumberFormat);
                             _ = blackList.Add((length, crc));
@@ -167,7 +167,7 @@ namespace SimpleZipNormalizer.CUI
                     }
                     else if (arg.StartsWith('-'))
                     {
-                        throw new Exception($"サポートされていないオプションがコマンド引数に指定されました。: \"{arg}\"");
+                        throw new ApplicationException($"サポートされていないオプションがコマンド引数に指定されました。: \"{arg}\"");
                     }
                     else
                     {
@@ -187,7 +187,7 @@ namespace SimpleZipNormalizer.CUI
                 }
 
                 if (encodingProvider.SupportedEncodings.None())
-                    throw new Exception($"エントリ名およびコメントに適用できるコードページがありません。オプションでコードページを指定している場合は指定内容を確認してください。サポートされているコードページのリストは \"--show_code_page_list\" オプションを指定して起動することにより確認できます。");
+                    throw new ApplicationException($"エントリ名およびコメントに適用できるコードページがありません。オプションでコードページを指定している場合は指定内容を確認してください。サポートされているコードページのリストは \"--show_code_page_list\" オプションを指定して起動することにより確認できます。");
 
                 var trashBox = TrashBox.OpenTrashBox();
 
@@ -294,7 +294,7 @@ namespace SimpleZipNormalizer.CUI
                 catch (Exception ex)
                 {
                     // 変名に失敗した場合はそのまま例外を通知する。
-                    throw new Exception($"ファイルの変名に失敗しました。: \"{zipFile.FullName}\" => \"{backupFile.Name}\"", ex);
+                    throw new ApplicationException($"ファイルの変名に失敗しました。: \"{zipFile.FullName}\" => \"{backupFile.Name}\"", ex);
                 }
 
                 // 正規化されたファイルをオリジナルの ".zip" ファイルの名前に変名する。
@@ -313,16 +313,16 @@ namespace SimpleZipNormalizer.CUI
                     {
                         // 変名に失敗した場合、もうどうしようもないので、そのまま例外を通知する。
                         // この場合、オリジナルの ".zip" ファイルは残らず、".zip.bak" ファイルが残る。
-                        throw new Exception($"ファイルの変名に失敗しました。: \"{backupFile.FullName}\" => \"{zipFile.Name}\"", ex2);
+                        throw new ApplicationException($"ファイルの変名に失敗しました。: \"{backupFile.FullName}\" => \"{zipFile.Name}\"", ex2);
                     }
 
                     // 復旧に成功した場合、変名に失敗したことを例外で通知する。
-                    throw new Exception($"ファイルの変名に失敗しました。: \"{normalizedFile.FullName}\" => \"{zipFile.Name}\"", ex);
+                    throw new ApplicationException($"ファイルの変名に失敗しました。: \"{normalizedFile.FullName}\" => \"{zipFile.Name}\"", ex);
                 }
 
                 // 不要になった ".zip.bak" ファイルをごみ箱へ移動する。
                 if (!trashBox.DisposeFile(backupFile))
-                    throw new Exception($"ファイルのごみ箱への移動に失敗しました。: \"{backupFile.FullName}\"");
+                    throw new ApplicationException($"ファイルのごみ箱への移動に失敗しました。: \"{backupFile.FullName}\"");
             }
         }
 
@@ -449,7 +449,7 @@ namespace SimpleZipNormalizer.CUI
             IZipEntryNameEncodingProvider entryNameEncodingProvider,
             Func<ZipSourceEntry, bool> excludedFileChecker,
             Func<ZipSourceEntry, bool> warnedFileChecker,
-            IProgress<double> progress)
+            SimpleProgress<double> progress)
         {
             try
             {
@@ -462,7 +462,7 @@ namespace SimpleZipNormalizer.CUI
                 var rootNode = PathNode.CreateRootNode();
                 var badEntries = sourceArchiveReader.EnumerateEntries().Where(entry => entry.FullName.IsUnknownEncodingText()).ToList();
                 if (badEntries.Count > 0)
-                    throw new Exception($".NETで認識できない名前のエントリがZIPファイルに含まれています。: ZIP file name:\"{sourceZipFile.FullName}\", Entry name: \"{badEntries.First().FullName}\"");
+                    throw new ApplicationException($".NETで認識できない名前のエントリがZIPファイルに含まれています。: ZIP file name:\"{sourceZipFile.FullName}\", Entry name: \"{badEntries.First().FullName}\"");
 
                 var progressValue = new ProgressValueHolder<double>(progress, 0.0, TimeSpan.FromMilliseconds(100));
                 progressValue.Report();
@@ -550,27 +550,27 @@ namespace SimpleZipNormalizer.CUI
             }
             catch (CompressionMethodNotSupportedException ex)
             {
-                throw new Exception($"ZIPアーカイブがサポートされていない圧縮方式で圧縮されているため正規化できません。: method={ex.CompresssionMethodId}, path=\"{sourceZipFile.FullName}\"", ex);
+                throw new ApplicationException($"ZIPアーカイブがサポートされていない圧縮方式で圧縮されているため正規化できません。: method={ex.CompresssionMethodId}, path=\"{sourceZipFile.FullName}\"", ex);
             }
             catch (BadZipFileFormatException ex)
             {
-                throw new Exception($"ZIPアーカイブが破損しているため正規化できません。: path=\"{sourceZipFile.FullName}\"", ex);
+                throw new ApplicationException($"ZIPアーカイブが破損しているため正規化できません。: path=\"{sourceZipFile.FullName}\"", ex);
             }
             catch (EncryptedZipFileNotSupportedException ex)
             {
-                throw new Exception($"ZIPアーカイブが暗号化されているため正規化できません。: required=\"{ex.Required}\", path=\"{sourceZipFile.FullName}\"", ex);
+                throw new ApplicationException($"ZIPアーカイブが暗号化されているため正規化できません。: required=\"{ex.Required}\", path=\"{sourceZipFile.FullName}\"", ex);
             }
             catch (MultiVolumeDetectedException ex)
             {
-                throw new Exception($"ZIPアーカイブがマルチボリュームであるため正規化できません。: path=\"{sourceZipFile.FullName}\"", ex);
+                throw new ApplicationException($"ZIPアーカイブがマルチボリュームであるため正規化できません。: path=\"{sourceZipFile.FullName}\"", ex);
             }
             catch (NotSupportedSpecificationException ex)
             {
-                throw new Exception($"ZIPアーカイブを解凍するための機能が不足しているため正規化できません。: path=\"{sourceZipFile.FullName}\"", ex);
+                throw new ApplicationException($"ZIPアーカイブを解凍するための機能が不足しているため正規化できません。: path=\"{sourceZipFile.FullName}\"", ex);
             }
             catch (Exception ex)
             {
-                throw new Exception($"正規化に失敗しました。: path=\"{sourceZipFile.FullName}\"", ex);
+                throw new ApplicationException($"正規化に失敗しました。: path=\"{sourceZipFile.FullName}\"", ex);
             }
         }
 
@@ -582,7 +582,7 @@ namespace SimpleZipNormalizer.CUI
             }
             catch (Exception ex)
             {
-                throw new Exception($"ZIPアーカイブへの書き込みができません。: \"{sourceZipFile.FullName}\"", ex);
+                throw new ApplicationException($"ZIPアーカイブへの書き込みができません。: \"{sourceZipFile.FullName}\"", ex);
             }
         }
 
@@ -607,7 +607,7 @@ namespace SimpleZipNormalizer.CUI
             IZipEntryNameEncodingProvider entryNameEncodingProvider,
             ulong sourceZipFileLength,
             IEnumerable<(string destinationFullName, bool isDirectory, string sourceFullName, int newOrder, ZipSourceEntry? sourceEntry, DateTimeOffset? lastWriteTimeOffset, DateTimeOffset? lastAccessTimeOffset, DateTimeOffset? creationTimeOffset)> normalizedEntries,
-            IProgress<double>? progress)
+            SimpleProgress<double>? progress)
         {
             var success = false;
             try
@@ -666,7 +666,7 @@ namespace SimpleZipNormalizer.CUI
                         }
                         catch (Exception ex)
                         {
-                            throw new Exception($"エントリのコピー中に例外が発生しました。: zipFile=\"{sourceZipFile.FullName}\", entry=\"{item.sourceEntry?.FullName ?? "???"}\"", ex);
+                            throw new ApplicationException($"エントリのコピー中に例外が発生しました。: zipFile=\"{sourceZipFile.FullName}\", entry=\"{item.sourceEntry?.FullName ?? "???"}\"", ex);
                         }
 
                         progress?.Report(currentProgressValue);
@@ -720,7 +720,7 @@ namespace SimpleZipNormalizer.CUI
                 .ToDictionary(g => g.Key, g => g.ToList().AsReadOnly());
 
             if (indexedNormalizedEntries.Count != indexedSourceEntries.Count)
-                throw new Exception($"正規化に失敗しました。 (エントリの個数が異なっています): {sourceZipFile.FullName}");
+                throw new Exception($"ApplicationException。 (エントリの個数が異なっています): {sourceZipFile.FullName}");
 
             var totalSize = sourceEntries.Sum(entry => (double)entry.Size);
             var completedSize = 0UL;
@@ -731,10 +731,10 @@ namespace SimpleZipNormalizer.CUI
 
                 var normalizedEntriesGroup = indexedNormalizedEntries[key];
                 if (!indexedSourceEntries.TryGetValue(key, out var sourceEntriesGroup))
-                    throw new Exception($"正規化に失敗しました。 (CRCおよび長さが一致するエントリの個数が異なっています): {sourceZipFile.FullName}");
+                    throw new ApplicationException($"正規化に失敗しました。 (CRCおよび長さが一致するエントリの個数が異なっています): {sourceZipFile.FullName}");
                 if (normalizedEntriesGroup.Count != sourceEntriesGroup.Count)
-                    throw new Exception($"正規化に失敗しました。 (CRCおよび長さが一致するエントリの個数が異なっています): {sourceZipFile.FullName}");
-                Validation.Assert(sourceEntriesGroup.Count > 0, "sourceEntriesGroup.Count > 0");
+                    throw new ApplicationException($"正規化に失敗しました。 (CRCおよび長さが一致するエントリの個数が異なっています): {sourceZipFile.FullName}");
+                Validation.Assert(sourceEntriesGroup.Count > 0);
                 if (sourceEntriesGroup.Count == 1)
                 {
                     // CRC とサイズが一致するエントリの組み合わせが一組しかない場合
@@ -748,7 +748,7 @@ namespace SimpleZipNormalizer.CUI
                             stream2,
                             new SimpleProgress<ulong>(value => progressValue.Value = (completedSize + value) / totalSize));
                     if (!dataMatch)
-                        throw new Exception($"正規化に失敗しました。 (データの内容が異なっています): {sourceZipFile.FullName}");
+                        throw new ApplicationException($"正規化に失敗しました。 (データの内容が異なっています): {sourceZipFile.FullName}");
                 }
                 else
                 {
@@ -769,7 +769,7 @@ namespace SimpleZipNormalizer.CUI
                                 return result;
                             }));
                     if (!dataMatch)
-                        throw new Exception($"正規化に失敗しました。 (データの内容が異なっています): {sourceZipFile.FullName}");
+                        throw new ApplicationException($"正規化に失敗しました。 (データの内容が異なっています): {sourceZipFile.FullName}");
                 }
 
                 // 比較が完了したエントリの合計サイズを終了済みサイズを加算する。

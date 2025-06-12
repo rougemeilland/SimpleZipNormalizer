@@ -36,11 +36,11 @@ namespace SimpleZipNormalizer.CUI
                 if (_indexedChildNodes.TryGetValue(name, out var childNode))
                 {
                     if (childNode is DirectoryPathNode)
-                        throw new Exception($"ファイル \"{SourceFullName}{name}\" を追加しようとしましたが、ディレクトリ \"{SourceFullName}{childNode.Name}/\" が既に存在しています。");
+                        throw new ApplicationException($"ファイル \"{SourceFullName}{name}\" を追加しようとしましたが、ディレクトリ \"{SourceFullName}{childNode.Name}/\" が既に存在しています。");
                     else if (childNode is FilePathNode)
-                        throw new Exception($"ファイル \"{SourceFullName}{name}\" が重複しています。");
+                        throw new ApplicationException($"ファイル \"{SourceFullName}{name}\" が重複しています。");
                     else
-                        throw new Exception("未知のノードが登録されています。");
+                        throw new ApplicationException("未知のノードが登録されています。");
                 }
 
                 childNode = new FilePathNode(name, $"{SourceFullName}{name}", this, sourceEntry);
@@ -53,7 +53,7 @@ namespace SimpleZipNormalizer.CUI
             {
                 var name = directoryPathNodeMatch.Groups["name"].Value;
                 if (name is "." or "..")
-                    throw new Exception($"\".\" または \"..\" という名前のディレクトリ名を持つエントリ名は使用できません。: \"{sourceEntry.FullName}\"");
+                    throw new ApplicationException($"\".\" または \"..\" という名前のディレクトリ名を持つエントリ名は使用できません。: \"{sourceEntry.FullName}\"");
                 var delimiter = directoryPathNodeMatch.Groups["delimiter"].Value;
                 var remainedPath = directoryPathNodeMatch.Groups["child_path"].Value;
                 var isTerminalDirectoryNode = string.IsNullOrEmpty(remainedPath);
@@ -70,11 +70,11 @@ namespace SimpleZipNormalizer.CUI
                     }
                     else if (childNode is FilePathNode)
                     {
-                        throw new Exception($"ディレクトリ \"{SourceFullName}{name}{delimiter}\" を追加しようとしましたが、ファイル \"{SourceFullName}{childNode.Name}\" が既に存在しています。");
+                        throw new ApplicationException($"ディレクトリ \"{SourceFullName}{name}{delimiter}\" を追加しようとしましたが、ファイル \"{SourceFullName}{childNode.Name}\" が既に存在しています。");
                     }
                     else
                     {
-                        throw new Exception("未知のノードが登録されています。");
+                        throw new ApplicationException("未知のノードが登録されています。");
                     }
                 }
                 else
@@ -190,7 +190,7 @@ namespace SimpleZipNormalizer.CUI
             }
         }
 
-        private static IEnumerable<PathNode> SplitLastPathNode(IEnumerable<PathNode> nodes, out PathNode? lastNode)
+        private static List<PathNode> SplitLastPathNode(IEnumerable<PathNode> nodes, out PathNode? lastNode)
         {
             var result = new List<PathNode>();
             var cache = (PathNode?)null;

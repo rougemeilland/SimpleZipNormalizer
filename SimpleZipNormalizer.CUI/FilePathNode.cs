@@ -18,7 +18,7 @@ namespace SimpleZipNormalizer.CUI
         public override IEnumerable<PathNode> EnumerateTerminalNodes()
         {
             if (SourceEntry is null)
-                throw new Exception($"{nameof(SourceEntry)} is not set on the file node.: {nameof(SourceFullName)}={SourceFullName}");
+                throw new ApplicationException($"{nameof(SourceEntry)} is not set on the file node.: {nameof(SourceFullName)}={SourceFullName}");
 
             yield return this;
         }

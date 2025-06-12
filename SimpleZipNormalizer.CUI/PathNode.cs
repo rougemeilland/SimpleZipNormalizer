@@ -23,8 +23,7 @@ namespace SimpleZipNormalizer.CUI
             {
                 if (string.IsNullOrEmpty(sourceFullName))
                     throw new ArgumentNullException(nameof(sourceFullName), $"{nameof(name)} が null または 空文字の何れでもない場合は、{nameof(sourceFullName)} も null あるいは空文字の何れであってもなりません。");
-                if (parentNode is null)
-                    throw new ArgumentNullException(nameof(parentNode));
+                ArgumentNullException.ThrowIfNull(parentNode);
             }
 
             Name = name;

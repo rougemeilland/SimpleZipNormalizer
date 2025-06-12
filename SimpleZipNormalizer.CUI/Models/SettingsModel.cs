@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace SimpleZipNormalizer.CUI.Models
 {
@@ -7,9 +6,9 @@ namespace SimpleZipNormalizer.CUI.Models
     {
         public SettingsModel()
         {
-            WarnedFilePatterns = Array.Empty<string>();
-            ExcludedFilePatterns = Array.Empty<string>();
-            BlackList = Array.Empty<string>();
+            WarnedFilePatterns = [];
+            ExcludedFilePatterns = [];
+            BlackList = [];
         }
 
         [JsonPropertyName("warned_file_patterns")]
