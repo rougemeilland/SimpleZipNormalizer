@@ -6,7 +6,7 @@ using Palmtree.IO;
 
 namespace Experiment01
 {
-    internal sealed class Program
+    internal static class Program
     {
         static Program()
         {

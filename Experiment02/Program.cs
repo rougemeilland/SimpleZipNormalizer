@@ -7,7 +7,7 @@ using Palmtree.IO.Compression.Archive.Zip;
 
 namespace Experiment02
 {
-    internal sealed class Program
+    internal static class Program
     {
         static Program()
         {
