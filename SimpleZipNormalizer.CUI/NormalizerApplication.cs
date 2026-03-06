@@ -29,6 +29,13 @@ namespace SimpleZipNormalizer.CUI
             ListZipEntries,
         }
 
+        private enum ResultOfNormalization
+        {
+            AlreadyNormalized,
+            Normalized,
+            IsEmpty,
+        }
+
         private const string _defaultSettingsJsonUrl = "https://raw.githubusercontent.com/rougemeilland/SimpleZipNormalizer/main/content/zipnorm.settings.json";
         private const string _settingsFileName = "zipnorm.settings.json";
 
@@ -219,20 +226,30 @@ namespace SimpleZipNormalizer.CUI
                                     value => ReportProgress(value, zipFile.FullName, (progressRate, content) => $"{progressRate} processing \"{content}\""),
                                     completedRate,
                                     TimeSpan.FromMilliseconds(100));
-                            if (NormalizeZipFile(
-                                zipFile,
-                                temporaryFile,
-                                encodingProvider,
-                                entry =>
-                                    !string.Equals(zipFile.Extension, ".epub", StringComparison.OrdinalIgnoreCase)
-                                    && (excludedFilePatterns.Any(pattern => pattern.IsMatch(Path.GetFileName(entry.FullName)))
-                                        || blackList.Contains((entry.Size, entry.Crc))),
-                                entry =>
-                                    !string.Equals(zipFile.Extension, ".epub", StringComparison.OrdinalIgnoreCase)
-                                    && warnedFilePatterns.Any(pattern => pattern.IsMatch(Path.GetFileName(entry.FullName))),
-                                new SimpleProgress<double>(value => progressRateValue.Value = completedRate + value * originalZipFileSize / totalSize)))
+                            var resultOfNormalization =
+                                NormalizeZipFile(
+                                    zipFile,
+                                    temporaryFile,
+                                    encodingProvider,
+                                    entry =>
+                                        !string.Equals(zipFile.Extension, ".epub", StringComparison.OrdinalIgnoreCase)
+                                        && (excludedFilePatterns.Any(pattern => pattern.IsMatch(Path.GetFileName(entry.FullName)))
+                                            || blackList.Contains((entry.Size, entry.Crc))),
+                                    entry =>
+                                        !string.Equals(zipFile.Extension, ".epub", StringComparison.OrdinalIgnoreCase)
+                                        && warnedFilePatterns.Any(pattern => pattern.IsMatch(Path.GetFileName(entry.FullName))),
+                                    new SimpleProgress<double>(value => progressRateValue.Value = completedRate + value * originalZipFileSize / totalSize));
+
+                            switch (resultOfNormalization)
                             {
-                                CleanUp(zipFile, GetBackupFile(zipFile), temporaryFile, trashBox);
+                                case ResultOfNormalization.IsEmpty:
+                                    CleanUp(zipFile, GetBackupFile(zipFile), null, trashBox);
+                                    break;
+                                case ResultOfNormalization.Normalized:
+                                    CleanUp(zipFile, GetBackupFile(zipFile), temporaryFile, trashBox);
+                                    break;
+                                default:
+                                    break;
                             }
                         }
                         catch (OperationCanceledException)
@@ -284,7 +301,7 @@ namespace SimpleZipNormalizer.CUI
                 return ResultCode.Failed;
             }
 
-            static void CleanUp(FilePath zipFile, FilePath backupFile, FilePath normalizedFile, ITrashBox trashBox)
+            static void CleanUp(FilePath zipFile, FilePath backupFile, FilePath? normalizedFile, ITrashBox trashBox)
             {
                 // オリジナルの ".zip" ファイルを ".zip.bak" に変名する。
                 try
@@ -297,27 +314,30 @@ namespace SimpleZipNormalizer.CUI
                     throw new ApplicationException($"ファイルの変名に失敗しました。: \"{zipFile.FullName}\" => \"{backupFile.Name}\"", ex);
                 }
 
-                // 正規化されたファイルをオリジナルの ".zip" ファイルの名前に変名する。
-                try
+                if (normalizedFile is not null)
                 {
-                    normalizedFile.MoveTo(zipFile);
-                }
-                catch (Exception ex)
-                {
-                    // 変名に失敗した場合、復旧のために、 ".zip.bak" ファイルの ".zip" への変名を試みる。
+                    // 正規化されたファイルをオリジナルの ".zip" ファイルの名前に変名する。
                     try
                     {
-                        backupFile.MoveTo(zipFile);
+                        normalizedFile.MoveTo(zipFile);
                     }
-                    catch (Exception ex2)
+                    catch (Exception ex)
                     {
-                        // 変名に失敗した場合、もうどうしようもないので、そのまま例外を通知する。
-                        // この場合、オリジナルの ".zip" ファイルは残らず、".zip.bak" ファイルが残る。
-                        throw new ApplicationException($"ファイルの変名に失敗しました。: \"{backupFile.FullName}\" => \"{zipFile.Name}\"", ex2);
-                    }
+                        // 変名に失敗した場合、復旧のために、 ".zip.bak" ファイルの ".zip" への変名を試みる。
+                        try
+                        {
+                            backupFile.MoveTo(zipFile);
+                        }
+                        catch (Exception ex2)
+                        {
+                            // 変名に失敗した場合、もうどうしようもないので、そのまま例外を通知する。
+                            // この場合、オリジナルの ".zip" ファイルは残らず、".zip.bak" ファイルが残る。
+                            throw new ApplicationException($"ファイルの変名に失敗しました。: \"{backupFile.FullName}\" => \"{zipFile.Name}\"", ex2);
+                        }
 
-                    // 復旧に成功した場合、変名に失敗したことを例外で通知する。
-                    throw new ApplicationException($"ファイルの変名に失敗しました。: \"{normalizedFile.FullName}\" => \"{zipFile.Name}\"", ex);
+                        // 復旧に成功した場合、変名に失敗したことを例外で通知する。
+                        throw new ApplicationException($"ファイルの変名に失敗しました。: \"{normalizedFile.FullName}\" => \"{zipFile.Name}\"", ex);
+                    }
                 }
 
                 // 不要になった ".zip.bak" ファイルをごみ箱へ移動する。
@@ -443,7 +463,7 @@ namespace SimpleZipNormalizer.CUI
             }
         }
 
-        private bool NormalizeZipFile(
+        private ResultOfNormalization NormalizeZipFile(
             FilePath sourceZipFile,
             FilePath destinationZipFile,
             IZipEntryNameEncodingProvider entryNameEncodingProvider,
@@ -516,9 +536,16 @@ namespace SimpleZipNormalizer.CUI
                     .Select((item, newOrder) => (item.destinationFullName, item.isDirectory, item.sourceFullName, newOrder, item.sourceEntry, item.lastWriteTimeOffset, item.lastAccessTimeOffset, item.creationTimeOffset))
                     .ToList();
 
+                // 正規化後にエントリが空になるかどうかを調べる
+                if (normalizedEntries.Count <= 0)
+                {
+                    progress?.Report(1);
+                    return ResultOfNormalization.IsEmpty;
+                }
+
                 // 正規化前後でエントリが変更する見込みがあるかどうかを調べる
                 var needToModify =
-                    sourceEntries.Count != trimmedSourceEntries.Count
+                    sourceEntries.Count != normalizedEntries.Count
                     || ExistEntriesToNeedToModify(normalizedEntries);
                 if (needToModify)
                 {
@@ -539,14 +566,19 @@ namespace SimpleZipNormalizer.CUI
                     using var normalizedZipArchiveReader = destinationZipFile.OpenAsZipFile(entryNameEncodingProvider);
                     VerifyNormalizedEntries(
                         sourceZipFile,
-                        trimmedSourceEntries,
+                        normalizedEntries.Select(entry => entry.sourceEntry).WhereNotNull(),
                         normalizedZipArchiveReader.EnumerateEntries(
                             new SimpleProgress<double>(value => progressValue.Value = 0.50 + value * 0.05)),
                         new Progress<double>(value => progressValue.Value = 0.55 + value * 0.45));
-                }
 
-                progress?.Report(1);
-                return needToModify;
+                    progress?.Report(1);
+                    return ResultOfNormalization.Normalized;
+                }
+                else
+                {
+                    progress?.Report(1);
+                    return ResultOfNormalization.AlreadyNormalized;
+                }
             }
             catch (CompressionMethodNotSupportedException ex)
             {
